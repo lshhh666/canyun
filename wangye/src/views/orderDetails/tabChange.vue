@@ -74,18 +74,23 @@ export default class extends Vue {
 <style lang="scss">
 .tab-change {
   display: flex;
-  border-radius: 4px;
-  margin-bottom: 20px;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  background: #ffffff;
+  border: 1px solid #dfe5eb;
+  border-radius: 6px;
 
   .tab-item {
-    width: 120px;
-    height: 40px;
+    min-width: 104px;
+    height: 36px;
+    padding: 0 14px;
     text-align: center;
-    line-height: 40px;
-    color: #333;
-    border: 1px solid #e5e4e4;
-    background-color: white;
-    border-left: none;
+    line-height: 36px;
+    color: #506276;
+    border: 0;
+    border-radius: 4px;
+    background-color: transparent;
     cursor: pointer;
     .special-item {
       .el-badge__content {
@@ -109,11 +114,9 @@ export default class extends Vue {
     }
   }
   .active {
-    background-color: #ffc200;
-    font-weight: bold;
-  }
-  .tab-item:first-child {
-    border-left: 1px solid #e5e4e4;
+    color: #147ee8;
+    background-color: #e8f3fc;
+    font-weight: 500;
   }
 }
 </style>

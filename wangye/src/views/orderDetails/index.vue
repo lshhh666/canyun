@@ -1,13 +1,14 @@
 <template>
-  <div class="dashboard-container">
+  <main class="cm-page dashboard-container order-management">
+    <PageHeader title="订单管理" description="查看订单进度并处理接单、派送与完成操作" />
     <TabChange
       :order-statics="orderStatics"
       :default-activity="defaultActivity"
       @tabChange="change"
     />
-    <div class="container" :class="{ hContainer: tableData.length }">
+    <div class="container cm-surface" :class="{ hContainer: tableData.length }">
       <!-- 搜索项 -->
-      <div class="tableBar">
+      <div class="tableBar cm-filter-bar">
         <label style="margin-right: 10px">订单号：</label>
         <el-input
           v-model="input"
@@ -59,11 +60,11 @@
         <el-table-column
           v-if="[0].includes(orderStatus)"
           key="status"
-          prop="订单状态"
+          prop="status"
           label="订单状态"
         >
           <template slot-scope="{ row }">
-            <span>{{ getOrderType(row) }}</span>
+            <StatusTag :status="statusTone(row.status)" :text="getOrderType(row)" />
           </template>
         </el-table-column>
         <el-table-column
@@ -166,7 +167,7 @@
             <!-- <el-divider direction="vertical" /> -->
             <div class="before">
               <el-button
-                v-if="row.status === 2"
+                v-if="actionsForStatus(row.status).includes('接单')"
                 type="text"
                 class="blueBug"
                 @click="orderAccept(row), (isTableOperateBtn = true)"
@@ -174,7 +175,7 @@
                 接单
               </el-button>
               <el-button
-                v-if="row.status === 3"
+                v-if="actionsForStatus(row.status).includes('派送')"
                 type="text"
                 class="blueBug"
                 @click="cancelOrDeliveryOrComplete(3, row.id)"
@@ -182,7 +183,7 @@
                 派送
               </el-button>
               <el-button
-                v-if="row.status === 4"
+                v-if="actionsForStatus(row.status).includes('完成')"
                 type="text"
                 class="blueBug"
                 @click="cancelOrDeliveryOrComplete(4, row.id)"
@@ -192,20 +193,12 @@
             </div>
             <div class="middle">
               <el-button
-                v-if="row.status === 2"
+                v-if="actionsForStatus(row.status).includes('拒单')"
                 type="text"
                 class="delBut"
                 @click="orderReject(row), (isTableOperateBtn = true)"
               >
                 拒单
-              </el-button>
-              <el-button
-                v-if="[1, 3, 4, 5].includes(row.status)"
-                type="text"
-                class="delBut"
-                @click="cancelOrder(row)"
-              >
-                取消
               </el-button>
             </div>
             <div class="after">
@@ -220,7 +213,11 @@
           </template>
         </el-table-column>
       </el-table>
-      <Empty v-else :is-search="isSearch" />
+      <EmptyState
+        v-else
+        :title="isSearch ? '未找到符合条件的订单' : '暂无订单'"
+        :description="isSearch ? '请调整订单号、手机号或下单时间' : '新的订单会显示在这里'"
+      />
       <el-pagination
         v-if="counts > 10"
         class="pageList"
@@ -469,15 +466,16 @@
         <el-button type="primary" @click="confirmCancel">确 定</el-button>
       </span>
     </el-dialog>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import HeadLable from '@/components/HeadLable/index.vue'
-import InputAutoComplete from '@/components/InputAutoComplete/index.vue'
 import TabChange from './tabChange.vue'
-import Empty from '@/components/Empty/index.vue'
+import PageHeader from '@/components/PageHeader/index.vue'
+import StatusTag from '@/components/StatusTag/index.vue'
+import EmptyState from '@/components/EmptyState/index.vue'
+import { actionsForStatus } from './orderActions'
 import {
   getOrderDetailPage,
   queryOrderDetailById,
@@ -491,13 +489,14 @@ import {
 
 @Component({
   components: {
-    HeadLable,
-    InputAutoComplete,
     TabChange,
-    Empty,
+    PageHeader,
+    StatusTag,
+    EmptyState,
   },
 })
 export default class extends Vue {
+  private actionsForStatus = actionsForStatus
   private defaultActivity: any = 0
   private orderStatics = {}
   private row = {}
@@ -508,6 +507,14 @@ export default class extends Vue {
   private input = '' //搜索条件的订单号
   private phone = '' //搜索条件的手机号
   private valueTime = []
+
+  private statusTone(status: number): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+    if (status === 2) return 'warning'
+    if (status === 3 || status === 4) return 'info'
+    if (status === 5) return 'success'
+    if (status === 6) return 'danger'
+    return 'neutral'
+  }
   private dialogVisible = false //详情弹窗
   private cancelDialogVisible = false //取消，拒单弹窗
   private cancelDialogTitle = '' //取消，拒绝弹窗标题
@@ -1124,6 +1131,53 @@ export default class extends Vue {
         }
       }
     }
+  }
+}
+</style>
+
+<style lang="scss">
+.order-management {
+  .container {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .cm-filter-bar {
+    margin: 0;
+    border: 0;
+    border-bottom: 1px solid #dfe5eb;
+    border-radius: 0;
+  }
+
+  .normal-btn {
+    margin-left: 4px;
+    color: #ffffff;
+    background: #147ee8;
+    border-color: #147ee8;
+  }
+
+  .tableBox {
+    border: 0;
+  }
+
+  .pageList {
+    padding: 18px 20px;
+    margin: 0;
+    text-align: right;
+    border-top: 1px solid #dfe5eb;
+  }
+
+  .blueBug { color: #147ee8; }
+  .delBut { color: #d95656; }
+
+  .order-top,
+  .order-middle .dish-info {
+    border-color: #dfe5eb;
+  }
+
+  .order-middle .user-info {
+    background: #f8fafc;
   }
 }
 </style>
