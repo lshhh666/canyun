@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.OrderMapper">
+
+    <insert id="add" useGeneratedKeys="true" keyProperty="id">
+        insert into orders(
+            number, status, user_id, address_book_id, order_time,
+            pay_method, pay_status, amount, remark, phone, address, consignee,
+            estimated_delivery_time, delivery_status, pack_amount,
+            tableware_number, tableware_status
+        ) values(
+                    #{number}, #{status}, #{userId}, #{addressBookId}, #{orderTime},
+                    #{payMethod}, #{payStatus}, #{amount}, #{remark}, #{phone}, #{address}, #{consignee},
+                    #{estimatedDeliveryTime}, #{deliveryStatus}, #{packAmount},
+                    #{tablewareNumber}, #{tablewareStatus}
+                )
+
+    </insert>
+    <update id="update">
+        update orders
+        <set>
+            <if test="status != null">status=#{status},</if>
+            <if test="payStatus != null">pay_status=#{payStatus},</if>
+            <if test="checkoutTime != null">checkout_time=#{checkoutTime},</if>
+            <if test="payMethod != null">pay_method=#{payMethod},</if>
+            <if test="cancelReason != null">cancel_reason=#{cancelReason},</if>
+            <if test="cancelTime != null">cancel_time=#{cancelTime},</if>
+            <if test="rejectionReason != null">rejection_reason=#{rejectionReason},</if>
+            <if test="deliveryStatus != null">delivery_status=#{deliveryStatus},</if>
+            <if test="deliveryTime != null">delivery_time=#{deliveryTime},</if>
+        </set>
+        where id=#{id}
+    </update>
+
+
+    <select id="countByMap" resultType="java.lang.Integer">
+        select count(id) from orders
+        <where>
+            <if test="status != null"> and status = #{status} </if>
+            <if test="begin != null"> and order_time >= #{begin} </if>
+            <if test="end != null"> and order_time &lt;= #{end} </if>
+        </where>
+    </select>
+
+    <select id="sumByMap" resultType="java.lang.Double">
+        select sum(amount) from orders
+        <where>
+            <if test="status != null"> and status = #{status} </if>
+            <if test="begin != null"> and order_time >= #{begin} </if>
+            <if test="end != null"> and order_time &lt;= #{end} </if>
+        </where>
+    </select>
+
+    <select id="getByNumber" resultType="com.sky.entity.Orders">
+        select * from orders where number=#{orderNumber}
+    </select>
+    <select id="historyOrders" resultType="com.sky.vo.OrderVO">
+        select * from orders
+        where
+            user_id=#{userId}
+        <if test="status!=null">
+            and status=#{status}
+        </if>
+        order by order_time desc
+    </select>
+    <select id="orderSearch" resultType="com.sky.vo.OrderVO">
+        select o.*, u.name user_name from orders o
+        left join user u on o.user_id = u.id
+        <where>
+            <if test="number!=null and number!=''">
+                and o.number=#{number}
+            </if>
+            <if test="phone!=null and phone!=''">
+                and o.phone = #{phone}
+            </if>
+            <if test="status != null">
+                and o.status = #{status}
+            </if>
+            <if test="beginTime != null">
+                and o.order_time >= #{beginTime}
+            </if>
+            <if test="endTime != null">
+                and o.order_time &lt;= #{endTime}
+            </if>
+        </where>
+        order by order_time desc
+    </select>
+    <select id="statistics" resultType="java.util.Map">
+        select status,count(*) count
+        from orders
+        group by status
+    </select>
+    <select id="getById" resultType="com.sky.entity.Orders">
+        select o.*, u.name user_name from orders o
+        left join user u on o.user_id = u.id
+        where o.id = #{id}
+    </select>
+
+</mapper>

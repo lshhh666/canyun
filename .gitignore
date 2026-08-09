@@ -1,0 +1,28 @@
+# IDE and OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Java build output
+**/target/
+*.class
+*.jar
+
+# Frontend dependencies and output
+wangye/node_modules/
+wangye/dist/
+wangye/report.*.json
+
+# Keep only the project-specific Nginx configuration, not the bundled runtime
+nginx-1.20.2/*
+!nginx-1.20.2/conf/
+nginx-1.20.2/conf/*
+!nginx-1.20.2/conf/nginx.conf
+
+# Local secrets and private tool configuration
+houduan/sky-server/src/main/resources/application-dev.yml
+xiaochengxu/project.private.config.json
+
+# Visual brainstorming scratch data
+.superpowers/
