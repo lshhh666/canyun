@@ -14,13 +14,18 @@
                :headers="headers">
       <img v-if="imageUrl"
            :src="imageUrl"
+           alt="已上传的菜品图片"
            class="avatar">
 
       <i v-else
+         role="button"
+         aria-label="上传菜品图片"
          class="el-icon-plus avatar-uploader-icon" />
       <span v-if="imageUrl"
             class="el-upload-list__item-actions">
         <span class="el-upload-span"
+              role="button"
+              tabindex="0"
               @click.stop="oploadImgDel">
           删除图片
         </span>
@@ -35,7 +40,6 @@
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
-import { baseUrl } from '@/config.json'
 import { getToken } from '@/utils/cookies'
 @Component({
   name: 'UploadImage'
@@ -57,7 +61,7 @@ export default class extends Vue {
   }
 
   handleError(err, file, fileList) {
-    console.log(err, file, fileList, 'handleError')
+    this.$emit('uploadError', err)
     this.$message({
       message: '图片上传失败',
       type: 'error'
@@ -65,11 +69,11 @@ export default class extends Vue {
   }
 
   handleAvatarSuccess(response: any, file: any, fileList: any) {
-    // this.imageUrl = response.data
-    // this.imageUrl = `http://172.17.2.120:8080/common/download?name=${response.data}`
+    if (!response || String(response.code) !== '1' || !response.data) {
+      this.handleError(new Error('invalid upload response'), file, fileList)
+      return
+    }
     this.imageUrl = `${response.data}`
-    // this.imageUrl = `${baseUrl}/common/download?name=${response.data}`
-
     this.$emit('imageChange', this.imageUrl)
   }
 
@@ -166,7 +170,7 @@ export default class extends Vue {
 }
 
 .avatar-uploader .el-upload:hover {
-  border-color: #ffc200;
+  border-color: #147ee8;
 }
 .el-upload-span {
   width: 100px;
