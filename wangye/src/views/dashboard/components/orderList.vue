@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="container homecon">
+    <div class="container homecon cm-surface dashboard-orders">
       <h2 class="homeTitle homeTitleBtn">
-        订单信息
+        实时订单
         <ul class="conTab">
           <li
             v-for="(item, index) in tabList"
@@ -163,7 +163,11 @@
             </el-table-column>
           </el-table>
         </div>
-        <Empty v-else :is-search="isSearch" />
+        <EmptyState
+          v-else
+          :title="isSearch ? '未找到符合条件的订单' : '当前没有待处理订单'"
+          :description="isSearch ? '请调整筛选条件后重试' : '新订单到达后会显示在这里'"
+        />
         <el-pagination
           v-if="counts > 10"
           class="pageList"
@@ -417,7 +421,7 @@
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator'
-import Empty from '@/components/Empty/index.vue'
+import EmptyState from '@/components/EmptyState/index.vue'
 import {
   getOrderDetailPage,
   queryOrderDetailById,
@@ -431,7 +435,7 @@ import {
 @Component({
   name: 'Orderview',
   components: {
-    Empty,
+    EmptyState,
   },
 })
 export default class extends Vue {
@@ -707,6 +711,28 @@ export default class extends Vue {
 }
 </script>
 <style  lang="scss" scoped >
+.dashboard-orders {
+  overflow: hidden;
+}
+
+.dashboard-orders .conTab {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 20px;
+}
+
+.dashboard-orders .conTab li {
+  padding: 5px 12px;
+  color: #7b8998;
+  background: transparent;
+  border-radius: 4px;
+}
+
+.dashboard-orders .conTab li.active {
+  color: #147ee8;
+  background: #e8f3fc;
+}
+
 .dashboard-container.home .homecon {
   margin-bottom: 0;
 }

@@ -1,52 +1,68 @@
 <template>
-  <div class="dashboard-container home">
-    <!-- 营业数据 -->
-    <Overview :overviewData="overviewData" />
-    <!-- end -->
-    <!-- 订单管理 -->
-    <Orderview :orderviewData="orderviewData" />
-    <!-- end -->
-    <div class="homeMain">
-      <!-- 菜品总览 -->
-      <CuisineStatistics :dishesData="dishesData" />
-      <!-- end -->
-      <!-- 套餐总览 -->
-      <SetMealStatistics :setMealData="setMealData" />
-      <!-- end -->
-    </div>
-    <!-- 订单信息 -->
-    <OrderList
-      :order-statics="orderStatics"
-      @getOrderListBy3Status="getOrderListBy3Status"
-    />
-    <!-- end -->
-  </div>
+  <main class="cm-page dashboard-container">
+    <PageHeader title="工作台" description="集中查看今日经营数据与需要处理的门店事项">
+      <template #actions>
+        <el-button size="small" :loading="loading" @click="init">刷新数据</el-button>
+      </template>
+    </PageHeader>
+
+    <section v-if="loading" class="cm-surface dashboard-loading" data-testid="dashboard-loading">
+      <div v-for="item in 4" :key="item" class="dashboard-loading__item" />
+    </section>
+
+    <EmptyState
+      v-else-if="hasError"
+      class="cm-surface"
+      type="error"
+      title="经营数据暂时无法加载"
+      description="请检查网络或服务状态后重试"
+    >
+      <template #action>
+        <el-button type="primary" size="small" @click="init">重新加载</el-button>
+      </template>
+    </EmptyState>
+
+    <template v-else>
+      <Overview :overview-data="overviewData" />
+
+      <div class="dashboard-grid">
+        <Orderview :orderview-data="orderviewData" />
+        <div class="dashboard-products">
+          <CuisineStatistics :dishes-data="dishesData" />
+          <SetMealStatistics :set-meal-data="setMealData" />
+        </div>
+      </div>
+
+      <OrderList
+        :order-statics="orderStatics"
+        @getOrderListBy3Status="getOrderListBy3Status"
+      />
+    </template>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import {
   getBusinessData,
-  getDataOverView, //营业数据
-  getOrderData, //订单管理今日订单
-  getOverviewDishes, //菜品总览
-  getSetMealStatistics, //套餐总览
+  getOrderData,
+  getOverviewDishes,
+  getSetMealStatistics,
 } from '@/api/index'
 import { getOrderListBy } from '@/api/order'
-// 组件
-// 营业数据
+import PageHeader from '@/components/PageHeader/index.vue'
+import EmptyState from '@/components/EmptyState/index.vue'
 import Overview from './components/overview.vue'
-// 订单管理
 import Orderview from './components/orderview.vue'
-// 菜品总览
 import CuisineStatistics from './components/cuisineStatistics.vue'
-// 套餐总览
 import SetMealStatistics from './components/setMealStatistics.vue'
-// 订单列表
 import OrderList from './components/orderList.vue'
+
 @Component({
   name: 'Dashboard',
   components: {
+    PageHeader,
+    EmptyState,
     Overview,
     Orderview,
     CuisineStatistics,
@@ -55,56 +71,44 @@ import OrderList from './components/orderList.vue'
   },
 })
 export default class extends Vue {
-  private todayData = {} as any
-  private overviewData = {}
-  private orderviewData = {} as any
-  private flag = 2
-  private tateData = []
-  private dishesData = {} as any
-  private setMealData = {}
-  private orderListData = []
-  private counts = 0
-  private page: number = 1
-  private pageSize: number = 10
-  private status = 2
-  private orderStatics = {} as any
+  private loading = true
+  private hasError = false
+  private overviewData: any = {}
+  private orderviewData: any = {}
+  private dishesData: any = {}
+  private setMealData: any = {}
+  private orderStatics: any = {}
+
   created() {
     this.init()
   }
-  init() {
-    this.$nextTick(() => {
-      this.getBusinessData()
-      this.getOrderStatisticsData()
-      this.getOverStatisticsData()
-      this.getSetMealStatisticsData()
-    })
+
+  async init() {
+    this.loading = true
+    this.hasError = false
+    try {
+      const [business, orders, dishes, setMeals] = await Promise.all([
+        getBusinessData(),
+        getOrderData(),
+        getOverviewDishes(),
+        getSetMealStatistics(),
+      ])
+      this.overviewData = business.data.data || {}
+      this.orderviewData = orders.data.data || {}
+      this.dishesData = dishes.data.data || {}
+      this.setMealData = setMeals.data.data || {}
+    } catch (error) {
+      this.hasError = true
+    } finally {
+      this.loading = false
+    }
   }
-  // 获取营业数据
-  async getBusinessData() {
-    const data = await getBusinessData()
-    this.overviewData = data.data.data
-  }
-  // 获取今日订单
-  async getOrderStatisticsData() {
-    const data = await getOrderData()
-    this.orderviewData = data.data.data
-  }
-  // 获取菜品总览数据
-  async getOverStatisticsData() {
-    const data = await getOverviewDishes()
-    this.dishesData = data.data.data
-  }
-  // 获取套餐总览数据
-  async getSetMealStatisticsData() {
-    const data = await getSetMealStatistics()
-    this.setMealData = data.data.data
-  }
-  //获取待处理，待派送，派送中数量
+
   getOrderListBy3Status() {
     getOrderListBy({})
       .then((res) => {
         if (res.data.code === 1) {
-          this.orderStatics = res.data.data
+          this.orderStatics = res.data.data || {}
         } else {
           this.$message.error(res.data.msg)
         }
@@ -116,5 +120,65 @@ export default class extends Vue {
 }
 </script>
 
+<style lang="scss" scoped>
+@import '@/styles/brand-tokens';
+
+.dashboard-loading {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: $cm-space-4;
+  padding: $cm-space-5;
+}
+
+.dashboard-loading__item {
+  height: 92px;
+  background: linear-gradient(90deg, #f2f5f7 25%, #f8fafb 37%, #f2f5f7 63%);
+  background-size: 400% 100%;
+  border-radius: $cm-radius-md;
+  animation: cm-loading 1.4s ease infinite;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr);
+  gap: $cm-space-4;
+  margin: $cm-space-4 0;
+}
+
+.dashboard-products {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $cm-space-4;
+}
+
+@keyframes cm-loading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (max-width: 1280px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+</style>
+
 <style lang="scss">
+.dashboard-container {
+  .homecon.container {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #dfe5eb;
+    border-radius: 8px;
+  }
+
+  .homeTitleBtn {
+    min-height: 56px;
+    padding: 16px 20px;
+    margin: 0;
+    border-bottom: 1px solid #dfe5eb;
+  }
+
+  .tableBox { border: 0; }
+}
 </style>
