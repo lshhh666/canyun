@@ -101,7 +101,7 @@ export default class extends Vue {
         axisLine: {
           //X轴线颜色
           lineStyle: {
-            color: '#E5E4E4',
+            color: '#DFE5EB',
             width: 1, //x轴线的宽度
           },
         },
@@ -133,15 +133,15 @@ export default class extends Vue {
           // symbol:"circle", //设置折线点定位实心点
           itemStyle: {
             normal: {
-              color: '#FFD000',
+              color: '#147EE8',
               lineStyle: {
-                color: '#FFD000',
+                color: '#147EE8',
               },
             },
             emphasis: {
               color: '#fff',
               borderWidth: 5,
-              borderColor: '#FFC100',
+              borderColor: '#2A8BED',
             },
           },
 
@@ -157,16 +157,16 @@ export default class extends Vue {
           // symbol:"circle", //设置折线点定位实心点
           itemStyle: {
             normal: {
-              color: '#FD7F7F',
+              color: '#268D59',
               lineStyle: {
-                color: '#FD7F7F',
+                color: '#268D59',
               },
             },
             emphasis: {
               // 圆点颜色
               color: '#fff',
               borderWidth: 5,
-              borderColor: '#FD7F7F',
+              borderColor: '#4AA873',
             },
           },
 

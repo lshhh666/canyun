@@ -74,7 +74,7 @@ export default class extends Vue {
           type: 'bar',
           showBackground: true,
           backgroundStyle: {
-            color: '#F3F4F7',
+            color: '#EDF1F4',
           },
           barWidth: 20,
           barGap: '80%' /*多个并排柱子设置柱子之间的间距*/,
@@ -93,15 +93,15 @@ export default class extends Vue {
                 0, // 渐变色的起止位置, 右/下/左/上
                 [
                   // offset 位置
-                  { offset: 0, color: '#FFBD00' },
-                  { offset: 1, color: '#FFD000' },
+                  { offset: 0, color: '#147EE8' },
+                  { offset: 1, color: '#63AEF2' },
                 ]
               ),
               label: {
                 //内容样式
                 show: true,
                 formatter: '{@score}',
-                color: '#333',
+                color: '#1F3449',
                 // position: "insideLeft", //内部左对齐
                 position: ['8', '5'], //自定义位置第一个参数为x轴方向，第二个参数为y轴方向，左上角为起点，向右向下为正数，向上向左为负数
               },
