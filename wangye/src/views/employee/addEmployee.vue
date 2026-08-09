@@ -1,8 +1,7 @@
 <template>
-  <div class="addBrand-container">
-    <HeadLable :title="title"
-               :goback="true" />
-    <div class="container">
+  <main class="cm-page addBrand-container management-form">
+    <PageHeader :title="title" description="设置员工账号与基础身份信息" />
+    <div class="container cm-surface">
       <el-form ref="ruleForm"
                :model="ruleForm"
                :rules="rules"
@@ -89,18 +88,18 @@
         </div>
       </el-form>
     </div>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import HeadLable from '@/components/HeadLable/index.vue'
+import PageHeader from '@/components/PageHeader/index.vue'
 import { queryEmployeeById, addEmployee, editEmployee } from '@/api/employee'
 
 @Component({
   name: 'addShop',
   components: {
-    HeadLable
+    PageHeader
   }
 })
 export default class extends Vue {

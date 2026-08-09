@@ -1,7 +1,8 @@
 <template>
-  <div class="dashboard-container">
-    <div class="container">
-      <div class="tableBar">
+  <main class="cm-page dashboard-container management-list">
+    <PageHeader title="菜品管理" description="维护菜品信息、价格、分类与售卖状态" />
+    <div class="container cm-surface">
+      <div class="tableBar cm-filter-bar">
         <label style="margin-right: 10px">菜品名称：</label>
         <el-input v-model="input"
                   placeholder="请填写菜品名称"
@@ -86,10 +87,10 @@
         </el-table-column>
         <el-table-column label="售卖状态">
           <template slot-scope="scope">
-            <div class="tableColumn-status"
-                 :class="{ 'stop-use': String(scope.row.status) === '0' }">
-              {{ String(scope.row.status) === '0' ? '停售' : '启售' }}
-            </div>
+            <StatusTag
+              :status="String(scope.row.status) === '0' ? 'neutral' : 'success'"
+              :text="String(scope.row.status) === '0' ? '停售' : '启售'"
+            />
           </template>
         </el-table-column>
         <el-table-column prop="updateTime"
@@ -123,8 +124,11 @@
           </template>
         </el-table-column>
       </el-table>
-      <Empty v-else
-             :is-search="isSearch" />
+      <EmptyState
+        v-else
+        :title="isSearch ? '未找到符合条件的菜品' : '暂无菜品'"
+        description="新建菜品后会显示在这里"
+      />
       <el-pagination v-if="counts > 10"
                      class="pageList"
                      :page-sizes="[10, 20, 30, 40]"
@@ -134,12 +138,13 @@
                      @size-change="handleSizeChange"
                      @current-change="handleCurrentChange" />
     </div>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import HeadLable from '@/components/HeadLable/index.vue'
+import PageHeader from '@/components/PageHeader/index.vue'
+import StatusTag from '@/components/StatusTag/index.vue'
 import {
   getDishPage,
   editDish,
@@ -147,16 +152,15 @@ import {
   dishStatusByStatus,
   dishCategoryList
 } from '@/api/dish'
-import InputAutoComplete from '@/components/InputAutoComplete/index.vue'
-import Empty from '@/components/Empty/index.vue'
+import EmptyState from '@/components/EmptyState/index.vue'
 import { baseUrl } from '@/config.json'
 
 @Component({
   name: 'DishType',
   components: {
-    HeadLable,
-    InputAutoComplete,
-    Empty
+    PageHeader,
+    StatusTag,
+    EmptyState
   }
 })
 export default class extends Vue {

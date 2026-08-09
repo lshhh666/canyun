@@ -1,7 +1,8 @@
 <template>
-  <div class="dashboard-container">
-    <div class="container">
-      <div class="tableBar">
+  <main class="cm-page dashboard-container management-list">
+    <PageHeader title="员工管理" description="管理门店员工账号与使用状态" />
+    <div class="container cm-surface">
+      <div class="tableBar cm-filter-bar">
         <label style="margin-right: 5px">员工姓名：</label>
         <el-input
           v-model="input"
@@ -33,12 +34,10 @@
         <el-table-column prop="phone" label="手机号" />
         <el-table-column label="账号状态">
           <template slot-scope="scope">
-            <div
-              class="tableColumn-status"
-              :class="{ 'stop-use': String(scope.row.status) === '0' }"
-            >
-              {{ String(scope.row.status) === '0' ? '禁用' : '启用' }}
-            </div>
+            <StatusTag
+              :status="String(scope.row.status) === '0' ? 'neutral' : 'success'"
+              :text="String(scope.row.status) === '0' ? '禁用' : '启用'"
+            />
           </template>
         </el-table-column>
         <el-table-column prop="updateTime" label="最后操作时间" />
@@ -71,7 +70,11 @@
           </template>
         </el-table-column>
       </el-table>
-      <Empty v-else :is-search="isSearch" />
+      <EmptyState
+        v-else
+        :title="isSearch ? '未找到符合条件的员工' : '暂无员工账号'"
+        description="新增员工后，账号会显示在这里"
+      />
       <el-pagination
         class="pageList"
         :page-sizes="[10, 20, 30, 40]"
@@ -82,23 +85,23 @@
         @current-change="handleCurrentChange"
       />
     </div>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import HeadLable from '@/components/HeadLable/index.vue'
+import PageHeader from '@/components/PageHeader/index.vue'
+import StatusTag from '@/components/StatusTag/index.vue'
 import { getEmployeeList, enableOrDisableEmployee } from '@/api/employee'
 import { UserModule } from '@/store/modules/user'
-import InputAutoComplete from '@/components/InputAutoComplete/index.vue'
-import Empty from '@/components/Empty/index.vue'
+import EmptyState from '@/components/EmptyState/index.vue'
 
 @Component({
   name: 'Employee',
   components: {
-    HeadLable,
-    InputAutoComplete,
-    Empty,
+    PageHeader,
+    StatusTag,
+    EmptyState,
   },
 })
 export default class extends Vue {

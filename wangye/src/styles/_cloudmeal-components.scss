@@ -94,3 +94,74 @@
 .el-pagination.is-background .el-pager li:not(.disabled).active {
   background-color: $cm-primary;
 }
+
+// Shared list-page archetype used by category, employee, dish and set-meal.
+.management-list {
+  > .container {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .cm-filter-bar {
+    margin: 0;
+    border: 0;
+    border-bottom: 1px solid $cm-border;
+    border-radius: 0;
+  }
+
+  .normal-btn {
+    margin-left: $cm-space-2;
+    color: #ffffff;
+    background: $cm-primary;
+    border-color: $cm-primary;
+  }
+
+  .tableBox {
+    border: 0;
+  }
+
+  .pageList {
+    padding: 18px $cm-space-5;
+    margin: 0;
+    text-align: right;
+    border-top: 1px solid $cm-border;
+  }
+
+  .blueBug { color: $cm-primary; }
+  .delBut { color: $cm-danger; }
+}
+
+// Shared add/edit form archetype. Existing model names, rules and submit
+// handlers remain owned by each business view.
+.management-form {
+  > .container {
+    max-width: 1120px;
+    padding: 28px 32px;
+    margin: 0;
+  }
+
+  .demo-ruleForm {
+    max-width: 960px;
+  }
+
+  .el-form-item__label {
+    color: $cm-text-regular;
+  }
+
+  .el-input,
+  .el-select,
+  .el-textarea {
+    max-width: 420px;
+  }
+
+  .address .el-textarea {
+    max-width: 680px;
+  }
+
+  .subBox {
+    padding-top: $cm-space-5;
+    margin-top: $cm-space-6;
+    border-top: 1px solid $cm-border;
+  }
+}

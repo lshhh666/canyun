@@ -1,8 +1,12 @@
 <template>
-  <div :key="vueRest"
-       class="addBrand-container">
+  <main :key="vueRest"
+       class="cm-page addBrand-container management-form">
+    <PageHeader
+      :title="actionType === 'edit' ? '编辑菜品' : '新增菜品'"
+      description="维护菜品分类、价格、口味、图片和描述"
+    />
     <div :key="restKey"
-         class="container">
+         class="container cm-surface">
       <el-form ref="ruleForm"
                :model="ruleForm"
                :rules="rules"
@@ -118,12 +122,12 @@
         </div>
       </el-form>
     </div>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator'
-import HeadLable from '@/components/HeadLable/index.vue'
+import PageHeader from '@/components/PageHeader/index.vue'
 import SelectInput from './components/SelectInput.vue'
 import ImageUpload from '@/components/ImgUpload/index.vue'
 // getFlavorList口味列表暂时不做 getDishTypeList
@@ -139,7 +143,7 @@ import { getToken } from '@/utils/cookies'
 @Component({
   name: 'addShop',
   components: {
-    HeadLable,
+    PageHeader,
     SelectInput,
     ImageUpload
   }

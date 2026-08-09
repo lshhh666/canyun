@@ -1,7 +1,8 @@
 <template>
-  <div class="dashboard-container">
-    <div class="container">
-      <div class="tableBar"
+  <main class="cm-page dashboard-container management-list">
+    <PageHeader title="分类管理" description="维护菜品与套餐的分类、排序和启用状态" />
+    <div class="container cm-surface">
+      <div class="tableBar cm-filter-bar"
            style="display: inline-block; width: 100%">
         <label style="margin-right: 10px">分类名称：</label>
         <el-input v-model="name"
@@ -58,10 +59,10 @@
                          label="排序" />
         <el-table-column label="状态">
           <template slot-scope="scope">
-            <div class="tableColumn-status"
-                 :class="{ 'stop-use': String(scope.row.status) === '0' }">
-              {{ String(scope.row.status) === '0' ? '禁用' : '启用' }}
-            </div>
+            <StatusTag
+              :status="String(scope.row.status) === '0' ? 'neutral' : 'success'"
+              :text="String(scope.row.status) === '0' ? '禁用' : '启用'"
+            />
           </template>
         </el-table-column>
         <el-table-column prop="updateTime"
@@ -95,8 +96,11 @@
           </template>
         </el-table-column>
       </el-table>
-      <Empty v-else
-             :is-search="isSearch" />
+      <EmptyState
+        v-else
+        :title="isSearch ? '未找到符合条件的分类' : '暂无分类'"
+        description="可通过右上角按钮新增菜品或套餐分类"
+      />
       <el-pagination v-if="counts > 10"
                      class="pageList"
                      :page-sizes="[10, 20, 30, 40]"
@@ -145,12 +149,13 @@
         </el-button>
       </span>
     </el-dialog>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import HeadLable from '@/components/HeadLable/index.vue'
+import PageHeader from '@/components/PageHeader/index.vue'
+import StatusTag from '@/components/StatusTag/index.vue'
 import {
   getCategoryPage,
   deleCategory,
@@ -158,13 +163,14 @@ import {
   addCategory,
   enableOrDisableEmployee
 } from '@/api/category'
-import Empty from '@/components/Empty/index.vue'
+import EmptyState from '@/components/EmptyState/index.vue'
 
 @Component({
   name: 'Category',
   components: {
-    HeadLable,
-    Empty
+    PageHeader,
+    StatusTag,
+    EmptyState
   }
 })
 export default class extends Vue {

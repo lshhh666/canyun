@@ -1,6 +1,10 @@
 <template>
-  <div class="addBrand-container">
-    <div class="container">
+  <main class="cm-page addBrand-container management-form">
+    <PageHeader
+      :title="actionType === 'edit' ? '编辑套餐' : '新增套餐'"
+      description="选择套餐菜品并维护价格、图片和描述"
+    />
+    <div class="container cm-surface">
       <el-form ref="ruleForm"
                :model="ruleForm"
                :rules="rules"
@@ -172,12 +176,12 @@
                    @click="addTableList">添 加</el-button>
       </span>
     </el-dialog>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import HeadLable from '@/components/HeadLable/index.vue'
+import PageHeader from '@/components/PageHeader/index.vue'
 import ImageUpload from '@/components/ImgUpload/index.vue'
 import AddDish from './components/AddDish.vue'
 import { querySetmealById, addSetmeal, editSetmeal } from '@/api/setMeal'
@@ -187,7 +191,7 @@ import { baseUrl } from '@/config.json'
 @Component({
   name: 'addShop',
   components: {
-    HeadLable,
+    PageHeader,
     AddDish,
     ImageUpload
   }
