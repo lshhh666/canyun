@@ -20,7 +20,8 @@ export default class extends Vue {}
 
 <style lang="scss" scoped>
 .app-main {
-  height: calc(100% - 64px);
+  height: calc(100% - #{$cm-topbar-height});
   overflow-y: auto;
+  background: $cm-page-bg;
 }
 </style>

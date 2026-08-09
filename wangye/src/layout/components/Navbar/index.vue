@@ -656,3 +656,55 @@ export default class extends Vue {
 //   display: none !important;
 // }
 </style>
+
+<style lang="scss" scoped>
+@import '@/styles/brand-tokens';
+
+.navbar {
+  height: $cm-topbar-height;
+  background: $cm-surface;
+  border-bottom: 1px solid $cm-border;
+}
+
+.navbar .statusBox,
+.navbar .right-menu,
+.navbar .rightStatus {
+  height: $cm-topbar-height;
+}
+
+.navbar .rightStatus {
+  line-height: $cm-topbar-height;
+}
+
+.navbar .right-menu {
+  margin-right: 20px;
+  color: $cm-text-regular;
+}
+
+.navbar .right-menu span:hover {
+  background: $cm-page-bg;
+}
+
+.navbar .avatar-wrapper {
+  margin-top: 12px;
+}
+
+.navbar .avatar-wrapper .el-button--primary {
+  color: $cm-text-regular;
+  background: $cm-page-bg;
+  border: 1px solid $cm-border;
+}
+
+.navbar .businessBtn {
+  color: #267b53;
+  background: #e9f6ef;
+  border-color: #cfeada;
+  border-radius: 999px;
+}
+
+.navbar .businessBtn.closing {
+  color: #667587;
+  background: #eef1f4;
+  border-color: #dfe5eb;
+}
+</style>

@@ -1,24 +1,10 @@
 <template>
   <div>
     <div class="logo">
-      <!-- <img
-        src="./../../../assets/logo.png"
-        width="122.5"
-        alt=""
-      > -->
-      <!-- <img
-        src="@/assets/login/login-logo.png"
-        alt=""
-        style="width: 120px; height: 31px"
-      /> -->
-      <div v-if="!isCollapse"
-           class="sidebar-logo">
-        <img src="@/assets/login/logo.png"
-             style="width: 120px; height: 31px">
-      </div>
-      <div v-else
-           class="sidebar-logo-mini">
-        <img src="@/assets/login/mini-logo.png">
+      <img src="@/assets/brand/cloudmeal-logo.png" alt="餐云 Logo">
+      <div v-if="!isCollapse" class="sidebar-brand">
+        <strong>餐云</strong>
+        <span>CloudMeal</span>
       </div>
     </div>
     <el-scrollbar wrap-class="scrollbar-wrapper">
@@ -134,29 +120,41 @@ export default class extends Vue {
 
 <style lang="scss" scoped>
 .logo {
-  text-align: center;
-  background-color: #ffc100;
-  padding: 15px 0 0;
-  height: 60px;
+  display: flex;
+  align-items: center;
+  height: $cm-topbar-height;
+  padding: 0 18px;
+  background-color: $cm-nav;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
   img {
-    display: inline-block;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
   }
 }
-.sidebar-logo-mini {
-  img {
-    width: 30px;
-    height: 30px;
-  }
+
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: 10px;
+  text-align: left;
+
+  strong { color: #fff; font-size: 16px; line-height: 20px; font-weight: 600; }
+  span { color: #7890a8; font-size: 10px; line-height: 14px; letter-spacing: 0.6px; }
 }
+
 .el-scrollbar {
-  height: 100%;
-  background-color: rgb(52, 55, 68);
+  height: calc(100% - #{$cm-topbar-height});
+  background-color: $cm-nav;
 }
 
 .el-menu {
   border: none;
-  height: calc(95vh - 23px);
+  min-height: 100%;
   width: 100% !important;
-  padding: 47px 15px 0;
+  padding: 18px 12px;
 }
 </style>

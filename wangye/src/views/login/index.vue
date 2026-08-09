@@ -1,39 +1,49 @@
 <template>
-  <div class="login">
-    <div class="login-box">
-      <img src="@/assets/login/login-l.png" alt="" />
-      <div class="login-form">
+  <main class="cm-login">
+    <section class="cm-login__brand">
+      <div class="cm-login__identity">
+        <img src="@/assets/brand/cloudmeal-logo.png" alt="餐云 Logo" />
+        <strong>餐云管理平台</strong>
+      </div>
+      <div class="cm-login__promise">
+        <span>CloudMeal · 餐饮经营管理</span>
+        <h1>让门店经营更清晰</h1>
+        <p>订单、商品与经营数据集中管理，为每一次出餐提供可靠支持。</p>
+      </div>
+      <p class="cm-login__copyright">餐云 CloudMeal</p>
+    </section>
+
+    <section class="cm-login__panel">
+      <div class="cm-login__form-wrap">
+        <header>
+          <h2>登录餐云</h2>
+          <p>使用门店管理员账号继续</p>
+        </header>
         <el-form ref="loginForm" :model="loginForm" :rules="loginRules">
-          <div class="login-form-title">
-            <img
-              src="@/assets/login/icon_logo.png"
-              style="width: 149px; height: 38px"
-              alt=""
-            />
-            <!-- <span class="title-label">苍穹外卖</span> -->
-          </div>
+          <label class="cm-login__label">账号</label>
           <el-form-item prop="username">
             <el-input
               v-model="loginForm.username"
               type="text"
               auto-complete="off"
-              placeholder="账号"
+              placeholder="请输入账号"
               prefix-icon="iconfont icon-user"
             />
           </el-form-item>
+          <label class="cm-login__label">密码</label>
           <el-form-item prop="password">
             <el-input
               v-model="loginForm.password"
               type="password"
-              placeholder="密码"
+              placeholder="请输入密码"
               prefix-icon="iconfont icon-lock"
               @keyup.enter.native="handleLogin"
             />
           </el-form-item>
-          <el-form-item style="width: 100%">
+          <el-form-item class="cm-login__submit">
             <el-button
               :loading="loading"
-              class="login-btn"
+              class="cm-login__button"
               size="medium"
               type="primary"
               style="width: 100%"
@@ -45,16 +55,15 @@
           </el-form-item>
         </el-form>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </template>
 
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator'
 import { Route } from 'vue-router'
-import { Form as ElForm, Input } from 'element-ui'
+import { Form as ElForm } from 'element-ui'
 import { UserModule } from '@/store/modules/user'
-import { isValidUsername } from '@/utils/validate'
 
 @Component({
   name: 'Login',
@@ -119,112 +128,100 @@ export default class extends Vue {
 </script>
 
 <style lang="scss">
-.login {
+@import '@/styles/brand-tokens';
+
+.cm-login {
+  display: grid;
+  grid-template-columns: minmax(480px, 1.08fr) minmax(440px, 0.92fr);
+  min-height: 100%;
+  background: $cm-surface;
+}
+
+.cm-login__brand {
+  position: relative;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100vh;
+  padding: 44px 56px 40px;
+  overflow: hidden;
+  color: #ffffff;
+  background: $cm-nav;
+
+  &::before,
+  &::after {
+    position: absolute;
+    content: '';
+    border: 1px solid rgba(75, 157, 232, 0.18);
+    border-radius: 50%;
+  }
+
+  &::before { width: 420px; height: 420px; right: -190px; top: 8%; }
+  &::after { width: 620px; height: 620px; left: -390px; bottom: -330px; }
+}
+
+.cm-login__identity,
+.cm-login__promise,
+.cm-login__copyright { position: relative; z-index: 1; }
+
+.cm-login__identity {
+  display: flex;
   align-items: center;
-  height: 100%;
-  // background: #476dbe;
-  background-color: #333;
+  gap: 12px;
+
+  img { width: 42px; height: 42px; border-radius: 10px; }
+  strong { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
 }
 
-.login-box {
-  width: 1000px;
-  height: 474.38px;
-  border-radius: 8px;
+.cm-login__promise {
+  max-width: 520px;
+  margin-bottom: 10vh;
+
+  span { color: #79b8ef; font-size: 13px; letter-spacing: 1.2px; }
+  h1 { margin: 18px 0 16px; font-size: 38px; line-height: 1.3; font-weight: 600; }
+  p { margin: 0; color: #b9c9d9; font-size: 15px; line-height: 1.9; }
+}
+
+.cm-login__copyright { margin: 0; color: #758ba1; font-size: 12px; }
+
+.cm-login__panel {
   display: flex;
-  img {
-    width: 60%;
-    height: auto;
-  }
-}
-
-.title {
-  margin: 0px auto 10px auto;
-  text-align: left;
-  color: #707070;
-}
-
-.login-form {
-  background: #ffffff;
-  width: 40%;
-  border-radius: 0px 8px 8px 0px;
-  display: flex;
-  justify-content: center;
   align-items: center;
-  .el-form {
-    width: 214px;
-    height: 307px;
-  }
-  .el-form-item {
-    margin-bottom: 30px;
-  }
-  .el-form-item.is-error .el-input__inner {
-    border: 0 !important;
-    border-bottom: 1px solid #fd7065 !important;
-    background: #fff !important;
-  }
-  .input-icon {
-    height: 32px;
-    width: 18px;
-    margin-left: -2px;
-  }
-  .el-input__inner {
-    border: 0;
-    border-bottom: 1px solid #e9e9e8;
-    border-radius: 0;
-    font-size: 12px;
-    font-weight: 400;
-    color: #333333;
-    height: 32px;
-    line-height: 32px;
-  }
-  .el-input__prefix {
-    left: 0;
-  }
-  .el-input--prefix .el-input__inner {
-    padding-left: 26px;
-  }
-  .el-input__inner::placeholder {
-    color: #aeb5c4;
-  }
-  .el-form-item--medium .el-form-item__content {
-    line-height: 32px;
-  }
-  .el-input--medium .el-input__icon {
-    line-height: 32px;
-  }
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px;
+  background: #f8fafc;
 }
 
-.login-btn {
-  border-radius: 17px;
-  padding: 11px 20px !important;
-  margin-top: 10px;
-  font-weight: 500;
-  font-size: 12px;
-  border: 0;
-  font-weight: 500;
-  color: #333333;
-  // background: #09a57a;
-  background-color: #ffc200;
-  &:hover,
-  &:focus {
-    // background: #09a57a;
-    background-color: #ffc200;
-    color: #ffffff;
-  }
+.cm-login__form-wrap {
+  width: 100%;
+  max-width: 380px;
+  padding: 36px 40px 40px;
+  background: $cm-surface;
+  border: 1px solid $cm-border;
+  border-radius: $cm-radius-lg;
+
+  header { margin-bottom: 30px; }
+  h2 { margin: 0 0 8px; color: $cm-text-primary; font-size: 24px; font-weight: 600; }
+  header p { margin: 0; color: $cm-text-secondary; font-size: 13px; }
+  .el-form-item { margin-bottom: 22px; }
+  .el-input__inner { height: 42px; padding-left: 38px; color: $cm-text-primary; }
+  .el-input__icon { line-height: 42px; }
 }
-.login-form-title {
-  height: 36px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 40px;
-  .title-label {
-    font-weight: 500;
-    font-size: 20px;
-    color: #333333;
-    margin-left: 10px;
-  }
+
+.cm-login__label {
+  display: block;
+  margin-bottom: 8px;
+  color: $cm-text-regular;
+  font-size: 13px;
+}
+
+.cm-login__submit { margin: 30px 0 0 !important; }
+.cm-login__button { height: 42px; border-radius: $cm-radius-md; font-size: 14px; }
+
+@media (max-width: 960px) {
+  .cm-login { grid-template-columns: 1fr; }
+  .cm-login__brand { display: none; }
+  .cm-login__panel { padding: 24px; }
 }
 </style>

@@ -50,16 +50,16 @@ export default class extends mixins(ResizeMixin) {
   position: relative;
   height: 100%;
   width: 100%;
-  min-width: 1366px;
-  overflow-x: auto;
+  min-width: 1000px;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
 .main-container {
   height: 100%;
-  background: #f3f4f7;
+  background: $cm-page-bg;
   position: relative;
-  width: calc(100% - 190px);
+  width: calc(100% - #{$sideBarWidth});
 }
 
 .drawer-bg {
@@ -76,7 +76,7 @@ export default class extends mixins(ResizeMixin) {
   min-height: 100%;
   transition: margin-left 0.28s;
   margin-left: $sideBarWidth;
-  background: $gray-5;
+  background: $cm-page-bg;
   position: relative;
 }
 
@@ -95,12 +95,12 @@ export default class extends mixins(ResizeMixin) {
 
 .hideSidebar {
   .main-container {
-    margin-left: 80px;
-    width: calc(100% - 80px);
+    margin-left: 72px;
+    width: calc(100% - 72px);
   }
 
   .sidebar-container {
-    width: 80px !important;
+    width: 72px !important;
   }
 }
 
