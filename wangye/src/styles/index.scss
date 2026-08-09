@@ -3,6 +3,7 @@
 @import './transition.scss';
 @import './svgicon.scss';
 @import './sidebar.scss';
+@import './brand-tokens.scss';
 /* Global scss */
 
 body {
@@ -16181,3 +16182,6 @@ input[type="number"] {
     }
   }
 }
+
+// CloudMeal overrides must load after the legacy global rules.
+@import './cloudmeal-components.scss';

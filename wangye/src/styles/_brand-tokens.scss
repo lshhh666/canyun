@@ -1,0 +1,42 @@
+// CloudMeal (餐云) admin design tokens — C2 restrained commercial style.
+
+// Brand and navigation
+$cm-nav: #162b42;
+$cm-nav-active: #173e67;
+$cm-primary: #147ee8;
+$cm-primary-hover: #2a8bed;
+$cm-primary-active: #0f6fce;
+
+// Surfaces and borders
+$cm-page-bg: #f5f7f9;
+$cm-surface: #ffffff;
+$cm-border: #dfe5eb;
+
+// Typography
+$cm-text-primary: #1f3449;
+$cm-text-regular: #506276;
+$cm-text-secondary: #7b8998;
+
+// Semantic colors
+$cm-success: #268d59;
+$cm-warning: #d99025;
+$cm-danger: #d95656;
+$cm-info: #2385df;
+
+// Shape and spacing
+$cm-radius-sm: 4px;
+$cm-radius-md: 6px;
+$cm-radius-lg: 8px;
+$cm-space-1: 4px;
+$cm-space-2: 8px;
+$cm-space-3: 12px;
+$cm-space-4: 16px;
+$cm-space-5: 20px;
+$cm-space-6: 24px;
+$cm-space-8: 32px;
+
+// Application shell
+$cm-sidebar-width: 208px;
+$cm-topbar-height: 56px;
+$cm-content-max-width: 1920px;
+$cm-overlay-shadow: 0 12px 32px rgba(22, 43, 66, 0.16);

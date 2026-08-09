@@ -1,30 +1,32 @@
 /* Variables */
 
+@import './brand-tokens';
+
 // Base color
-$mine:#FFC200;
-$loginBg: #FFCFAC;
-$blue:#2892E5;
-$green: #1DC779;
-$yellow:#FFB302;
-$pink: #F56C6C;
+$mine: $cm-primary;
+$loginBg: $cm-page-bg;
+$blue: $cm-info;
+$green: $cm-success;
+$yellow: $cm-warning;
+$pink: $cm-danger;
 $block:#000;
-$gray-1: #20232A;
-$gray-2: #818693;
-$gray-3: #BAC0CD;
-$gray-4: #D8DDE3;
-$gray-5: #F3F4F7;
-$gray-6: #EBEEF5;
-$bgColor: #FAFAFB;
-$white: #fff;
+$gray-1: $cm-text-primary;
+$gray-2: $cm-text-regular;
+$gray-3: $cm-text-secondary;
+$gray-4: $cm-border;
+$gray-5: $cm-page-bg;
+$gray-6: #edf1f4;
+$bgColor: $cm-page-bg;
+$white: $cm-surface;
 
 // Sidebar
-$sideBarWidth: 190px;
-$subMenuBg:#272A36;
-$subMenuHover:#272A36;
+$sideBarWidth: $cm-sidebar-width;
+$subMenuBg: $cm-nav;
+$subMenuHover: $cm-nav-active;
 $subMenuActiveText:#f4f4f5;
-$menuBg:#343744;
-$menuText:#bfcbd9;
-$menuActiveText:$mine; //Also see settings.sidebarTextTheme
+$menuBg: $cm-nav;
+$menuText: #b9c7d5;
+$menuActiveText: #ffffff; // Also see settings.sidebarTextTheme
 
 // Login page
 $lightGray: #080808;

@@ -1,0 +1,96 @@
+@import './brand-tokens';
+
+// Shared CloudMeal page primitives. These classes intentionally stay small so
+// legacy pages can adopt the new visual language incrementally.
+.cm-page {
+  min-height: 100%;
+  padding: $cm-space-6;
+  background: $cm-page-bg;
+  color: $cm-text-primary;
+}
+
+.cm-surface {
+  background: $cm-surface;
+  border: 1px solid $cm-border;
+  border-radius: $cm-radius-lg;
+}
+
+.cm-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $cm-space-3 $cm-space-4;
+  padding: $cm-space-4 $cm-space-5;
+  margin-bottom: $cm-space-4;
+  background: $cm-surface;
+  border: 1px solid $cm-border;
+  border-radius: $cm-radius-lg;
+}
+
+.cm-section-title {
+  margin: 0;
+  color: $cm-text-primary;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+// Element UI brand alignment. Kept here, after the legacy stylesheet, so the
+// existing behaviour remains intact while visual values become consistent.
+.el-button {
+  border-radius: $cm-radius-md;
+  font-weight: 400;
+}
+
+.el-button--primary {
+  background-color: $cm-primary;
+  border-color: $cm-primary;
+
+  &:hover,
+  &:focus {
+    background-color: $cm-primary-hover;
+    border-color: $cm-primary-hover;
+  }
+
+  &:active {
+    background-color: $cm-primary-active;
+    border-color: $cm-primary-active;
+  }
+}
+
+.el-input__inner,
+.el-textarea__inner,
+.el-select .el-input__inner {
+  border-color: $cm-border;
+  border-radius: $cm-radius-md;
+}
+
+.el-table {
+  color: $cm-text-regular;
+
+  th {
+    color: $cm-text-primary;
+    font-weight: 600;
+    background: #f8fafc;
+  }
+
+  td,
+  th.is-leaf {
+    border-bottom-color: $cm-border;
+  }
+}
+
+.el-dialog {
+  border-radius: $cm-radius-lg;
+  box-shadow: $cm-overlay-shadow;
+}
+
+.el-dialog__header {
+  background: $cm-surface;
+  border-bottom: 1px solid $cm-border;
+  border-radius: $cm-radius-lg $cm-radius-lg 0 0;
+}
+
+.el-pagination.is-background .el-pager li:not(.disabled).active {
+  background-color: $cm-primary;
+}
