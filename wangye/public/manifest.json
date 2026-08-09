@@ -1,6 +1,6 @@
 {
-  "name": "苍穹外卖",
-  "short_name": "Vue Ts Admin",
+  "name": "餐云管理平台",
+  "short_name": "餐云",
   "icons": [
     {
       "src": "./img/icons/android-chrome-192x192.png",
@@ -15,6 +15,6 @@
   ],
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#fff",
-  "theme_color": "#4DBA87"
+  "background_color": "#F5F7F9",
+  "theme_color": "#147EE8"
 }

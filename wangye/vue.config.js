@@ -1,5 +1,5 @@
 const path = require('path')
-const name = 'Vue Typescript Admin'
+const name = '餐云管理平台'
 const IS_PROD = ['production', 'development'].includes(process.env.NODE_ENV)
 
 module.exports = {
@@ -20,8 +20,8 @@ module.exports = {
   // 开启代理
   devServer: {
     host:'0.0.0.0',
-    public: '0.0.0.0:8888', // 本地的ip:端口号
-    port: 8888,
+    public: '0.0.0.0:8090', // 本地的ip:端口号
+    port: 8090,
     open: true,
     disableHostCheck:true,
     hot:true,//自动保存
