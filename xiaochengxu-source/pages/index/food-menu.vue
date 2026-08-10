@@ -2,9 +2,9 @@
 	<view style="flex:1;background-color: #f1f2f5;">
 		<scroll-view scroll-y="true" :style="{height:swiperHeight+'px',width:swiperWidth+'px'}">
 			 <block v-for="(tab,index) in tabBars" :key="tab.id">
-				<view 
-				class="swiper-tab-list" 
-				:class="{'active':(tabIndexShow===index)}" 
+				<view
+				class="swiper-tab-list"
+				:class="{'active':(tabIndexShow===index)}"
 				@tap="tabtap(index)">
 					{{tab.name}} {{tab.num?tab.num:''}}
 					<view class="swiper-tab-line"></view>

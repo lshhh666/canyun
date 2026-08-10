@@ -173,7 +173,7 @@
 					opacity: $disable;
 				}
 			}
-			
+
 		}
 	}
 </style>

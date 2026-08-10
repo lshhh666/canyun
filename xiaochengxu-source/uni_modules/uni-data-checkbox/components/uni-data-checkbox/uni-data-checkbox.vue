@@ -405,7 +405,7 @@
 					let selectedColor = this.selectedColor?this.selectedColor:'#2979ff'
 					styles['background-color'] = item.selected?selectedColor:'#fff'
 					styles['border-color'] = item.selected?selectedColor:'#DCDFE6'
-					
+
 					if(!item.selected && item.disabled){
 						styles['background-color'] = '#F2F6FC'
 						styles['border-color'] = item.selected?selectedColor:'#DCDFE6'

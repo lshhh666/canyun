@@ -31,7 +31,7 @@ export const getMoreNorm = (params) =>
 		params,
 	})
 
-// 获取菜品分类列表	
+// 获取菜品分类列表
 export const getList = (params) =>
 	request({
 		url: `/user/dish/category`,
@@ -39,7 +39,7 @@ export const getList = (params) =>
 		params,
 	})
 
-// 获取菜品详情	
+// 获取菜品详情
 export const getDishDetail = (params) =>
 	request({
 		url: `/user/dish/setmealDishList/${params.setmealId}`,
@@ -79,7 +79,7 @@ export const clearOrder = (params) =>
 		params
 	})
 
-// 提交订单 
+// 提交订单
 export const payOrder = (params) =>
 	request({
 		url: `/user/order/pay/${params.tableId}/${params.jsCode}`,
@@ -173,7 +173,7 @@ export const newAddShoppingCartAdd = (params) => {
 }
 
 
-// 购物车减菜接口-new 
+// 购物车减菜接口-new
 export const newShoppingCartSub = (params) => {
 	return request({
 		url: '/user/shoppingCart/sub',
@@ -365,5 +365,3 @@ export const queryOrdersCheckStatus = (params) =>
 		method: 'get',
 		params
 	})
-
-

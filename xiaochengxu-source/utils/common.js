@@ -1,4 +1,4 @@
-	import {  
+	import {
 		reminderOrder,
 		cancelOrder,
 		delShoppingCart,
@@ -38,7 +38,7 @@ export default {
 				this.showConfirm=false
 				this.$refs.commonPopup.open(type)
 				this.textTip='请联系商家进行取消！'
-			}	
+			}
 		},
 		// 再来一单
 		async oneMoreOrder(id){

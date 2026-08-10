@@ -86,7 +86,7 @@ page {
 /*checkbox 选项框大小  */
 /* uni-checkbox .uni-checkbox-input {
 		width: 30rpx !important;
-		height: 30rpx !important; 
+		height: 30rpx !important;
 	} */
 /*checkbox选中后样式  */
 /* uni-checkbox .uni-checkbox-input.uni-checkbox-input-checked {
@@ -96,7 +96,7 @@ page {
 /*checkbox选中后图标样式  */
 /* uni-checkbox .uni-checkbox-input.uni-checkbox-input-checked::before {
 		width: 20rpx;
-		height: 20rpx;  
+		height: 20rpx;
 		line-height: 20rpx;
 		text-align: center;
 		font-size: 18rpx;

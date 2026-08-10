@@ -10,7 +10,7 @@
 		<slot></slot>
 	</view>
 	<!-- #endif -->
-	
+
 </template>
 
 <script>

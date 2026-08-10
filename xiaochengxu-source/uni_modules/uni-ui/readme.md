@@ -1,9 +1,9 @@
 > 当前插件不包含示例页面 ,如需示例请在 HBuiderX 中新建 `hello uni-app > 扩展组件` 中查看
-> 
+>
 > 代码示例地址 ：[https://ext.dcloud.net.cn/plugin?id=4941](https://ext.dcloud.net.cn/plugin?id=4941)
-> 
+>
 > 组件演示地址：[https://hellouniapp.dcloud.net.cn](https://hellouniapp.dcloud.net.cn/pages/extUI/badge/badge)
-> 
+>
 > 组件文档地址：[https://uniapp.dcloud.io/component/uniui/uni-ui](https://uniapp.dcloud.io/component/uniui/uni-ui)
 
 # uni-ui 介绍
@@ -157,7 +157,7 @@ uni-ui支持 HBuilderX直接新建项目模板、npm安装和单独导入个别�
 
 
 
-### npm安装 
+### npm安装
 在 `vue-cli` 项目中可以使用 `npm` 安装 `uni-ui` 库 ，或者直接在 `HBuilderX` 项目中使用 `npm` 。
 
 > **注意**
@@ -178,7 +178,7 @@ uni-ui支持 HBuilderX直接新建项目模板、npm安装和单独导入个别�
 
 - 安装 sass
 ```
- npm i sass -D   或   yarn add sass -D  
+ npm i sass -D   或   yarn add sass -D
 ```
 
 - 安装 sass-loader
@@ -213,7 +213,7 @@ npm i @dcloudio/uni-ui   或   yarn add @dcloudio/uni-ui
 			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
 		}
 	},
-	
+
 	// 其他内容
 	pages:[
 		// ...
@@ -222,7 +222,7 @@ npm i @dcloudio/uni-ui   或   yarn add @dcloudio/uni-ui
 
 ```
 
-在 ``template`` 中使用组件： 
+在 ``template`` 中使用组件：
 
 ```html
 <uni-badge text="1"></uni-badge>

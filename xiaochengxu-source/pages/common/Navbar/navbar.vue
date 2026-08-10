@@ -26,7 +26,7 @@ export default {
 		// 	return num
 		// }
 		ht: function () {
-			let res = uni.getMenuButtonBoundingClientRect() 
+			let res = uni.getMenuButtonBoundingClientRect()
 			return res.top +5
 		}
 	},

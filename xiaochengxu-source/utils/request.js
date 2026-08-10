@@ -9,16 +9,16 @@ export function request({url='', params={}, method='GET'}) {
 	let header = {
 			'Accept': 'application/json',
 			'Access-Control-Allow-Origin':'*',
-			'Content-Type': 'application/json', 
+			'Content-Type': 'application/json',
 			// 'shopid':storeInfo.storeInfo.shopId ?? '',
 			// 'storeid':storeInfo.storeInfo.storeId ?? '',
 			'authentication': storeInfo.token
 		}
-	
+
 	const requestRes = new Promise((resolve, reject) => {
 		store.commit('setLodding', false)
 		 uni.request({
-			url: baseUrl+url, 
+			url: baseUrl+url,
 			data: params,
 			header: header,
 			method: method,
@@ -41,4 +41,3 @@ export function request({url='', params={}, method='GET'}) {
 	})
 	return requestRes
 }
-

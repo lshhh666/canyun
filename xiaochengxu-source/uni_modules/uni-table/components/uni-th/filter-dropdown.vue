@@ -293,7 +293,7 @@
 
 <style lang="scss">
 	$uni-primary: #1890ff !default;
-	
+
 	.flex-r {
 		display: flex;
 		flex-direction: row;

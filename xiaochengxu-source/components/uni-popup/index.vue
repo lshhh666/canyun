@@ -1,7 +1,7 @@
 <!--联系商家弹层-->
 <template>
   <view class="popup-content" :class="{ 'popup-height': type === 'left' || type === 'right' }">
-  	<text class="text">请联系商家进行取消！</text>
+	<text class="text">请联系商家进行取消！</text>
   </view>
 </template>
 <script src="../../pages/order/index.js"></script>
@@ -129,4 +129,3 @@
 		color: #333;
 	}
 </style>
-

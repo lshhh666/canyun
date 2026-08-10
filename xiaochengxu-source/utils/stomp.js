@@ -480,7 +480,7 @@
   Stomp.clearInterval = function(id) {
     return clearInterval(id);
   };
-  
+
   // if (typeof window !== "undefined" && window !== null) {
   //   Stomp.setInterval = function(interval, f) {
   //     return window.setInterval(f, interval);

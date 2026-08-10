@@ -9,7 +9,7 @@
 
 > **注意事项**
 > 为了避免错误使用，给大家带来不好的开发体验，请在使用组件前仔细阅读下面的注意事项，可以帮你避免一些错误。
-> - 本组件农历转换使用的js是 [@1900-2100区间内的公历、农历互转](https://github.com/jjonline/calendar.js)  
+> - 本组件农历转换使用的js是 [@1900-2100区间内的公历、农历互转](https://github.com/jjonline/calendar.js)
 > - 仅支持自定义组件模式
 > - `date`属性传入的应该是一个 String ，如： 2019-06-27 ，而不是 new Date()
 > - 通过 `insert` 属性来确定当前的事件是 @change 还是 @confirm 。理应合并为一个事件，但是为了区分模式，现使用两个事件，这里需要注意
@@ -28,9 +28,9 @@
 
 ```html
 <view>
-	<uni-calendar 
+	<uni-calendar
 	:insert="true"
-	:lunar="true" 
+	:lunar="true"
 	:start-date="'2019-3-2'"
 	:end-date="'2019-5-20'"
 	@change="change"
@@ -44,7 +44,7 @@
 
 ```html
 <view>
-	<uni-calendar 
+	<uni-calendar
 	ref="calendar"
 	:insert="false"
 	@confirm="confirm"

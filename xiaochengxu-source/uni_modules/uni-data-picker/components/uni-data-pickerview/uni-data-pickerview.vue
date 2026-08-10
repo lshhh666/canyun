@@ -2,7 +2,7 @@
   <view class="uni-data-pickerview">
     <scroll-view v-if="!isCloudDataList" class="selected-area" scroll-x="true">
       <view class="selected-list">
-          <view 
+          <view
             class="selected-item"
             v-for="(item,index) in selected"
             :key="index"
