@@ -1,43 +1,40 @@
 import store from './../store'
 import { baseUrl } from './env'
-// 参数： url:请求地址  param：请求参数  method：请求方式 callBack：回调函数
-export function request({url='', params={}, method='GET'}) {
-	uni.getStorage({
-		key: ''
-	})
-	const storeInfo = store.state
-	let header = {
-			'Accept': 'application/json',
-			'Access-Control-Allow-Origin':'*',
-			'Content-Type': 'application/json',
-			// 'shopid':storeInfo.storeInfo.shopId ?? '',
-			// 'storeid':storeInfo.storeInfo.storeId ?? '',
-			'authentication': storeInfo.token
-		}
 
-	const requestRes = new Promise((resolve, reject) => {
-		store.commit('setLodding', false)
-		 uni.request({
-			url: baseUrl+url,
-			data: params,
-			header: header,
-			method: method,
-			success: (res) => {
-				const { data } = res
-				if (data.code == 200 || data.code === 1) {
-					// store.commit('setLodding', false)
-					resolve(res.data)
-				}else{
-					// store.commit('setLodding', true)
-					reject(res.data)
-				}
-			},
-			fail: (err) => {
-				const error = {data:{msg:err.data}}
-				// store.commit('setLodding', true)
-				reject(error)
-			}
-		});
-	})
-	return requestRes
+export function request({ url = '', params = {}, method = 'GET' }) {
+  const header = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    authentication: store.state.token
+  }
+
+  return new Promise((resolve, reject) => {
+    uni.request({
+      url: baseUrl + url,
+      data: params,
+      header,
+      method,
+      success: res => {
+        const data = res.data || {}
+        if (data.code === 200 || data.code === 1) {
+          resolve(data)
+          return
+        }
+        if (res.statusCode === 401 || data.code === 401) {
+          store.commit('setToken', '')
+          uni.removeStorageSync('token')
+        }
+        reject({
+          code: data.code || res.statusCode,
+          message: data.msg || '请求失败，请稍后重试',
+          raw: res
+        })
+      },
+      fail: error => reject({
+        code: 'NETWORK_ERROR',
+        message: '网络连接失败，请检查网络后重试',
+        raw: error
+      })
+    })
+  })
 }
