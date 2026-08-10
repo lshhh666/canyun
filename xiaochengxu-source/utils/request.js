@@ -25,7 +25,7 @@ export function request({ url = '', params = {}, method = 'GET' }) {
           uni.removeStorageSync('token')
         }
         reject({
-          code: data.code || res.statusCode,
+          code: data.code ?? res.statusCode,
           message: data.msg || '请求失败，请稍后重试',
           raw: res
         })
