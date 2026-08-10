@@ -95,6 +95,44 @@
   background-color: $cm-primary;
 }
 
+.cm-primary-action {
+  color: #fff !important;
+  background-color: $cm-primary !important;
+  border-color: $cm-primary !important;
+
+  &:hover,
+  &:focus {
+    color: #fff !important;
+    background-color: $cm-primary-hover !important;
+    border-color: $cm-primary-hover !important;
+  }
+
+  &:active {
+    color: #fff !important;
+    background-color: $cm-primary-active !important;
+    border-color: $cm-primary-active !important;
+  }
+}
+
+.cm-query-action {
+  color: $cm-primary !important;
+  background: #fff !important;
+  border-color: $cm-primary !important;
+
+  &:hover,
+  &:focus {
+    color: $cm-primary-hover !important;
+    background: #e8f3fc !important;
+    border-color: $cm-primary-hover !important;
+  }
+}
+
+.statistics-page .li-tab.active {
+  color: $cm-primary !important;
+  background: #e8f3fc !important;
+  border-color: $cm-primary !important;
+}
+
 // Shared list-page archetype used by category, employee, dish and set-meal.
 .management-list {
   > .container {

@@ -12,11 +12,12 @@
           @clear="init"
           @keyup.enter.native="initFun"
         />
-        <el-button class="normal-btn continue" @click="init(true)"
+        <el-button class="normal-btn continue cm-query-action" @click="init(true)"
           >查询</el-button
         >
         <el-button
           type="primary"
+          class="cm-primary-action"
           style="float: right"
           @click="addEmployeeHandle('add')"
         >

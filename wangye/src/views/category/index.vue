@@ -26,18 +26,19 @@
 
         <div style="float: right">
           <el-button type="primary"
-                     class="continue"
+                     class="continue cm-primary-action"
                      @click="addClass('class')">
             + 新增菜品分类
           </el-button>
           <el-button type="primary"
+                     class="cm-primary-action"
                      style="margin-left:20px"
                      @click="addClass('meal')">
             + 新增套餐分类
           </el-button>
         </div>
 
-        <el-button class="normal-btn continue"
+        <el-button class="normal-btn continue cm-query-action"
                    @click="init(true)">
           查询
         </el-button>

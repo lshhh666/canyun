@@ -23,7 +23,7 @@
     <el-button
       data-testid="export-report"
       icon="iconfont icon-download"
-      class="right-el-button"
+      class="right-el-button cm-primary-action"
       type="primary"
       :loading="exporting"
       :disabled="exporting"

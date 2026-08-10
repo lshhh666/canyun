@@ -34,7 +34,7 @@
                      :label="item.label"
                      :value="item.value" />
         </el-select>
-        <el-button class="normal-btn continue"
+        <el-button class="normal-btn continue cm-query-action"
                    @click="init(true)">
           查询
         </el-button>
@@ -49,6 +49,7 @@
             >批量停售</span
           > -->
           <el-button type="primary"
+                     class="cm-primary-action"
                      style="margin-left: 15px"
                      @click="addSetMeal('add')">
             + 新建套餐
