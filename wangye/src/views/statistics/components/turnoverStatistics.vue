@@ -18,16 +18,38 @@ import * as echarts from 'echarts'
 })
 export default class extends Vue {
   @Prop() private turnoverdata!: any
+  private chart: echarts.ECharts | null = null
+
+  mounted() {
+    this.renderChart()
+    window.addEventListener('resize', this.resizeChart)
+  }
+
+  beforeDestroy() {
+    window.removeEventListener('resize', this.resizeChart)
+    if (this.chart) {
+      this.chart.dispose()
+      this.chart = null
+    }
+  }
+
   @Watch('turnoverdata')
   getData() {
-    this.$nextTick(() => {
-      this.initChart()
-    })
+    this.renderChart()
   }
-  initChart() {
-    type EChartsOption = echarts.EChartsOption
-    const chartDom = document.getElementById('main') as any
-    const myChart = echarts.init(chartDom)
+
+  private resizeChart = () => {
+    if (this.chart) this.chart.resize()
+  }
+
+  private renderChart() {
+    this.$nextTick(() => this.initChart())
+  }
+
+  private initChart() {
+    const chartDom = document.getElementById('main') as HTMLElement | null
+    if (!chartDom) return
+    this.chart = this.chart || echarts.init(chartDom)
 
     var option: any
     option = {
@@ -112,7 +134,7 @@ export default class extends Vue {
         },
       ],
     }
-    option && myChart.setOption(option)
+    this.chart.setOption(option, true)
   }
 }
 </script>

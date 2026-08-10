@@ -36,17 +36,38 @@ import * as echarts from 'echarts'
 export default class extends Vue {
   @Prop() private orderdata!: any
   @Prop() private overviewData!: any
+  private chart: echarts.ECharts | null = null
+
+  mounted() {
+    this.renderChart()
+    window.addEventListener('resize', this.resizeChart)
+  }
+
+  beforeDestroy() {
+    window.removeEventListener('resize', this.resizeChart)
+    if (this.chart) {
+      this.chart.dispose()
+      this.chart = null
+    }
+  }
 
   @Watch('orderdata')
   getData() {
-    this.$nextTick(() => {
-      this.initChart()
-    })
+    this.renderChart()
   }
-  initChart() {
-    type EChartsOption = echarts.EChartsOption
-    const chartDom = document.getElementById('ordermain') as any
-    const myChart = echarts.init(chartDom)
+
+  private resizeChart = () => {
+    if (this.chart) this.chart.resize()
+  }
+
+  private renderChart() {
+    this.$nextTick(() => this.initChart())
+  }
+
+  private initChart() {
+    const chartDom = document.getElementById('ordermain') as HTMLElement | null
+    if (!chartDom) return
+    this.chart = this.chart || echarts.init(chartDom)
     // // 循环遍历出x轴的数据
     // const baseDate = this.orderdata.list.map((item) => {
     //   return (item as any).date
@@ -174,7 +195,7 @@ export default class extends Vue {
         }
       ],
     }
-    option && myChart.setOption(option)
+    this.chart.setOption(option, true)
   }
 }
 </script>

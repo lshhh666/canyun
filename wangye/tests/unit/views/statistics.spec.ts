@@ -31,3 +31,24 @@ describe('CloudMeal statistics states and export', () => {
     expect(title).toContain("this.$message.error('报表导出失败，请稍后重试')")
   })
 })
+
+describe('CloudMeal statistics chart lifecycle', () => {
+  const chartFiles = [
+    'turnoverStatistics.vue',
+    'userStatistics.vue',
+    'orderStatistics.vue',
+    'top10.vue',
+  ].map((file) => fs.readFileSync(
+    path.resolve(__dirname, `../../../src/views/statistics/components/${file}`),
+    'utf8'
+  ))
+
+  it('draws every chart on first mount and releases its instance', () => {
+    chartFiles.forEach((source) => {
+      expect(source).toContain('mounted()')
+      expect(source).toContain('this.renderChart()')
+      expect(source).toContain('beforeDestroy()')
+      expect(source).toContain('this.chart.dispose()')
+    })
+  })
+})
