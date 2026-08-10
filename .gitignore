@@ -25,6 +25,11 @@ nginx-1.20.2/conf/*
 houduan/sky-server/src/main/resources/application-dev.yml
 xiaochengxu/project.private.config.json
 
+# Uni-app dependencies, generated output and private WeChat settings
+xiaochengxu-source/node_modules/
+xiaochengxu-source/unpackage/
+xiaochengxu-source/project.private.config.json
+
 # Visual brainstorming scratch data
 .superpowers/
 
