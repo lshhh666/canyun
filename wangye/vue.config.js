@@ -6,7 +6,11 @@ module.exports = {
   'publicPath': process.env.NODE_ENV === 'production' ? './' : '/', // TODO: Remember to change this to fit your need
   'lintOnSave': process.env.NODE_ENV === 'development',
   'pwa': {
-    'name': name
+    'name': name,
+    'themeColor': '#147EE8',
+    'msTileColor': '#147EE8',
+    'appleMobileWebAppCapable': 'yes',
+    'appleMobileWebAppStatusBarStyle': 'default'
   },
   'pluginOptions': {
     'style-resources-loader': {
