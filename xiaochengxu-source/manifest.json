@@ -1,5 +1,5 @@
 {
-    "name" : "sky-take-out-user-mp",
+    "name" : "餐云点餐",
     "appid" : "__UNI__EC43DCB",
     "description" : "",
     "versionName" : "1.0.0",
@@ -50,7 +50,7 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "wxffb3637a228223b8",
+        "appid" : "wx718a307127ebbc96",
         "requiredPrivateInfos" : [ "getLocation" ],
         "permission" : {
             "scope.userLocation" : {
@@ -76,7 +76,7 @@
         "enable" : false
     },
     "h5" : {
-        "title" : "sky-take-out-user-mp",
+        "title" : "餐云点餐",
         "domain" : "/"
     }
 }
