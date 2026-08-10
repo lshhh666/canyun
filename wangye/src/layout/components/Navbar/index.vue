@@ -86,6 +86,7 @@ import { getStatus, setStatus } from '@/api/users'
 import Cookies from 'js-cookie'
 import { debounce, throttle } from '@/utils/common'
 import { setNewData, getNewData } from '@/utils/cookies'
+import { buildWebSocketUrl } from '@/utils/websocket'
 
 // 接口
 import { getCountUnread } from '@/api/inform'
@@ -103,7 +104,7 @@ import Password from '../components/password.vue'
 export default class extends Vue {
   private storeId = this.getStoreId
   private restKey: number = 0
-  private websocket = null
+  private websocket: WebSocket | null = null
   private newOrder = ''
   private message = ''
   private audioIsPlaying = false
@@ -164,14 +165,18 @@ export default class extends Vue {
   onload() {
   }
   destroyed() {
-    this.websocket.close() //离开路由之后断开websocket连接
+    document.removeEventListener('click', this.handleClose)
+    if (this.websocket) {
+      this.websocket.close()
+      this.websocket = null
+    }
   }
 
   // 添加新订单提示弹窗
   webSocket() {
     const that = this as any
-    let clientId = Math.random().toString(36).substr(2)
-    let socketUrl = process.env.VUE_APP_SOCKET_URL + clientId
+    const clientId = Math.random().toString(36).substr(2)
+    const socketUrl = buildWebSocketUrl(process.env.VUE_APP_SOCKET_URL, clientId)
     console.log(socketUrl, 'socketUrl')
     if (typeof WebSocket == 'undefined') {
       that.$notify({
@@ -224,12 +229,7 @@ export default class extends Vue {
       }
       // 监听socket错误
       this.websocket.onerror = function () {
-        that.$notify({
-          title: '错误',
-          message: '服务器错误，无法接收实时报警信息',
-          type: 'error',
-          duration: 0,
-        })
+        console.warn('CloudMeal WebSocket connection unavailable')
       }
       // 监听socket关闭
       this.websocket.onclose = function () {
