@@ -30,3 +30,6 @@ xiaochengxu/project.private.config.json
 
 # Task-local compatibility runtimes
 .tools/
+
+# Isolated feature worktrees
+.worktrees/
