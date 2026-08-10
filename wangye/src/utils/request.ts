@@ -8,12 +8,13 @@ import {
   removePending,
 } from './requestOptimize'
 import router from '@/router'
+import { baseUrl } from '@/config.json'
 
 const CancelToken = axios.CancelToken
 let redirectingToLogin = false
 
 const service = axios.create({
-  baseURL: process.env.VUE_APP_BASE_API,
+  baseURL: process.env.VUE_APP_BASE_API || baseUrl,
   timeout: 600000,
 })
 

@@ -18,6 +18,11 @@ describe('request state contract', () => {
     expect(source).toContain('return response')
   })
 
+  it('falls back to the nginx API prefix in production builds', () => {
+    expect(source).toContain("import { baseUrl } from '@/config.json'")
+    expect(source).toContain('process.env.VUE_APP_BASE_API || baseUrl')
+  })
+
   it('cleans pending state for network failures before rejecting', () => {
     const cleanup = source.indexOf('cleanupRequest(error && error.config)')
     const rejection = source.lastIndexOf('return Promise.reject(error)')
