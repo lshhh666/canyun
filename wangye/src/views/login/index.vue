@@ -215,7 +215,27 @@ export default class extends Vue {
 }
 
 .cm-login__submit { margin: 30px 0 0 !important; }
-.cm-login__button { height: 42px; border-radius: $cm-radius-md; font-size: 14px; }
+.cm-login__button.el-button--primary {
+  height: 42px;
+  color: #ffffff !important;
+  font-size: 14px;
+  background-color: $cm-primary !important;
+  border-color: $cm-primary !important;
+  border-radius: $cm-radius-md;
+
+  &:hover,
+  &:focus {
+    color: #ffffff !important;
+    background-color: $cm-primary-hover !important;
+    border-color: $cm-primary-hover !important;
+  }
+
+  &:active {
+    color: #ffffff !important;
+    background-color: $cm-primary-active !important;
+    border-color: $cm-primary-active !important;
+  }
+}
 
 @media (max-width: 960px) {
   .cm-login { grid-template-columns: 1fr; }

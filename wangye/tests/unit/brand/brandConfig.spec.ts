@@ -11,6 +11,8 @@ describe('CloudMeal public brand configuration', () => {
     )
 
     expect(html).toContain('<title>餐云管理平台</title>')
+    expect(html).toContain('img/icons/cloudmeal-favicon-32x32.png')
+    expect(html).toContain('img/icons/cloudmeal-favicon-16x16.png')
     expect(manifest.name).toBe('餐云管理平台')
     expect(manifest.short_name).toBe('餐云')
   })
@@ -25,5 +27,11 @@ describe('CloudMeal public brand configuration', () => {
     expect(vueConfig).toContain('port: 8090')
     expect(nginxConfig).toContain('listen       8090;')
     expect(nginxConfig).toContain('http://localhost:8080/admin/')
+  })
+
+  it('uses uniquely named CloudMeal PWA icons to avoid legacy favicon cache', () => {
+    const vueConfig = fs.readFileSync(path.join(projectRoot, 'vue.config.js'), 'utf8')
+    expect(vueConfig).toContain("'favicon32': 'img/icons/cloudmeal-favicon-32x32.png'")
+    expect(vueConfig).toContain("'favicon16': 'img/icons/cloudmeal-favicon-16x16.png'")
   })
 })
