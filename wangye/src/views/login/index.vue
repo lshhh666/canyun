@@ -128,8 +128,6 @@ export default class extends Vue {
 </script>
 
 <style lang="scss">
-@import '@/styles/brand-tokens';
-
 .cm-login {
   display: grid;
   grid-template-columns: minmax(480px, 1.08fr) minmax(440px, 0.92fr);

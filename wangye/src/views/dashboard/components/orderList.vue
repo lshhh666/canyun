@@ -624,7 +624,6 @@ export default class extends Vue {
 
     ;(this.cancelDialogTitle === '取消' ? orderCancel : orderReject)({
       id: this.orderId,
-      // eslint-disable-next-line standard/computed-property-even-spacing
       [this.cancelDialogTitle === '取消' ? 'cancelReason' : 'rejectionReason']:
         this.cancelReason === '自定义原因' ? this.remark : this.cancelReason,
     })

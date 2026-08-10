@@ -13,6 +13,7 @@ Thumbs.db
 wangye/node_modules/
 wangye/dist/
 wangye/report.*.json
+wangye/tests/unit/coverage/
 
 # Keep only the project-specific Nginx configuration, not the bundled runtime
 nginx-1.20.2/*
@@ -26,3 +27,6 @@ xiaochengxu/project.private.config.json
 
 # Visual brainstorming scratch data
 .superpowers/
+
+# Task-local compatibility runtimes
+.tools/

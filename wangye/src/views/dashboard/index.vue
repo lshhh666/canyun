@@ -121,8 +121,6 @@ export default class extends Vue {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
-
 .dashboard-loading {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

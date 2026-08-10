@@ -18,8 +18,6 @@ export default class extends Vue {}
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
-
 .cm-not-found {
   display: flex;
   align-items: center;

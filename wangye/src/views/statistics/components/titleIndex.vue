@@ -94,8 +94,6 @@ export default class extends Vue {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
-
 .title-index {
   display: flex;
   align-items: center;

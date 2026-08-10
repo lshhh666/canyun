@@ -53,8 +53,6 @@ export default class extends Vue {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
-
 .order-tasks { padding: $cm-space-5; }
 header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
 h2 { margin: 0 0 4px; color: $cm-text-primary; font-size: 16px; font-weight: 600; }

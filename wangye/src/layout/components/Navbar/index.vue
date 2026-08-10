@@ -658,8 +658,6 @@ export default class extends Vue {
 </style>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
-
 .navbar {
   height: $cm-topbar-height;
   background: $cm-surface;

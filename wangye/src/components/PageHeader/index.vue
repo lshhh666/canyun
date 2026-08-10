@@ -21,8 +21,6 @@ export default class PageHeader extends Vue {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
-
 .cm-page-header {
   display: flex;
   align-items: flex-end;

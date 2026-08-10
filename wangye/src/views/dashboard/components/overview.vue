@@ -54,8 +54,6 @@ export default class extends Vue {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
-
 .overview { padding: $cm-space-5; }
 .overview__header { display: flex; justify-content: space-between; align-items: flex-start; }
 h2 { margin: 0 0 4px; color: $cm-text-primary; font-size: 16px; font-weight: 600; }

@@ -32,7 +32,6 @@ export default class extends Vue {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/brand-tokens';
 .product-summary { padding: 18px; }
 header { display: flex; justify-content: space-between; color: $cm-text-primary; font-size: 14px; font-weight: 600; }
 header a, .product-summary__add { color: $cm-primary; font-size: 12px; font-weight: 400; }
