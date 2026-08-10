@@ -1,236 +1,253 @@
-<!--选择多规格弹层-->
 <template>
-  <!-- 餐品详情 -->
-  <view class="dish_detail_pop" v-if="dishDetailes.type == 1">
-    <image
-      mode="aspectFill"
-      class="div_big_image"
-      :src="dishDetailes.image"
-    ></image>
-    <view class="title">{{ dishDetailes.name }}</view>
-    <view class="desc">{{ dishDetailes.description }}</view>
-    <view class="but_item">
-      <view class="price">
-        <text class="ico">￥</text>
-        {{ dishDetailes.price.toFixed(2) }}
+  <view class="dish-sheet">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view>
+        <view class="sheet-title">{{ dishDetailes.name }}</view>
+        <view class="sheet-subtitle">{{ dishDetailes.type == 1 ? '菜品详情' : '套餐内容' }}</view>
       </view>
-      <view
-        class="active"
-        v-if="dishDetailes.flavors.length === 0 && dishDetailes.dishNumber > 0"
-      >
-        <image
-          src="../../../static/btn_red.png"
-          @click="redDishAction(dishDetailes, '普通')"
-          class="dish_red"
-          mode=""
-        ></image>
-        <text class="dish_number">{{ dishDetailes.dishNumber }}</text>
-        <image
-          src="../../../static/btn_add.png"
-          class="dish_add"
-          @click="addDishAction(dishDetailes, '普通')"
-          mode=""
-        ></image>
-      </view>
-
-      <view class="active" v-if="dishDetailes.flavors.length > 0"
-        ><view class="dish_card_add" @click="moreNormDataesHandle(dishDetailes)"
-          >选择规格</view
-        ></view
-      >
-      <view
-        class="active"
-        v-if="
-          dishDetailes.dishNumber === 0 && dishDetailes.flavors.length === 0
-        "
-      >
-        <view class="dish_card_add" @click="addDishAction(dishDetailes, '普通')"
-          >加入购物车</view
-        >
-      </view>
+      <view class="sheet-close" aria-label="关闭" @click="dishClose">×</view>
     </view>
-    <view class="close" @click="dishClose"
-      ><image
-        class="close_img"
-        src="../../../static/but_close.png"
-        mode=""
-      ></image
-    ></view>
-  </view>
-  <!-- end -->
-  <!-- 套餐详情 -->
-  <view class="dish_detail_pop" v-else>
-    <scroll-view class="dish_items" scroll-y="true" scroll-top="0rpx">
-      <view
-        class="dish_item"
-        v-for="(item, index) in dishMealData"
-        :key="index"
-      >
-        <image class="div_big_image" :src="item.image" mode=""></image>
-        <view class="title">
-          {{ item.name }}
-          <text style="">X{{ item.copies }}</text>
+
+    <scroll-view class="sheet-content" scroll-y="true">
+      <template v-if="dishDetailes.type == 1">
+        <image mode="aspectFill" class="detail-image" :src="dishDetailes.image"></image>
+        <view v-if="dishDetailes.description" class="detail-desc">{{ dishDetailes.description }}</view>
+      </template>
+
+      <view v-else class="meal-list">
+        <view class="meal-item" v-for="(item, index) in dishMealData" :key="index">
+          <image class="meal-image" :src="item.image" mode="aspectFill"></image>
+          <view class="meal-info">
+            <view class="meal-name">{{ item.name }} <text>×{{ item.copies }}</text></view>
+            <view class="meal-desc">{{ item.description }}</view>
+          </view>
         </view>
-        <view class="desc">{{ item.description }}</view>
       </view>
     </scroll-view>
-    <view class="but_item">
-      <view class="price">
-        <text class="ico">￥</text>
-        {{ dishDetailes.price }}
-      </view>
+
+    <view class="sheet-footer">
+      <view class="detail-price"><text>￥</text>{{ displayPrice }}</view>
       <view
-        class="active"
-        v-if="dishDetailes.dishNumber && dishDetailes.dishNumber > 0"
+        class="quantity-control"
+        v-if="hasNoFlavors && dishDetailes.dishNumber > 0"
       >
-        <image
-          src="../../../static/btn_red.png"
-          @click="redDishAction(dishDetailes, '普通')"
-          class="dish_red"
-          mode=""
-        ></image>
-        <text class="dish_number">{{ dishDetailes.dishNumber }}</text>
-        <image
-          src="../../../static/btn_add.png"
-          class="dish_add"
-          @click="addDishAction(dishDetailes, '普通')"
-          mode=""
-        ></image>
+        <view class="quantity-button quantity-button--minus" @click="redDishAction(dishDetailes, '普通')">−</view>
+        <text class="dish-number">{{ dishDetailes.dishNumber }}</text>
+        <view class="quantity-button quantity-button--add" @click="addDishAction(dishDetailes, '普通')">＋</view>
       </view>
-      <view class="active" v-else-if="dishDetailes.dishNumber == 0"
-        ><view
-          class="dish_card_add"
-          @click="addDishAction(dishDetailes, '普通')"
-          >加入购物车</view
-        ></view
-      >
+      <view v-else-if="!hasNoFlavors" class="primary-action" @click="moreNormDataesHandle(dishDetailes)">
+        选择规格
+      </view>
+      <view v-else class="primary-action" @click="addDishAction(dishDetailes, '普通')">加入购物车</view>
     </view>
-    <view class="close" @click="dishClose"
-      ><image
-        class="close_img"
-        src="../../../static/but_close.png"
-        mode=""
-      ></image
-    ></view>
   </view>
-  <!-- end -->
 </template>
+
 <script>
 export default {
-  // 获取父级传的数据
   props: {
     dishDetailes: {
       type: Object,
-      default: () => ({}),
+      default: () => ({})
     },
     openDetailPop: {
       type: Boolean,
-      default: false,
+      default: false
     },
     dishMealData: {
       type: Array,
-      default: () => [],
+      default: () => []
+    }
+  },
+  computed: {
+    hasNoFlavors() {
+      return !this.dishDetailes.flavors || this.dishDetailes.flavors.length === 0
     },
+    displayPrice() {
+      const price = Number(this.dishDetailes.price || 0)
+      return price.toFixed(2)
+    }
   },
   methods: {
-    // 加入购物车
     addDishAction(obj, item) {
-      console.log(obj, item);
-      this.$emit("addDishAction", { obj: obj, item: item });
+      this.$emit("addDishAction", { obj: obj, item: item })
     },
     redDishAction(obj, item) {
-      this.$emit("redDishAction", { obj: obj, item: item });
+      this.$emit("redDishAction", { obj: obj, item: item })
     },
-    // 选择规格
     moreNormDataesHandle(obj) {
-      this.$emit("moreNormDataesHandle", obj);
+      this.$emit("moreNormDataesHandle", obj)
     },
-    // 关闭菜单详情
     dishClose() {
-      this.$emit("dishClose");
-    },
-  },
-};
-</script>
-<style lang="scss" scoped>
-.dish_detail_pop {
-  width: calc(100vw - 160rpx);
-  box-sizing: border-box;
-  position: relative;
-  top: 50%;
-  left: 50%;
-  padding: 40rpx;
-  transform: translateX(-50%) translateY(-50%);
-  background: #fff;
-  border-radius: 20rpx;
-  .div_big_image {
-    width: 100%;
-    height: 320rpx;
-    border-radius: 10rpx;
-  }
-  .title {
-    font-size: 40rpx;
-    line-height: 80rpx;
-    text-align: center;
-    font-weight: bold;
-  }
-  .dish_items {
-    height: 60vh;
-  }
-  .but_item {
-    display: flex;
-    position: relative;
-    flex: 1;
-    .price {
-      text-align: left;
-      color: #e94e3c;
-      line-height: 88rpx;
-      box-sizing: border-box;
-      font-size: 48rpx;
-      font-weight: bold;
-      .ico {
-        font-size: 28rpx;
-      }
-    }
-    .active {
-      position: absolute;
-      right: 0rpx;
-      bottom: 20rpx;
-      display: flex;
-      .dish_add,
-      .dish_red {
-        display: block;
-        width: 72rpx;
-        height: 72rpx;
-      }
-      .dish_number {
-        padding: 0 10rpx;
-        line-height: 72rpx;
-        font-size: 30rpx;
-        font-family: PingFangSC, PingFangSC-Medium;
-        font-weight: 500;
-      }
-      .dish_card_add {
-        width: 200rpx;
-        line-height: 60rpx;
-        text-align: center;
-        font-weight: 500;
-        font-size: 28rpx;
-        opacity: 1;
-        background: #ffc200;
-        border-radius: 30rpx;
-      }
+      this.$emit("dishClose")
     }
   }
 }
-.close {
+</script>
+
+<style lang="scss" scoped>
+.dish-sheet {
   position: absolute;
-  bottom: -180rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  .close_img {
-    width: 88rpx;
-    height: 88rpx;
-  }
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 82vh;
+  padding: 12rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 16rpx 16rpx 0 0;
+  box-sizing: border-box;
+}
+
+.sheet-handle {
+  width: 72rpx;
+  height: 6rpx;
+  margin: 0 auto 18rpx;
+  background: #d9e0e8;
+  border-radius: 3rpx;
+}
+
+.sheet-header,
+.sheet-footer,
+.meal-item,
+.quantity-control {
+  display: flex;
+  align-items: center;
+}
+
+.sheet-header {
+  justify-content: space-between;
+}
+
+.sheet-title {
+  color: #12263f;
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 48rpx;
+}
+
+.sheet-subtitle,
+.detail-desc,
+.meal-desc {
+  color: #748396;
+  font-size: 24rpx;
+  line-height: 36rpx;
+}
+
+.sheet-close {
+  width: 56rpx;
+  color: #647489;
+  font-size: 46rpx;
+  line-height: 56rpx;
+  text-align: center;
+}
+
+.sheet-content {
+  max-height: 54vh;
+  margin-top: 22rpx;
+}
+
+.detail-image {
+  display: block;
+  width: 100%;
+  height: 360rpx;
+  border-radius: 16rpx;
+  background: #eef2f6;
+}
+
+.detail-desc {
+  padding: 20rpx 0 8rpx;
+}
+
+.meal-item {
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #e8edf2;
+}
+
+.meal-image {
+  width: 112rpx;
+  height: 112rpx;
+  flex: 0 0 112rpx;
+  border-radius: 12rpx;
+  background: #eef2f6;
+}
+
+.meal-info {
+  min-width: 0;
+  margin-left: 20rpx;
+}
+
+.meal-name {
+  color: #12263f;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+}
+
+.meal-name text {
+  margin-left: 8rpx;
+  color: #748396;
+  font-weight: 400;
+}
+
+.sheet-footer {
+  min-height: 96rpx;
+  padding-top: 20rpx;
+  justify-content: space-between;
+  border-top: 1rpx solid #e8edf2;
+}
+
+.detail-price {
+  color: #12263f;
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.detail-price text {
+  font-size: 24rpx;
+}
+
+.quantity-button {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  align-items: center;
+  justify-content: center;
+  color: #147ee8;
+  background: #ffffff;
+  border: 1rpx solid #147ee8;
+  border-radius: 50%;
+  box-sizing: border-box;
+  font-size: 34rpx;
+}
+
+.quantity-button--add {
+  color: #ffffff;
+  background: #147ee8;
+}
+
+.quantity-button--minus {
+  color: #d94b4b;
+  border-color: #d94b4b;
+}
+
+.dish-number {
+  min-width: 52rpx;
+  color: #12263f;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+.primary-action {
+  min-width: 204rpx;
+  padding: 0 28rpx;
+  color: #ffffff;
+  background: #147ee8;
+  border-radius: 8rpx;
+  font-size: 27rpx;
+  line-height: 72rpx;
+  text-align: center;
+  box-sizing: border-box;
 }
 </style>

@@ -1,245 +1,210 @@
-<!--购物车弹层-->
 <template>
-  <view class="cart_pop" @click.stop="openOrderCartList = openOrderCartList">
-    <view class="top_title">
-      <view class="tit">购物车</view>
-      <view class="clear" @click.stop="clearCardOrder()">
-        <image
-          class="clear_icon"
-          src="../../../static/clear.png"
-          mode=""
-        ></image>
-        <text class="clear-des">清空</text>
+  <view class="cart-sheet" @click.stop>
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view>
+        <view class="sheet-title">购物车</view>
+        <view class="sheet-subtitle">已选商品可继续调整数量</view>
       </view>
+      <view class="clear-action" @click.stop="clearCardOrder()">清空购物车</view>
     </view>
-    <scroll-view class="card_order_list" scroll-y="true" scroll-top="40rpx">
-      <view
-        class="type_item_cont"
-        v-for="(item, ind) in orderAndUserInfo"
-        :key="ind"
-      >
-        <view
-          class="type_item"
-          v-for="(obj, index) in item.dishList"
-          :key="index"
-        >
-          <view class="dish_img"
-            ><image
-              mode="aspectFill"
-              :src="obj.image"
-              class="dish_img_url"
-            ></image
-          ></view>
-          <view class="dish_info">
-            <view class="dish_name">{{ obj.name }}</view>
-            <view class="dish_dishFlavor" v-if="obj.dishFlavor">{{
-              obj.dishFlavor
-            }}</view>
-            <view class="dish_price">
-              <text class="ico">￥</text>
-              {{ obj.amount }}
-            </view>
-            <view class="dish_active">
-              <image
-                v-if="obj.number && obj.number > 0"
-                src="../../../static/btn_red.png"
-                @click.stop="redDishAction(obj, '购物车')"
-                class="dish_red"
-                mode=""
-              ></image>
-              <text v-if="obj.number && obj.number > 0" class="dish_number">{{
-                obj.number
-              }}</text>
-              <image
-                src="../../../static/btn_add.png"
-                class="dish_add"
-                @click.stop="addDishAction(obj, '购物车')"
-                mode=""
-              ></image>
+
+    <scroll-view class="cart-list" scroll-y="true">
+      <view class="cart-group" v-for="(item, ind) in orderAndUserInfo" :key="ind">
+        <view class="cart-item" v-for="(obj, index) in item.dishList" :key="index">
+          <image mode="aspectFill" :src="obj.image" class="dish-image"></image>
+          <view class="dish-info">
+            <view class="dish-name">{{ obj.name }}</view>
+            <view class="dish-flavor" v-if="obj.dishFlavor">{{ obj.dishFlavor }}</view>
+            <view class="dish-row">
+              <view class="dish-price"><text>￥</text>{{ obj.amount }}</view>
+              <view class="quantity-control">
+                <view
+                  v-if="obj.number && obj.number > 0"
+                  class="quantity-button quantity-button--minus"
+                  @click.stop="redDishAction(obj, '购物车')"
+                >
+                  −
+                </view>
+                <text v-if="obj.number && obj.number > 0" class="dish-number">{{ obj.number }}</text>
+                <view class="quantity-button quantity-button--add" @click.stop="addDishAction(obj, '购物车')">
+                  ＋
+                </view>
+              </view>
             </view>
           </view>
         </view>
       </view>
-      <view class="seize_seat"></view>
+      <view class="list-space"></view>
     </scroll-view>
   </view>
 </template>
+
 <script>
 export default {
-  // 获取父级传的数据
   props: {
     orderAndUserInfo: {
       type: Array,
-      default: () => [],
+      default: () => []
     },
     openOrderCartList: {
       type: Boolean,
-      default: false,
-    },
+      default: false
+    }
   },
   methods: {
     clearCardOrder() {
-      this.$emit("clearCardOrder");
+      this.$emit("clearCardOrder")
     },
-    // 加入购物车
     addDishAction(obj, item) {
-      this.$emit("addDishAction", { obj: obj, item: item });
+      this.$emit("addDishAction", { obj: obj, item: item })
     },
     redDishAction(obj, item) {
-      this.$emit("redDishAction", { obj: obj, item: item });
-    },
-  },
-};
+      this.$emit("redDishAction", { obj: obj, item: item })
+    }
+  }
+}
 </script>
+
 <style lang="scss" scoped>
-.cart_pop {
-  width: 100%;
+.cart-sheet {
   position: absolute;
+  right: 0;
   bottom: 0;
   left: 0;
-  height: 60vh;
-  background-color: #fff;
-  border-radius: 8rpx 8rpx 0 0;
-  padding: 20rpx 30rpx 30rpx 30rpx;
+  max-height: 72vh;
+  padding: 12rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 16rpx 16rpx 0 0;
   box-sizing: border-box;
-  .top_title {
-    display: flex;
-    justify-content: space-between;
-    border-bottom: solid 1px #ebeef5;
-    padding-bottom: 20rpx;
-    .tit {
-      font-size: 40rpx;
-      font-weight: bold;
-      color: #20232a;
-    }
-    .clear {
-      color: #999999;
-      font-size: 28rpx;
-      font-weight: 400;
-      display: flex;
-      align-items: center;
-      font-family: PingFangSC, PingFangSC-Regular;
+}
 
-      // position: relative;
-      // top: 14rpx;
-      .clear_icon {
-        // position: relative;
-        // top: 0rpx;
-        width: 30rpx;
-        height: 30rpx;
-        margin-right: 8rpx;
-      }
-      .clear-des {
-        height: 56rpx;
-        line-height: 56rpx;
-      }
-    }
-  }
-  .card_order_list {
-    background-color: #fff;
-    padding-top: 40rpx;
-    box-sizing: border-box;
-    height: calc(100% - 0rpx);
-    flex: 1;
-    position: relative;
-    .type_item_cont {
-      .user_info {
-        display: flex;
-        margin-bottom: 20rpx;
-        .user_avatar {
-          .user_avatar_icon {
-            width: 42rpx;
-            height: 42rpx;
-            border-radius: 42rpx;
-          }
-          margin-right: 20rpx;
-        }
-        .user_name {
-          color: #19232b;
-          font-size: 24rpx;
-        }
-      }
-    }
+.sheet-handle {
+  width: 72rpx;
+  height: 6rpx;
+  margin: 0 auto 18rpx;
+  background: #d9e0e8;
+  border-radius: 3rpx;
+}
 
-    .type_item {
-      display: flex;
-      margin-bottom: 40rpx;
-      .dish_img {
-        width: 128rpx;
-        margin-right: 30rpx;
-        .dish_img_url {
-          display: block;
-          width: 128rpx;
-          height: 128rpx;
-          border-radius: 8rpx;
-        }
-      }
-      .dish_info {
-        position: relative;
-        flex: 1;
-        padding-bottom: 120rpx;
-        border-bottom: solid 1px #ebeef5;
-        .dish_name {
-          font-size: 32rpx;
-          line-height: 40rpx;
-          color: #333333;
-          font-family: PingFangSC, PingFangSC-Semibold;
-          font-weight: 600;
-        }
+.sheet-header,
+.cart-item,
+.dish-row,
+.quantity-control {
+  display: flex;
+  align-items: center;
+}
 
-        .dish_price {
-          font-size: 32rpx;
-          color: #e94e3c;
-          position: absolute;
-          bottom: 24rpx;
-          .ico {
-            font-size: 24rpx;
-          }
-        }
-        .dish_active {
-          position: absolute;
-          right: 20rpx;
-          bottom: 20rpx;
-          display: flex;
-          .dish_add,
-          .dish_red {
-            display: block;
-            width: 72rpx;
-            height: 72rpx;
-          }
-          .dish_number {
-            padding: 0 10rpx;
-            line-height: 72rpx;
-            font-size: 30rpx;
-            font-family: PingFangSC, PingFangSC-Medium;
-            font-weight: 500;
-          }
-        }
-      }
-    }
-    &::before {
-      content: "";
-      position: absolute;
-      width: 100vw;
-      height: 120rpx;
-      z-index: 99;
-      background: linear-gradient(
-        0deg,
-        rgba(255, 255, 255, 1) 10%,
-        rgba(255, 255, 255, 0)
-      );
-      bottom: 0px;
-      left: 0px;
-    }
-    .seize_seat {
-      width: 100%;
-      height: 120rpx;
-    }
-  }
-  .dish_dishFlavor {
-    position: absolute;
-    left: 0;
-    top: 40rpx;
-  }
+.sheet-header,
+.dish-row {
+  justify-content: space-between;
+}
+
+.sheet-title {
+  color: #12263f;
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 48rpx;
+}
+
+.sheet-subtitle,
+.dish-flavor {
+  color: #748396;
+  font-size: 24rpx;
+  line-height: 36rpx;
+}
+
+.clear-action {
+  padding: 8rpx 0 8rpx 20rpx;
+  color: #d94b4b;
+  font-size: 25rpx;
+}
+
+.cart-list {
+  max-height: 56vh;
+  margin-top: 14rpx;
+}
+
+.cart-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #e8edf2;
+}
+
+.dish-image {
+  width: 120rpx;
+  height: 120rpx;
+  flex: 0 0 120rpx;
+  border-radius: 12rpx;
+  background: #eef2f6;
+}
+
+.dish-info {
+  min-width: 0;
+  margin-left: 20rpx;
+  flex: 1;
+}
+
+.dish-name {
+  overflow: hidden;
+  color: #12263f;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dish-flavor {
+  margin-top: 2rpx;
+}
+
+.dish-row {
+  margin-top: 14rpx;
+}
+
+.dish-price {
+  color: #12263f;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.dish-price text {
+  font-size: 22rpx;
+}
+
+.quantity-button {
+  display: flex;
+  width: 52rpx;
+  height: 52rpx;
+  align-items: center;
+  justify-content: center;
+  color: #147ee8;
+  background: #ffffff;
+  border: 1rpx solid #147ee8;
+  border-radius: 50%;
+  box-sizing: border-box;
+  font-size: 32rpx;
+}
+
+.quantity-button--add {
+  color: #ffffff;
+  background: #147ee8;
+}
+
+.quantity-button--minus {
+  color: #d94b4b;
+  border-color: #d94b4b;
+}
+
+.dish-number {
+  min-width: 48rpx;
+  color: #12263f;
+  font-size: 27rpx;
+  text-align: center;
+}
+
+.list-space {
+  height: 20rpx;
 }
 </style>

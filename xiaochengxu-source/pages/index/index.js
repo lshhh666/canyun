@@ -1,10 +1,12 @@
-import navBar from "../common/Navbar/navbar.vue" //标题
 import Phone from "@/components/uni-phone/index.vue" //拨打电话
+import CloudmealHeader from "@/components/cloudmeal-header/cloudmeal-header.vue"
+import AppTabbar from "@/components/app-tabbar/app-tabbar.vue"
+import StatePanel from "@/components/state-panel/state-panel.vue"
 import popMask from "./components/popMask.vue" //规格
 import popCart from "./components/popCart.vue" //购物车弹出层
 import dishDetail from "./components/dishDetail.vue" //菜品详情
 import {
-	// 苍穹外卖相关的接口
+	// 点餐页相关接口
 	userLogin,
 	getCategoryList,
 	dishListByCategoryId,
@@ -27,10 +29,11 @@ import {
 } from "../api/api.js"
 import { mapState, mapMutations } from "vuex"
 import { baseUrl } from "../../utils/env"
+import { getErrorMessage } from "../../utils/error-message"
 export default {
 	data() {
 		return {
-			title: "Hello",
+			title: "餐云点餐",
 			// 去结算部分
 			openOrderCartList: false,
 			// 存放左侧滚动区域菜品分类数组
@@ -43,10 +46,10 @@ export default {
 			openMoreNormPop: false,
 			moreNormDataes: null,
 			tableInfo: null,
-			moreNormDishdata: null,
-			moreNormdata: null,
+			moreNormDishdata: {},
+			moreNormdata: [],
 			// 套餐中查询到的菜品名称
-			dishMealData: null,
+			dishMealData: [],
 			openTablePeoPleNumber: 1,
 			orderData: 0,
 			// 选中左侧菜品的索引
@@ -74,11 +77,14 @@ export default {
 			menuItemHeight: 0, // 左边菜单item的高度
 			itemId: "", // 栏目右边scroll-view用于滚动的id
 			arr: [],
+			menuRequestId: 0,
 		}
 	},
 	//   组件
 	components: {
-		navBar,
+		CloudmealHeader,
+		AppTabbar,
+		StatePanel,
 		Phone,
 		popMask,
 		popCart,
@@ -266,14 +272,18 @@ export default {
 
 			// 获取店铺联系方式
 			this.getMerchantInfo()
-			getCategoryList().then((res) => {
-				if (res && res.code === 1) {
-					this.typeListData = [...res.data]
-					if (res.data.length > 0) {
-						this.getDishListDataes(res.data[this.typeIndex || 0])
+			getCategoryList()
+				.then((res) => {
+					if (res && res.code === 1) {
+						this.typeListData = [...res.data]
+						if (res.data.length > 0) {
+							this.getDishListDataes(res.data[this.typeIndex || 0], this.typeIndex || 0)
+						}
 					}
-				}
-			})
+				})
+				.catch((error) => {
+					this.showMenuError(error)
+				})
 			// 调用一次购物车集合---初始化
 			this.getTableOrderDishListes()
 		},
@@ -330,24 +340,23 @@ export default {
 		},
 		// 获取右边菜单每个item到顶部的距离
 		getMenuItemTop() {
-			new Promise((resolve) => {
-				let selectorQuery = uni.createSelectorQuery()
+			return new Promise((resolve) => {
+				let selectorQuery = uni.createSelectorQuery().in(this)
 				selectorQuery
-					.selectAll(".class-item")
+					.selectAll(".type_list .type_item")
 					.boundingClientRect((rects) => {
-						// 如果节点尚未生成，rects值为[](因为用selectAll，所以返回的是数组)，循环调用执行
-						if (!rects.length) {
-							setTimeout(() => {
-								this.getMenuItemTop()
-							}, 10)
-							return
-						}
+						this.arr = rects || []
+						resolve(this.arr)
 					})
 					.exec()
 			})
 		},
 		// 获取菜品列表
 		async getDishListDataes(params, index) {
+			const requestId = ++this.menuRequestId
+			if (index !== undefined) this.typeIndex = index
+			this.dishListData = []
+			this.dishListItems = []
 			this.rightIdAndType = {}
 			this.rightIdAndType = {
 				id: params.id,
@@ -360,6 +369,7 @@ export default {
 			if (params.type === 1) {
 				await dishListByCategoryId(param)
 					.then((res) => {
+						if (requestId !== this.menuRequestId) return
 						if (res && res.code === 1) {
 							// 添加一个字段去实时更新加入购物车number数量 ----- newCardNumber
 							this.dishListData =
@@ -371,11 +381,15 @@ export default {
 								}))
 						}
 					})
-					.catch((err) => { })
+					.catch((error) => {
+						if (requestId !== this.menuRequestId) return
+						this.showMenuError(error)
+					})
 			} else {
 				// 套餐
 				await querySetmeaList(param)
 					.then((success) => {
+						if (requestId !== this.menuRequestId) return
 						if (success && success.code === 1) {
 							// dishListItems被转换数组---原始this.dishListData
 							this.dishListData =
@@ -387,9 +401,12 @@ export default {
 								}))
 						}
 					})
-					.catch((err) => { })
+					.catch((error) => {
+						if (requestId !== this.menuRequestId) return
+						this.showMenuError(error)
+					})
 			}
-			this.typeIndex = index
+			if (requestId !== this.menuRequestId) return
 			this.setOrderNum()
 		},
 		// 获取首页店铺信息
@@ -430,12 +447,30 @@ export default {
 		},
 		// 去订单页面
 		goOrder() {
+			if (this.shopStatus !== 1) {
+				uni.showToast({
+					title: "门店休息中，暂时无法结算",
+					icon: "none",
+				})
+				return
+			}
+			if (this.orderListData().length === 0) return
 			uni.navigateTo({
 				url: "/pages/order/index",
 			})
 		},
+		showMenuError(error) {
+			uni.showToast({
+				title: getErrorMessage(error, "菜单加载失败，请重试"),
+				icon: "none",
+			})
+		},
 		// 加菜 - 添加菜品
 		async addDishAction(item, form) {
+			if (item && item.obj) {
+				form = item.item
+				item = item.obj
+			}
 			// 规格
 			if (
 				this.openMoreNormPop &&
@@ -515,6 +550,10 @@ export default {
 		},
 		// 减菜 - 添加菜品
 		async redDishAction(item, form) {
+			if (item && item.obj) {
+				form = item.item
+				item = item.obj
+			}
 			// 实时更新obj.newCardNumber新添加的字段----加入购物车数量number
 			this.tablewareNumber--
 			this.dishDetailes.dishNumber--

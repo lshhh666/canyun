@@ -1,16 +1,21 @@
-<!--选择多规格弹层-->
 <template>
-  <view class="more_norm_pop">
-    <view class="title">{{ moreNormDishdata.name }}</view>
-    <scroll-view class="items_cont" scroll-y="true" scroll-top="0rpx">
-      <view class="item_row" v-for="(obj, index) in moreNormdata" :key="index">
-        <view class="flavor_name">{{ obj.name }}</view>
-        <view class="flavor_item">
+  <view class="spec-sheet">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view>
+        <view class="sheet-title">{{ moreNormDishdata.name }}</view>
+        <view class="sheet-subtitle">请选择口味或规格</view>
+      </view>
+      <view class="sheet-close" aria-label="关闭" @click="closeMoreNorm(moreNormDishdata)">×</view>
+    </view>
+
+    <scroll-view class="spec-list" scroll-y="true">
+      <view class="spec-group" v-for="(obj, index) in moreNormdata" :key="index">
+        <view class="spec-name">{{ obj.name }}</view>
+        <view class="spec-options">
           <view
-            :class="{
-              item: true,
-              act: flavorDataes.findIndex((it) => item === it) !== -1,
-            }"
+            class="spec-option"
+            :class="{ selected: flavorDataes.findIndex(it => item === it) !== -1 }"
             v-for="(item, ind) in obj.value"
             :key="ind"
             @click="checkMoreNormPop(obj.value, item)"
@@ -20,180 +25,166 @@
         </view>
       </view>
     </scroll-view>
-    <view class="but_item">
-      <view class="price">
-        <text class="ico">￥</text>
-        {{ moreNormDishdata.price }}
-      </view>
-      <view class="active"
-        ><view class="dish_card_add" @click="addShop(moreNormDishdata, '普通')"
-          >加入购物车</view
-        ></view
-      >
+
+    <view class="sheet-footer">
+      <view class="spec-price"><text>￥</text>{{ displayPrice }}</view>
+      <view class="primary-action" @click="addShop(moreNormDishdata, '普通')">加入购物车</view>
     </view>
-    <view class="close" @click="closeMoreNorm(moreNormDishdata)"
-      ><image
-        class="close_img"
-        src="../../../static/but_close.png"
-        mode=""
-      ></image
-    ></view>
   </view>
 </template>
+
 <script>
 export default {
-  // 获取父级传的数据
   props: {
-    // 空页面提示
     moreNormDishdata: {
       type: Object,
-      default: () => ({}),
+      default: () => ({})
     },
     moreNormdata: {
       type: Array,
-      default: () => [],
+      default: () => []
     },
     flavorDataes: {
       type: Array,
-      default: () => [],
-    },
+      default: () => []
+    }
+  },
+  computed: {
+    displayPrice() {
+      return Number(this.moreNormDishdata.price || 0).toFixed(2)
+    }
   },
   methods: {
     checkMoreNormPop(obj, item) {
-      this.$emit("checkMoreNormPop", { obj: obj, item: item });
+      this.$emit("checkMoreNormPop", { obj: obj, item: item })
     },
     addShop(obj) {
-      console.log(obj);
-      this.$emit("addShop", obj);
+      this.$emit("addShop", obj)
     },
     closeMoreNorm(obj) {
-      this.$emit("closeMoreNorm", obj);
-    },
-  },
-};
-</script>
-<style lang="scss" scoped>
-.more_norm_pop {
-  width: calc(100vw - 160rpx);
-  box-sizing: border-box;
-  position: relative;
-  top: 50%;
-  left: 50%;
-  padding: 40rpx;
-  transform: translateX(-50%) translateY(-50%);
-  background: #fff;
-  border-radius: 20rpx;
-  .div_big_image {
-    width: 100%;
-    border-radius: 10rpx;
-  }
-  .title {
-    font-size: 40rpx;
-    line-height: 80rpx;
-    text-align: center;
-    font-weight: bold;
-  }
-  .items_cont {
-    display: flex;
-    flex-wrap: wrap;
-    margin-left: -14rpx;
-    max-height: 50vh;
-    .item_row {
-      .flavor_name {
-        height: 40rpx;
-        opacity: 1;
-        font-size: 28rpx;
-        font-family: PingFangSC, PingFangSC-Regular;
-        font-weight: 400;
-        text-align: left;
-        color: #666666;
-        line-height: 40rpx;
-        padding-left: 10rpx;
-        padding-top: 20rpx;
-      }
-      .flavor_item {
-        display: flex;
-        flex-wrap: wrap;
-        .item {
-          border: 1px solid #ffb302;
-          border-radius: 12rpx;
-          margin: 20rpx 10rpx;
-          padding: 0 26rpx;
-          height: 60rpx;
-          line-height: 60rpx;
-          font-family: PingFangSC, PingFangSC-Regular;
-          font-weight: 400;
-          color: #333333;
-        }
-        .act {
-          // background: linear-gradient(144deg, #ffda05 18%, #ffb302 80%);
-          background: #ffc200;
-          border: 1px solid #ffc200;
-          font-family: PingFangSC, PingFangSC-Medium;
-          font-weight: 500;
-        }
-      }
-    }
-  }
-  .but_item {
-    display: flex;
-    position: relative;
-    flex: 1;
-    padding-left: 10rpx;
-    margin: 34rpx 0 -20rpx 0;
-    .price {
-      text-align: left;
-      color: #e94e3c;
-      line-height: 88rpx;
-      box-sizing: border-box;
-      font-size: 48rpx;
-      font-family: DIN, DIN-Medium;
-      font-weight: 500;
-      .ico {
-        font-size: 28rpx;
-      }
-    }
-    .active {
-      position: absolute;
-      right: 0rpx;
-      bottom: 20rpx;
-      display: flex;
-      .dish_add,
-      .dish_red {
-        display: block;
-        width: 72rpx;
-        height: 72rpx;
-      }
-      .dish_number {
-        padding: 0 10rpx;
-        line-height: 72rpx;
-        font-size: 30rpx;
-        font-family: PingFangSC, PingFangSC-Medium;
-        font-weight: 500;
-      }
-      .dish_card_add {
-        width: 200rpx;
-        height: 60rpx;
-        line-height: 60rpx;
-        text-align: center;
-        font-weight: 500;
-        font-size: 28rpx;
-        opacity: 1;
-        // background: linear-gradient(144deg, #ffda05 18%, #ffb302 80%);
-        background: #ffc200;
-        border-radius: 30rpx;
-      }
+      this.$emit("closeMoreNorm", obj)
     }
   }
 }
-.close {
+</script>
+
+<style lang="scss" scoped>
+.spec-sheet {
   position: absolute;
-  bottom: -180rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  .close_img {
-    width: 88rpx;
-    height: 88rpx;
-  }
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 78vh;
+  padding: 12rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 16rpx 16rpx 0 0;
+  box-sizing: border-box;
+}
+
+.sheet-handle {
+  width: 72rpx;
+  height: 6rpx;
+  margin: 0 auto 18rpx;
+  background: #d9e0e8;
+  border-radius: 3rpx;
+}
+
+.sheet-header,
+.sheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-title {
+  color: #12263f;
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 48rpx;
+}
+
+.sheet-subtitle {
+  color: #748396;
+  font-size: 24rpx;
+  line-height: 36rpx;
+}
+
+.sheet-close {
+  width: 56rpx;
+  color: #647489;
+  font-size: 46rpx;
+  line-height: 56rpx;
+  text-align: center;
+}
+
+.spec-list {
+  max-height: 50vh;
+  margin-top: 16rpx;
+}
+
+.spec-group {
+  padding: 18rpx 0 8rpx;
+}
+
+.spec-name {
+  color: #12263f;
+  font-size: 27rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+}
+
+.spec-options {
+  display: flex;
+  margin: 4rpx -8rpx 0;
+  flex-wrap: wrap;
+}
+
+.spec-option {
+  min-width: 112rpx;
+  margin: 12rpx 8rpx;
+  padding: 0 22rpx;
+  color: #526377;
+  background: #ffffff;
+  border: 1rpx solid #cbd5df;
+  border-radius: 8rpx;
+  font-size: 25rpx;
+  line-height: 64rpx;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.spec-option.selected {
+  color: #147ee8;
+  background: #eef6ff;
+  border-color: #147ee8;
+}
+
+.sheet-footer {
+  min-height: 96rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #e8edf2;
+}
+
+.spec-price {
+  color: #12263f;
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.spec-price text {
+  font-size: 24rpx;
+}
+
+.primary-action {
+  min-width: 204rpx;
+  padding: 0 28rpx;
+  color: #ffffff;
+  background: #147ee8;
+  border-radius: 8rpx;
+  font-size: 27rpx;
+  line-height: 72rpx;
+  text-align: center;
+  box-sizing: border-box;
 }
 </style>
