@@ -1,5 +1,95 @@
 const test = require('node:test')
-const { read, expectAll, expectNone } = require('./helpers.cjs')
+const vm = require('node:vm')
+const { assert, read, expectAll, expectNone } = require('./helpers.cjs')
+
+function deferred() {
+  let resolve
+  let reject
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
+function loadOrderingController(overrides = {}) {
+  const source = read('xiaochengxu-source/pages/index/index.js')
+  const exportMarker = 'export default '
+  const optionsSource = source.slice(source.indexOf(exportMarker) + exportMarker.length)
+  const state = {
+    shopInfo: { shopAddress: '测试门店' },
+    shopPhone: '',
+    orderListData: [],
+    baseUserInfo: {},
+    lodding: false,
+    token: 'token-123',
+    deliveryFee: 3,
+    ...(overrides.state || {})
+  }
+  const calls = { mutations: [], toasts: [], navigations: [] }
+  const apiDefaults = {
+    userLogin: async () => ({ code: 1, data: {} }),
+    getCategoryList: async () => ({ code: 1, data: [] }),
+    dishListByCategoryId: async () => ({ code: 1, data: [] }),
+    querySetmeaList: async () => ({ code: 1, data: [] }),
+    getShoppingCartList: async () => ({ code: 1, data: [] }),
+    newAddShoppingCartAdd: async () => ({ code: 1 }),
+    newShoppingCartSub: async () => ({ code: 1 }),
+    delShoppingCart: async () => ({ code: 1 }),
+    querySetmealDishById: async () => ({ code: 1, data: [] }),
+    getShopStatus: async () => ({ code: 1, data: 1 }),
+    getMerchantInfo: async () => ({ code: 1, data: { phone: '' } })
+  }
+  const context = {
+    module: { exports: {} },
+    console: { log() {} },
+    setTimeout,
+    clearTimeout,
+    baseUrl: 'http://example.test',
+    getErrorMessage: (error, fallback) => (error && error.message) || fallback,
+    Phone: {},
+    CloudmealHeader: {},
+    AppTabbar: {},
+    StatePanel: {},
+    popMask: {},
+    popCart: {},
+    dishDetail: {},
+    mapState(names) {
+      return Object.fromEntries(names.map(name => [name, function getVuexState() {
+        return state[name]
+      }]))
+    },
+    mapMutations(names) {
+      return Object.fromEntries(names.map(name => [name, function commitVuex(payload) {
+        calls.mutations.push([name, payload])
+        if (name === 'initdishListMut') state.orderListData = payload
+      }]))
+    },
+    uni: {
+      showToast(options) {
+        calls.toasts.push(options)
+      },
+      navigateTo(options) {
+        calls.navigations.push(options)
+      }
+    },
+    ...apiDefaults,
+    ...(overrides.apis || {})
+  }
+
+  vm.runInNewContext(`module.exports = ${optionsSource}`, context)
+  const definition = context.module.exports
+  const instance = { ...definition.data() }
+  Object.entries(definition.methods).forEach(([name, method]) => {
+    instance[name] = method.bind(instance)
+  })
+  Object.entries(definition.computed).forEach(([name, getter]) => {
+    Object.defineProperty(instance, name, { get: getter.bind(instance) })
+  })
+  instance.$nextTick = callback => callback.call(instance)
+
+  return { calls, definition, instance, state }
+}
 
 test('ordering page keeps business handlers and uses CloudMeal shell', () => {
   const page = read('xiaochengxu-source/pages/index/index.vue')
@@ -40,7 +130,7 @@ test('ordering layout keeps browsing available while checkout follows store stat
     'class="menu-layout"',
     'v-if="dishListItems && dishListItems.length > 0"',
     ':disabled="orderListData().length === 0 || shopStatus !== 1"',
-    "shopStatus !== 1 ? '门店休息中'",
+    "shopStatus === null ? '状态加载中'",
     '<state-panel'
   ])
   expectAll(styles, [
@@ -55,11 +145,110 @@ test('ordering layout keeps browsing available while checkout follows store stat
     'if (item && item.obj)',
     'form = item.item',
     'item = item.obj',
-    'this.getDishListDataes(res.data[this.typeIndex || 0], this.typeIndex || 0)',
+    'await this.getDishListDataes(categories[this.typeIndex || 0], this.typeIndex || 0)',
     'const requestId = ++this.menuRequestId',
     'if (requestId !== this.menuRequestId) return',
     'selectAll(".type_list .type_item")',
     'this.arr = rects || []'
   ])
   expectNone(page + styles + script, ['linear-gradient', '#ffc200', '#FFC200', 'selectAll(".class-item")'])
+})
+
+test('Vuex state helpers run as bound methods and null carts normalize to arrays', async () => {
+  const harness = loadOrderingController({
+    state: { token: 'bound-token', orderListData: [{ id: 9 }] },
+    apis: { getShoppingCartList: async () => ({ code: 1, data: null }) }
+  })
+
+  assert.equal(harness.instance.token(), 'bound-token')
+  assert.equal(harness.instance.orderListData()[0].id, 9)
+  await harness.instance.getTableOrderDishListes()
+
+  assert.equal(Array.isArray(harness.state.orderListData), true)
+  assert.equal(harness.state.orderListData.length, 0)
+  assert.equal(harness.calls.mutations.at(-1)[0], 'initdishListMut')
+  assert.equal(Array.isArray(harness.calls.mutations.at(-1)[1]), true)
+  assert.equal(harness.calls.mutations.at(-1)[1].length, 0)
+  assert.equal(harness.instance.orderDishNumber, 0)
+  assert.equal(harness.instance.orderDishPrice, 0)
+})
+
+test('cart writes refresh cart before synchronizing menu counts', async () => {
+  const cases = [
+    ['add', instance => instance.addDishAction({ id: 1, type: 1, dishNumber: 0 }, '普通')],
+    ['spec add', instance => instance.addShop({ id: 1, type: 1, dishNumber: 0 })],
+    ['subtract', instance => instance.redDishAction({ id: 1, type: 1, dishNumber: 1 }, '普通')],
+    ['clear', instance => instance.clearCardOrder()]
+  ]
+
+  for (const [label, runAction] of cases) {
+    const harness = loadOrderingController()
+    const sequence = []
+    harness.instance.dishDetailes = { dishNumber: 1 }
+    harness.instance.rightIdAndType = { id: 2, type: 1 }
+    harness.instance.getTableOrderDishListes = async () => {
+      sequence.push('cart:start')
+      await Promise.resolve()
+      sequence.push('cart:end')
+    }
+    harness.instance.getDishListDataes = async () => {
+      sequence.push('menu')
+    }
+
+    await runAction(harness.instance)
+    await Promise.resolve()
+    await Promise.resolve()
+    assert.deepEqual(sequence, ['cart:start', 'cart:end', 'menu'], label)
+  }
+})
+
+test('overlapping category requests ignore the older response', async () => {
+  const oldRequest = deferred()
+  const newRequest = deferred()
+  let requestCount = 0
+  const harness = loadOrderingController({
+    apis: {
+      getCategoryList: () => (++requestCount === 1 ? oldRequest.promise : newRequest.promise)
+    }
+  })
+  const dishRequests = []
+  harness.instance.getMerchantInfo = async () => {}
+  harness.instance.getTableOrderDishListes = async () => {}
+  harness.instance.getDishListDataes = async category => dishRequests.push(category.id)
+
+  const firstInit = harness.instance.init()
+  const secondInit = harness.instance.init()
+  newRequest.resolve({ code: 1, data: [{ id: 'new', type: 1 }] })
+  await secondInit
+  oldRequest.resolve({ code: 1, data: [{ id: 'old', type: 1 }] })
+  await firstInit
+
+  assert.equal(harness.instance.typeListData[0].id, 'new')
+  assert.deepEqual(dishRequests, ['new'])
+})
+
+test('loading and closed stores block checkout without blocking add requests', async () => {
+  let addCalls = 0
+  const harness = loadOrderingController({
+    state: { orderListData: [{ id: 1 }] },
+    apis: {
+      newAddShoppingCartAdd: async () => {
+        addCalls += 1
+        return { code: 1 }
+      }
+    }
+  })
+  harness.instance.getTableOrderDishListes = async () => {}
+  harness.instance.getDishListDataes = async () => {}
+  harness.instance.dishDetailes = { dishNumber: 0 }
+
+  assert.equal(harness.instance.shopStatusText, '状态加载中')
+  harness.instance.shopStatus = 0
+  assert.equal(harness.instance.shopStatusText, '休息中')
+  harness.instance.goOrder()
+  await harness.instance.addDishAction({ id: 1, type: 1, dishNumber: 0 }, '普通')
+
+  assert.equal(harness.calls.navigations.length, 0)
+  assert.equal(harness.calls.toasts.at(-1).title, '门店休息中，暂时无法结算')
+  assert.equal(addCalls, 1)
 })

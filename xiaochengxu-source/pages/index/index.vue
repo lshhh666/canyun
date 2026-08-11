@@ -3,7 +3,7 @@
     <cloudmeal-header
       title="餐云点餐"
       :subtitle="shopInfo().shopAddress || '正在获取门店信息'"
-      :status="shopStatus === 1 ? '营业中' : '休息中'"
+      :status="shopStatusText"
     />
 
     <view class="store-contact" @click="handlePhone('bottom')">
@@ -103,7 +103,7 @@
         :disabled="orderListData().length === 0 || shopStatus !== 1"
         @click="goOrder()"
       >
-        {{ shopStatus !== 1 ? '门店休息中' : orderListData().length === 0 ? '请先选购商品' : '去结算' }}
+        {{ shopStatus === null ? '状态加载中' : shopStatus !== 1 ? '门店休息中' : orderListData().length === 0 ? '请先选购商品' : '去结算' }}
       </button>
     </view>
 

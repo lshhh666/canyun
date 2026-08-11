@@ -78,6 +78,7 @@ export default {
 			itemId: "", // 栏目右边scroll-view用于滚动的id
 			arr: [],
 			menuRequestId: 0,
+			categoryRequestId: 0,
 		}
 	},
 	//   组件
@@ -92,6 +93,10 @@ export default {
 	},
 	//   计算属性
 	computed: {
+		shopStatusText: function () {
+			if (this.shopStatus === null) return "状态加载中"
+			return this.shopStatus === 1 ? "营业中" : "休息中"
+		},
 		// 购物车信息列表
 		orderListDataes: function () {
 			return this.orderListData()
@@ -265,6 +270,9 @@ export default {
 		},
 
 		async init() {
+			const requestId = ++this.categoryRequestId
+			// 新一轮初始化开始时，使上一轮已发出的菜品请求立即失效
+			this.menuRequestId++
 			// 获取菜品和套餐分类接口
 			if (this.typeIndex !== 0) {
 				this.typeIndex = 0
@@ -272,20 +280,22 @@ export default {
 
 			// 获取店铺联系方式
 			this.getMerchantInfo()
-			getCategoryList()
-				.then((res) => {
-					if (res && res.code === 1) {
-						this.typeListData = [...res.data]
-						if (res.data.length > 0) {
-							this.getDishListDataes(res.data[this.typeIndex || 0], this.typeIndex || 0)
-						}
-					}
-				})
-				.catch((error) => {
-					this.showMenuError(error)
-				})
 			// 调用一次购物车集合---初始化
 			this.getTableOrderDishListes()
+			try {
+				const res = await getCategoryList()
+				if (requestId !== this.categoryRequestId) return
+				if (res && res.code === 1) {
+					const categories = Array.isArray(res.data) ? res.data : []
+					this.typeListData = categories
+					if (categories.length > 0) {
+						await this.getDishListDataes(categories[this.typeIndex || 0], this.typeIndex || 0)
+					}
+				}
+			} catch (error) {
+				if (requestId !== this.categoryRequestId) return
+				this.showMenuError(error)
+			}
 		},
 		// 点击左边的栏目切换
 		async swichMenu(params, index) {
@@ -439,7 +449,8 @@ export default {
 			await getShoppingCartList({})
 				.then((res) => {
 					if (res.code === 1) {
-						this.initdishListMut(res.data)
+						const orderList = Array.isArray(res.data) ? res.data : []
+						this.initdishListMut(orderList)
 						this.computOrderInfo()
 					}
 				})
@@ -464,6 +475,10 @@ export default {
 				title: getErrorMessage(error, "菜单加载失败，请重试"),
 				icon: "none",
 			})
+		},
+		async refreshCartAndMenu() {
+			await this.getTableOrderDishListes()
+			await this.getDishListDataes(this.rightIdAndType)
 		},
 		// 加菜 - 添加菜品
 		async addDishAction(item, form) {
@@ -530,23 +545,19 @@ export default {
 					}
 				}
 			}
-			newAddShoppingCartAdd(params)
-				.then((res) => {
-					if (res.code === 1) {
-						// 调用一次购物车集合---初始化
-						this.getTableOrderDishListes()
-						// 重新调取刷新右侧具体菜品列表
-						this.getDishListDataes(this.rightIdAndType)
-						this.flavorDataes = []
-					}
-				})
-				.catch((err) => { })
+			try {
+				const res = await newAddShoppingCartAdd(params)
+				if (res.code === 1) {
+					await this.refreshCartAndMenu()
+					this.flavorDataes = []
+				}
+			} catch (err) { }
 		},
 		// 加入购物车
 		addShop(item) {
 			console.log(item);
 			this.dishDetailes = item
-			this.addDishAction(item, "普通")
+			return this.addDishAction(item, "普通")
 		},
 		// 减菜 - 添加菜品
 		async redDishAction(item, form) {
@@ -594,28 +605,22 @@ export default {
 					}
 				}
 			}
-			await newShoppingCartSub(params)
-				.then((res) => {
-					if (res.code === 1) {
-						// 调用一次购物车集合---初始化
-						this.getTableOrderDishListes()
-						// 重新调取刷新右侧具体菜品列表
-						this.getDishListDataes(this.rightIdAndType)
-					}
-				})
-				.catch((err) => { })
+			try {
+				const res = await newShoppingCartSub(params)
+				if (res.code === 1) {
+					await this.refreshCartAndMenu()
+				}
+			} catch (err) { }
 		},
 		// 清空购物车
-		clearCardOrder() {
-			delShoppingCart()
-				.then((res) => {
+		async clearCardOrder() {
+			try {
+				const res = await delShoppingCart()
+				if (res.code === 1) {
 					this.openOrderCartList = false
-					// 调用一次购物车集合---初始化
-					this.getTableOrderDishListes()
-					// 重新调取刷新右侧具体菜品列表
-					this.getDishListDataes(this.rightIdAndType)
-				})
-				.catch((err) => { })
+					await this.refreshCartAndMenu()
+				}
+			} catch (err) { }
 		},
 		// 打开菜品牌详情
 		openDetailHandle(item) {
