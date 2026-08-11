@@ -187,7 +187,7 @@ var _default2 = {
       default: true
     },
     /* 弹出层类型，可选值；
-	bottom：底部弹出层
+   bottom：底部弹出层
     */
     type: {
       type: String,

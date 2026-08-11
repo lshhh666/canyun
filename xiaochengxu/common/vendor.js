@@ -24126,6 +24126,7 @@ var _toConsumableArray2 = _interopRequireDefault(__webpack_require__(/*! @babel/
 var _asyncToGenerator2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/asyncToGenerator */ 48));
 var _slicedToArray2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ 5));
 var _defineProperty2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/defineProperty */ 11));
+var _typeof2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/typeof */ 13));
 var _api = __webpack_require__(/*! ../api/api.js */ 49);
 var _vuex = __webpack_require__(/*! vuex */ 38);
 var _env = __webpack_require__(/*! ../../utils/env */ 51);
@@ -24217,6 +24218,9 @@ var _default = {
       itemId: "",
       // 栏目右边scroll-view用于滚动的id
       arr: [],
+      menuLoading: false,
+      menuLoadFailed: false,
+      menuLifecycleId: 0,
       menuRequestId: 0,
       categoryRequestId: 0
     };
@@ -24241,8 +24245,13 @@ var _default = {
     orderListDataes: function orderListDataes() {
       return this.orderListData();
     },
-    loaddingSt: function loaddingSt() {
-      return this.lodding();
+    shopAddressText: function shopAddressText() {
+      var info = this.shopInfo();
+      return info && (0, _typeof2.default)(info) === 'object' && info.shopAddress ? info.shopAddress : '门店信息暂未完善';
+    },
+    deliveryFeeText: function deliveryFeeText() {
+      var fee = Number(this.deliveryFee());
+      return Number.isFinite(fee) && fee >= 0 ? fee.toFixed(2) : '0.00';
     },
     // 计算购物车清单
     orderAndUserInfo: function orderAndUserInfo() {
@@ -24300,7 +24309,7 @@ var _default = {
   //设置购物车订单
   "setStoreInfo", "setBaseUserInfo",
   //设置用户基本信息
-  "setLodding", "setToken",
+  "setToken",
   //设置token
   "setDeliveryFee" //设置配送费
   ])), (0, _vuex.mapState)(["shopInfo",
@@ -24309,7 +24318,7 @@ var _default = {
   //电话
   "orderListData", "baseUserInfo",
   //用户信息
-  "lodding", "token",
+  "token",
   //token
   "deliveryFee" //配送费
   ])), {}, {
@@ -24400,70 +24409,89 @@ var _default = {
     init: function init() {
       var _this2 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee() {
-        var requestId, res, categories;
+        var requestId, lifecycleId, res, categories, loaded;
         return _regenerator.default.wrap(function _callee$(_context) {
           while (1) {
             switch (_context.prev = _context.next) {
               case 0:
-                requestId = ++_this2.categoryRequestId; // 新一轮初始化开始时，使上一轮已发出的菜品请求立即失效
+                requestId = ++_this2.categoryRequestId;
+                lifecycleId = ++_this2.menuLifecycleId;
+                _this2.menuLoading = true;
+                _this2.menuLoadFailed = false;
                 _this2.menuRequestId++;
-                // 获取菜品和套餐分类接口
-                if (_this2.typeIndex !== 0) {
-                  _this2.typeIndex = 0;
-                }
-
-                // 获取店铺联系方式
+                if (_this2.typeIndex !== 0) _this2.typeIndex = 0;
                 _this2.getMerchantInfo();
-                // 调用一次购物车集合---初始化
                 _this2.getTableOrderDishListes();
-                _context.prev = 5;
-                _context.next = 8;
+                _context.prev = 8;
+                _context.next = 11;
                 return (0, _api.getCategoryList)();
-              case 8:
+              case 11:
                 res = _context.sent;
-                if (!(requestId !== _this2.categoryRequestId)) {
-                  _context.next = 11;
+                if (!(requestId !== _this2.categoryRequestId || lifecycleId !== _this2.menuLifecycleId)) {
+                  _context.next = 14;
                   break;
                 }
                 return _context.abrupt("return");
-              case 11:
-                if (!(res && res.code === 1)) {
-                  _context.next = 17;
+              case 14:
+                if (!(!res || res.code !== 1)) {
+                  _context.next = 16;
                   break;
                 }
+                throw new Error(res && res.msg || '菜单加载失败，请重试');
+              case 16:
                 categories = Array.isArray(res.data) ? res.data : [];
                 _this2.typeListData = categories;
                 if (!(categories.length > 0)) {
-                  _context.next = 17;
+                  _context.next = 25;
                   break;
                 }
-                _context.next = 17;
+                _context.next = 21;
                 return _this2.getDishListDataes(categories[_this2.typeIndex || 0], _this2.typeIndex || 0);
-              case 17:
-                _context.next = 24;
-                break;
-              case 19:
-                _context.prev = 19;
-                _context.t0 = _context["catch"](5);
-                if (!(requestId !== _this2.categoryRequestId)) {
-                  _context.next = 23;
+              case 21:
+                loaded = _context.sent;
+                if (!(requestId !== _this2.categoryRequestId || lifecycleId !== _this2.menuLifecycleId)) {
+                  _context.next = 24;
                   break;
                 }
                 return _context.abrupt("return");
-              case 23:
-                _this2.showMenuError(_context.t0);
               case 24:
+                _this2.menuLoadFailed = loaded === false;
+              case 25:
+                _context.next = 33;
+                break;
+              case 27:
+                _context.prev = 27;
+                _context.t0 = _context["catch"](8);
+                if (!(requestId !== _this2.categoryRequestId || lifecycleId !== _this2.menuLifecycleId)) {
+                  _context.next = 31;
+                  break;
+                }
+                return _context.abrupt("return");
+              case 31:
+                _this2.menuLoadFailed = true;
+                _this2.showMenuError(_context.t0);
+              case 33:
+                _context.prev = 33;
+                if (requestId === _this2.categoryRequestId && lifecycleId === _this2.menuLifecycleId) {
+                  _this2.menuLoading = false;
+                }
+                return _context.finish(33);
+              case 36:
               case "end":
                 return _context.stop();
             }
           }
-        }, _callee, null, [[5, 19]]);
+        }, _callee, null, [[8, 27, 33, 36]]);
       }))();
+    },
+    reloadMenu: function reloadMenu() {
+      return this.init();
     },
     // 点击左边的栏目切换
     swichMenu: function swichMenu(params, index) {
       var _this3 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee2() {
+        var lifecycleId, loaded;
         return _regenerator.default.wrap(function _callee2$(_context2) {
           while (1) {
             switch (_context2.prev = _context2.next) {
@@ -24481,17 +24509,35 @@ var _default = {
                 }
                 return _context2.abrupt("return");
               case 5:
+                lifecycleId = ++_this3.menuLifecycleId;
+                _this3.menuLoading = true;
+                _this3.menuLoadFailed = false;
                 _this3.$nextTick(function () {
                   this.typeIndex = index;
                   this.leftMenuStatus(index);
                 });
-                _this3.getDishListDataes(params, index);
-              case 7:
+                _context2.prev = 9;
+                _context2.next = 12;
+                return _this3.getDishListDataes(params, index);
+              case 12:
+                loaded = _context2.sent;
+                if (!(lifecycleId !== _this3.menuLifecycleId || loaded === null)) {
+                  _context2.next = 15;
+                  break;
+                }
+                return _context2.abrupt("return");
+              case 15:
+                _this3.menuLoadFailed = loaded === false;
+              case 16:
+                _context2.prev = 16;
+                if (lifecycleId === _this3.menuLifecycleId) _this3.menuLoading = false;
+                return _context2.finish(16);
+              case 19:
               case "end":
                 return _context2.stop();
             }
           }
-        }, _callee2);
+        }, _callee2, null, [[9,, 16, 19]]);
       }))();
     },
     // 获取一个目标元素的高度
@@ -24559,7 +24605,7 @@ var _default = {
     getDishListDataes: function getDishListDataes(params, index) {
       var _this7 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee4() {
-        var requestId, param;
+        var requestId, param, response, rows;
         return _regenerator.default.wrap(function _callee4$(_context4) {
           while (1) {
             switch (_context4.prev = _context4.next) {
@@ -24568,68 +24614,70 @@ var _default = {
                 if (index !== undefined) _this7.typeIndex = index;
                 _this7.dishListData = [];
                 _this7.dishListItems = [];
-                _this7.rightIdAndType = {};
                 _this7.rightIdAndType = {
                   id: params.id,
                   type: params.type
                 };
                 param = {
                   categoryId: params.id
-                }; // type：1是菜品、2是套餐
+                };
+                _context4.prev = 6;
                 if (!(params.type === 1)) {
-                  _context4.next = 12;
+                  _context4.next = 13;
                   break;
                 }
                 _context4.next = 10;
-                return (0, _api.dishListByCategoryId)(param).then(function (res) {
-                  if (requestId !== _this7.menuRequestId) return;
-                  if (res && res.code === 1) {
-                    // 添加一个字段去实时更新加入购物车number数量 ----- newCardNumber
-                    _this7.dishListData = res.data && res.data.map(function (obj) {
-                      return _objectSpread(_objectSpread({}, obj), {}, {
-                        type: 1,
-                        newCardNumber: 0
-                      });
-                    });
-                  }
-                }).catch(function (error) {
-                  if (requestId !== _this7.menuRequestId) return;
-                  _this7.showMenuError(error);
-                });
+                return (0, _api.dishListByCategoryId)(param);
               case 10:
-                _context4.next = 14;
+                _context4.t0 = _context4.sent;
+                _context4.next = 16;
                 break;
-              case 12:
-                _context4.next = 14;
-                return (0, _api.querySetmeaList)(param).then(function (success) {
-                  if (requestId !== _this7.menuRequestId) return;
-                  if (success && success.code === 1) {
-                    // dishListItems被转换数组---原始this.dishListData
-                    _this7.dishListData = success.data && success.data.map(function (obj) {
-                      return _objectSpread(_objectSpread({}, obj), {}, {
-                        type: 2,
-                        newCardNumber: 0
-                      });
-                    });
-                  }
-                }).catch(function (error) {
-                  if (requestId !== _this7.menuRequestId) return;
-                  _this7.showMenuError(error);
-                });
-              case 14:
+              case 13:
+                _context4.next = 15;
+                return (0, _api.querySetmeaList)(param);
+              case 15:
+                _context4.t0 = _context4.sent;
+              case 16:
+                response = _context4.t0;
                 if (!(requestId !== _this7.menuRequestId)) {
-                  _context4.next = 16;
+                  _context4.next = 19;
                   break;
                 }
-                return _context4.abrupt("return");
-              case 16:
+                return _context4.abrupt("return", null);
+              case 19:
+                if (!(!response || response.code !== 1)) {
+                  _context4.next = 22;
+                  break;
+                }
+                _this7.showMenuError(new Error(response && response.msg || '菜单加载失败，请重试'));
+                return _context4.abrupt("return", false);
+              case 22:
+                rows = Array.isArray(response.data) ? response.data : [];
+                _this7.dishListData = rows.map(function (obj) {
+                  return _objectSpread(_objectSpread({}, obj), {}, {
+                    type: params.type === 1 ? 1 : 2,
+                    newCardNumber: 0
+                  });
+                });
                 _this7.setOrderNum();
-              case 17:
+                return _context4.abrupt("return", true);
+              case 28:
+                _context4.prev = 28;
+                _context4.t1 = _context4["catch"](6);
+                if (!(requestId !== _this7.menuRequestId)) {
+                  _context4.next = 32;
+                  break;
+                }
+                return _context4.abrupt("return", null);
+              case 32:
+                _this7.showMenuError(_context4.t1);
+                return _context4.abrupt("return", false);
+              case 34:
               case "end":
                 return _context4.stop();
             }
           }
-        }, _callee4);
+        }, _callee4, null, [[6, 28]]);
       }))();
     },
     // 获取首页店铺信息

@@ -133,9 +133,6 @@ var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  var m0 = _vm.shopInfo().shopAddress || "正在获取门店信息"
-  var m1 = _vm.deliveryFee()
-  var m2 = _vm.shopInfo().shopAddress || "门店信息获取中"
   var l0 = _vm.__map(_vm.typeListData, function (item, index) {
     var $orig = _vm.__get_orig(item)
     var g0 = item.name.length
@@ -144,20 +141,23 @@ var render = function () {
       g0: g0,
     }
   })
-  var g1 = _vm.dishListItems && _vm.dishListItems.length > 0
-  var l1 = g1
-    ? _vm.__map(_vm.dishListItems, function (item, index) {
-        var $orig = _vm.__get_orig(item)
-        var g2 = item.price.toFixed(2)
-        var g3 = !item.flavors || item.flavors.length === 0
-        return {
-          $orig: $orig,
-          g2: g2,
-          g3: g3,
-        }
-      })
+  var g1 = !_vm.menuLoadFailed
+    ? _vm.dishListItems && _vm.dishListItems.length > 0
     : null
-  var g4 = !g1 ? _vm.typeListData.length : null
+  var l1 =
+    !_vm.menuLoadFailed && g1
+      ? _vm.__map(_vm.dishListItems, function (item, index) {
+          var $orig = _vm.__get_orig(item)
+          var g2 = item.price.toFixed(2)
+          var g3 = !item.flavors || item.flavors.length === 0
+          return {
+            $orig: $orig,
+            g2: g2,
+            g3: g3,
+          }
+        })
+      : null
+  var g4 = !_vm.menuLoadFailed && !g1 ? _vm.typeListData.length : null
   var g5 = _vm.orderListData().length === 0 || _vm.shopStatus !== 1
   var g6 = _vm.orderDishPrice.toFixed(2)
   var g7 = _vm.orderListData().length === 0 || _vm.shopStatus !== 1
@@ -178,9 +178,6 @@ var render = function () {
     {},
     {
       $root: {
-        m0: m0,
-        m1: m1,
-        m2: m2,
         l0: l0,
         g1: g1,
         l1: l1,
