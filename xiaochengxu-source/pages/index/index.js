@@ -79,6 +79,7 @@ export default {
 			arr: [],
 			menuLoading: false,
 			menuLoadFailed: false,
+			menuLifecycleId: 0,
 			menuRequestId: 0,
 			categoryRequestId: 0,
 		}
@@ -107,7 +108,7 @@ export default {
 			const info = this.shopInfo()
 			return info && typeof info === 'object' && info.shopAddress
 				? info.shopAddress
-				: '闂ㄥ簵淇℃伅鏆傛湭瀹屽杽'
+				: '门店信息暂未完善'
 		},
 		deliveryFeeText: function () {
 			const fee = Number(this.deliveryFee())
@@ -278,6 +279,7 @@ export default {
 
 		async init() {
 			const requestId = ++this.categoryRequestId
+			const lifecycleId = ++this.menuLifecycleId
 			this.menuLoading = true
 			this.menuLoadFailed = false
 			this.menuRequestId++
@@ -287,9 +289,9 @@ export default {
 			this.getTableOrderDishListes()
 			try {
 				const res = await getCategoryList()
-				if (requestId !== this.categoryRequestId) return
+				if (requestId !== this.categoryRequestId || lifecycleId !== this.menuLifecycleId) return
 				if (!res || res.code !== 1) {
-					throw new Error((res && res.msg) || '鑿滃崟鍔犺浇澶辫触锛岃閲嶈瘯')
+					throw new Error((res && res.msg) || '菜单加载失败，请重试')
 				}
 
 				const categories = Array.isArray(res.data) ? res.data : []
@@ -299,15 +301,17 @@ export default {
 						categories[this.typeIndex || 0],
 						this.typeIndex || 0
 					)
-					if (requestId !== this.categoryRequestId) return
+					if (requestId !== this.categoryRequestId || lifecycleId !== this.menuLifecycleId) return
 					this.menuLoadFailed = loaded === false
 				}
 			} catch (error) {
-				if (requestId !== this.categoryRequestId) return
+				if (requestId !== this.categoryRequestId || lifecycleId !== this.menuLifecycleId) return
 				this.menuLoadFailed = true
 				this.showMenuError(error)
 			} finally {
-				if (requestId === this.categoryRequestId) this.menuLoading = false
+				if (requestId === this.categoryRequestId && lifecycleId === this.menuLifecycleId) {
+					this.menuLoading = false
+				}
 			}
 		},
 		reloadMenu() {
@@ -319,12 +323,20 @@ export default {
 				await this.getMenuItemTop()
 			}
 			if (index == this.typeIndex) return
+			const lifecycleId = ++this.menuLifecycleId
+			this.menuLoading = true
+			this.menuLoadFailed = false
 			this.$nextTick(function () {
 				this.typeIndex = index
 				this.leftMenuStatus(index)
 			})
-			const loaded = await this.getDishListDataes(params, index)
-			if (loaded !== null) this.menuLoadFailed = loaded === false
+			try {
+				const loaded = await this.getDishListDataes(params, index)
+				if (lifecycleId !== this.menuLifecycleId || loaded === null) return
+				this.menuLoadFailed = loaded === false
+			} finally {
+				if (lifecycleId === this.menuLifecycleId) this.menuLoading = false
+			}
 		},
 		// 获取一个目标元素的高度
 		getElRect(elClass, dataVal) {
@@ -398,7 +410,7 @@ export default {
 					: await querySetmeaList(param)
 				if (requestId !== this.menuRequestId) return null
 				if (!response || response.code !== 1) {
-					this.showMenuError(new Error((response && response.msg) || '鑿滃崟鍔犺浇澶辫触锛岃閲嶈瘯'))
+					this.showMenuError(new Error((response && response.msg) || '菜单加载失败，请重试'))
 					return false
 				}
 

@@ -9,7 +9,7 @@
     <view class="store-contact" @click="handlePhone('bottom')">
       <view class="store-contact__fee">
         <text class="store-contact__label">配送费</text>
-        <text>锟{ deliveryFeeText }}</text>
+        <text>￥{{ deliveryFeeText }}</text>
       </view>
       <view class="store-contact__action">
         <text>{{ shopAddressText }}</text>
@@ -45,9 +45,9 @@
       <state-panel
         v-if="menuLoadFailed"
         class="menu-empty"
-        title="鑿滃崟鍔犺浇澶辫触"
-        description="璇锋鏌ョ綉缁滃悗閲嶆柊鍔犺浇"
-        actionText="閲嶆柊鍔犺浇"
+        title="菜单加载失败"
+        description="请检查网络后重新加载"
+        actionText="重新加载"
         @action="reloadMenu"
       />
       <scroll-view

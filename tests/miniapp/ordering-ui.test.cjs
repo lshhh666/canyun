@@ -161,23 +161,23 @@ test('ordering loading overlay is structural and missing metadata has stable cop
   expectAll(page, [
     'v-if="menuLoading"',
     'v-if="menuLoadFailed"',
-    'actionText="閲嶆柊鍔犺浇"',
+    'actionText="重新加载"',
     '@action="reloadMenu"',
     '{{ shopAddressText }}',
-    '锟{ deliveryFeeText }}'
+    '￥{{ deliveryFeeText }}'
   ])
-  expectNone(page, ['v-show="loaddingSt"', '锟{ deliveryFee() }}', '姝ｅ湪鑾峰彇闂ㄥ簵淇℃伅'])
+  expectNone(page, ['v-show="loaddingSt"', '￥{{ deliveryFee() }}', '正在获取门店信息'])
 
   const missing = loadOrderingController({
     state: { shopInfo: null, deliveryFee: null }
   })
-  assert.equal(missing.instance.shopAddressText, '闂ㄥ簵淇℃伅鏆傛湭瀹屽杽')
+  assert.equal(missing.instance.shopAddressText, '门店信息暂未完善')
   assert.equal(missing.instance.deliveryFeeText, '0.00')
 
   const valid = loadOrderingController({
-    state: { shopInfo: { shopAddress: '鏈涗含闂ㄥ簵' }, deliveryFee: '3' }
+    state: { shopInfo: { shopAddress: '望京门店' }, deliveryFee: '3' }
   })
-  assert.equal(valid.instance.shopAddressText, '鏈涗含闂ㄥ簵')
+  assert.equal(valid.instance.shopAddressText, '望京门店')
   assert.equal(valid.instance.deliveryFeeText, '3.00')
 })
 
@@ -319,6 +319,47 @@ test('an older initialization cannot clear the newer loading state', async () =>
   assert.equal(harness.instance.menuLoading, true)
   newRequest.resolve({ code: 1, data: [] })
   await newInit
+  assert.equal(harness.instance.menuLoading, false)
+})
+
+test('a category switch owns its failure state over an older initial menu request', async () => {
+  const categories = deferred()
+  const initialDishes = deferred()
+  const switchedDishes = deferred()
+  const initialDishStarted = deferred()
+  let dishCalls = 0
+  const harness = loadOrderingController({
+    apis: {
+      getCategoryList: () => categories.promise,
+      dishListByCategoryId: () => {
+        dishCalls += 1
+        if (dishCalls === 1) {
+          initialDishStarted.resolve()
+          return initialDishes.promise
+        }
+        return switchedDishes.promise
+      }
+    }
+  })
+  harness.instance.arr = [{}]
+  harness.instance.getMerchantInfo = async () => {}
+  harness.instance.getTableOrderDishListes = async () => {}
+  harness.instance.leftMenuStatus = async () => {}
+
+  const initial = harness.instance.init()
+  categories.resolve({ code: 1, data: [{ id: 1, type: 1 }, { id: 2, type: 1 }] })
+  await initialDishStarted.promise
+
+  const switched = harness.instance.swichMenu({ id: 2, type: 1 }, 1)
+  switchedDishes.resolve({ code: 0, msg: 'switch failed' })
+  await switched
+
+  assert.equal(harness.instance.menuLoadFailed, true)
+  assert.equal(harness.instance.menuLoading, false)
+  initialDishes.resolve({ code: 1, data: [] })
+  await initial
+
+  assert.equal(harness.instance.menuLoadFailed, true)
   assert.equal(harness.instance.menuLoading, false)
 })
 
