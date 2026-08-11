@@ -95,6 +95,10 @@ export default {
 		dishAmount: function () {
 			return this.orderListDataes.reduce((total, item) => total + item.number * item.amount, 0)
 		},
+		deliveryFeeAmount: function () {
+			const amount = Number(this.deliveryFee())
+			return Number.isFinite(amount) ? amount : 0
+		},
 		// 菜品数据
 		orderListDataes: function () {
 			return this.orderListData()
@@ -306,7 +310,7 @@ export default {
 				this.orderDishNumber += n.number
 				console.log(n);
 			})
-			this.orderDishPrice = this.orderDishPrice + this.deliveryFee() + this.orderDishNumber
+			this.orderDishPrice = this.orderDishPrice + this.deliveryFeeAmount + this.orderDishNumber
 		},
 		// 返回上一级
 		goBack() {
@@ -340,7 +344,7 @@ export default {
 					packAmount: this.orderDishNumber,
 					amount: this.orderDishPrice,
 					shopId: this.shopInfo().shopId,
-					deliveryFee: this.deliveryFee()
+					deliveryFee: this.deliveryFeeAmount
 				}
 				const res = await submitOrderSubmit(params)
 				if (res.code === 1) {

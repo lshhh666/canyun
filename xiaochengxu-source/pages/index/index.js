@@ -82,6 +82,10 @@ export default {
 			menuLifecycleId: 0,
 			menuRequestId: 0,
 			categoryRequestId: 0,
+			networkStatusHandler: null,
+			isUnloaded: false,
+			elRectRetryLimit: 50,
+			elRectRetryTasks: [],
 		}
 	},
 	//   组件
@@ -147,18 +151,35 @@ export default {
 		this.getMenuItemTop()
 	},
 	onLoad(options) {
-		uni.onNetworkStatusChange(function (res) {
-			if (res.isConnected == false) {
+		this.isUnloaded = false
+		this.networkStatusHandler = (res) => {
+			if (!this.isUnloaded && res.isConnected === false) {
 				uni.navigateTo({
 					url: "/pages/nonet/index",
 				})
 			}
-		})
+		}
+		uni.onNetworkStatusChange(this.networkStatusHandler)
 		if (options) {
 			if (!options.status && !options.formOrder) {
 				this.getData()
 			}
 		}
+	},
+	onUnload() {
+		this.isUnloaded = true
+		this.menuLifecycleId += 1
+		this.categoryRequestId += 1
+		this.menuRequestId += 1
+		if (this.networkStatusHandler && typeof uni.offNetworkStatusChange === "function") {
+			uni.offNetworkStatusChange(this.networkStatusHandler)
+		}
+		this.networkStatusHandler = null
+		const retryTasks = this.elRectRetryTasks.splice(0)
+		retryTasks.forEach((task) => {
+			clearTimeout(task.timer)
+			task.resolve(false)
+		})
 	},
 	onShow() {
 		if (this.token()) {
@@ -339,8 +360,12 @@ export default {
 			}
 		},
 		// 获取一个目标元素的高度
-		getElRect(elClass, dataVal) {
-			new Promise((resolve, reject) => {
+		getElRect(elClass, dataVal, retryCount = 0) {
+			return new Promise((resolve) => {
+				if (this.isUnloaded) {
+					resolve(false)
+					return
+				}
 				const query = uni.createSelectorQuery().in(this)
 				query
 					.select("." + elClass)
@@ -349,15 +374,27 @@ export default {
 							size: true,
 						},
 						(res) => {
+							if (this.isUnloaded) {
+								resolve(false)
+								return
+							}
 							// 如果节点尚未生成，res值为null，循环调用执行
 							if (!res) {
-								setTimeout(() => {
-									this.getElRect(elClass)
+								if (retryCount >= this.elRectRetryLimit) {
+									resolve(false)
+									return
+								}
+								const retryTask = { timer: null, resolve }
+								retryTask.timer = setTimeout(() => {
+									const taskIndex = this.elRectRetryTasks.indexOf(retryTask)
+									if (taskIndex > -1) this.elRectRetryTasks.splice(taskIndex, 1)
+									this.getElRect(elClass, dataVal, retryCount + 1).then(resolve)
 								}, 10)
+								this.elRectRetryTasks.push(retryTask)
 								return
 							}
 							this[dataVal] = res.height
-							resolve()
+							resolve(true)
 						}
 					)
 					.exec()

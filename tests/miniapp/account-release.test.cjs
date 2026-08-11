@@ -139,11 +139,11 @@ test('account routes address, order history and order detail to their real pages
     ['setAddressBackUrl', '/pages/my/my']
   ])
   assert.deepEqual(harness.calls.redirects.map(call => call.url), [
-    '/pages/address/address?form=my',
-    '/pages/details/index?orderId=88'
+    '/pages/address/address?form=my'
   ])
   assert.deepEqual(harness.calls.navigations.map(call => call.url), [
-    '/pages/historyOrder/historyOrder'
+    '/pages/historyOrder/historyOrder',
+    '/pages/details/index?orderId=88'
   ])
 })
 
@@ -207,7 +207,7 @@ test('recent order events reach account detail and repeat-order handlers', async
   await Promise.all(pending)
 
   assert.deepEqual(events, [['goDetail', 31], ['oneOrderFun', 32]])
-  assert.equal(account.calls.redirects.at(-1).url, '/pages/details/index?orderId=31')
+  assert.equal(account.calls.navigations.at(-1).url, '/pages/details/index?orderId=31')
   assert.deepEqual(sequence, ['clear-cart', 'repeat:32'])
   assert.equal(account.calls.backs.at(-1).delta, 1)
   assert.equal(account.calls.relaunches.length, 0)

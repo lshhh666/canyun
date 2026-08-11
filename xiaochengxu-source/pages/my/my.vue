@@ -164,7 +164,7 @@ export default {
     },
     goDetail(id) {
       this.setAddressBackUrl('/pages/my/my')
-      uni.redirectTo({ url: `/pages/details/index?orderId=${id}` })
+      uni.navigateTo({ url: `/pages/details/index?orderId=${id}` })
     },
     async lower() {
       if (this.loading) return false

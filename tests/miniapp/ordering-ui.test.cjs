@@ -26,7 +26,13 @@ function loadOrderingController(overrides = {}) {
     deliveryFee: 3,
     ...(overrides.state || {})
   }
-  const calls = { mutations: [], toasts: [], navigations: [] }
+  const calls = {
+    mutations: [],
+    toasts: [],
+    navigations: [],
+    networkSubscriptions: [],
+    networkUnsubscriptions: []
+  }
   const apiDefaults = {
     userLogin: async () => ({ code: 1, data: {} }),
     getCategoryList: async () => ({ code: 1, data: [] }),
@@ -43,8 +49,8 @@ function loadOrderingController(overrides = {}) {
   const context = {
     module: { exports: {} },
     console: { log() {} },
-    setTimeout,
-    clearTimeout,
+    setTimeout: overrides.setTimeout || setTimeout,
+    clearTimeout: overrides.clearTimeout || clearTimeout,
     baseUrl: 'http://example.test',
     getErrorMessage: (error, fallback) => (error && error.message) || fallback,
     Phone: {},
@@ -73,7 +79,14 @@ function loadOrderingController(overrides = {}) {
       },
       navigateTo(options) {
         calls.navigations.push(options)
-      }
+      },
+      onNetworkStatusChange(handler) {
+        calls.networkSubscriptions.push(handler)
+      },
+      offNetworkStatusChange(handler) {
+        calls.networkUnsubscriptions.push(handler)
+      },
+      ...(overrides.uni || {})
     },
     ...apiDefaults,
     ...(overrides.apis || {})
@@ -361,6 +374,120 @@ test('a category switch owns its failure state over an older initial menu reques
 
   assert.equal(harness.instance.menuLoadFailed, true)
   assert.equal(harness.instance.menuLoading, false)
+})
+
+test('ordering unregisters its network listener and invalidates menu work on unload', async () => {
+  const categories = deferred()
+  const harness = loadOrderingController({
+    apis: { getCategoryList: () => categories.promise }
+  })
+  harness.instance.getMerchantInfo = async () => {}
+  harness.instance.getTableOrderDishListes = async () => {}
+
+  harness.definition.onLoad.call(harness.instance, { status: true })
+  assert.equal(harness.calls.networkSubscriptions.length, 1)
+  const handler = harness.calls.networkSubscriptions[0]
+  handler({ isConnected: false })
+  assert.equal(harness.calls.navigations.at(-1).url, '/pages/nonet/index')
+
+  const pending = harness.instance.init()
+  const ids = {
+    lifecycle: harness.instance.menuLifecycleId,
+    category: harness.instance.categoryRequestId,
+    menu: harness.instance.menuRequestId
+  }
+  harness.definition.onUnload.call(harness.instance)
+
+  assert.deepEqual(harness.calls.networkUnsubscriptions, [handler])
+  assert.equal(harness.instance.networkStatusHandler, null)
+  assert.equal(harness.instance.menuLifecycleId, ids.lifecycle + 1)
+  assert.equal(harness.instance.categoryRequestId, ids.category + 1)
+  assert.equal(harness.instance.menuRequestId, ids.menu + 1)
+
+  categories.resolve({ code: 1, data: [{ id: 9, type: 1 }] })
+  await pending
+  assert.equal(harness.instance.typeListData.length, 0)
+})
+
+test('element measurement returns an awaited Promise and preserves the target across retry', async () => {
+  const scheduled = []
+  const selectors = []
+  const responses = [null, { height: 96 }]
+  const harness = loadOrderingController({
+    setTimeout(callback, delay) {
+      scheduled.push({ callback, delay })
+      return scheduled.length
+    },
+    uni: {
+      createSelectorQuery() {
+        let callback
+        return {
+          in() { return this },
+          select(selector) { selectors.push(selector); return this },
+          fields(_options, handler) { callback = handler; return this },
+          exec() { callback(responses.shift()) }
+        }
+      }
+    }
+  })
+
+  const measurement = harness.instance.getElRect('type_item', 'menuItemHeight')
+  assert.equal(typeof measurement.then, 'function')
+  assert.equal(scheduled.length, 1)
+  assert.equal(scheduled[0].delay, 10)
+
+  scheduled[0].callback()
+  assert.equal(await measurement, true)
+  assert.equal(harness.instance.menuItemHeight, 96)
+  assert.deepEqual(selectors, ['.type_item', '.type_item'])
+})
+
+test('element measurement caps retries and unload cancels its owned timers', async () => {
+  function retryHarness() {
+    const scheduled = []
+    const cleared = []
+    let selectorCalls = 0
+    const harness = loadOrderingController({
+      setTimeout(callback, delay) {
+        scheduled.push({ id: scheduled.length + 1, callback, delay })
+        return scheduled.length
+      },
+      clearTimeout(id) {
+        cleared.push(id)
+      },
+      uni: {
+        createSelectorQuery() {
+          selectorCalls += 1
+          let callback
+          return {
+            in() { return this },
+            select() { return this },
+            fields(_options, handler) { callback = handler; return this },
+            exec() { callback(null) }
+          }
+        }
+      }
+    })
+    return { cleared, harness, scheduled, selectorCalls: () => selectorCalls }
+  }
+
+  const capped = retryHarness()
+  const cappedMeasurement = capped.harness.instance.getElRect('type_item', 'menuItemHeight')
+  for (let index = 0; index < 50; index += 1) {
+    assert.ok(capped.scheduled[index], `missing retry timer ${index + 1}`)
+    capped.scheduled[index].callback()
+  }
+  assert.equal(await cappedMeasurement, false)
+  assert.equal(capped.scheduled.length, 50)
+  assert.equal(capped.selectorCalls(), 51)
+
+  const cancelled = retryHarness()
+  const cancelledMeasurement = cancelled.harness.instance.getElRect('menu-scroll-view', 'menuHeight')
+  cancelled.harness.definition.onUnload.call(cancelled.harness.instance)
+  assert.equal(await cancelledMeasurement, false)
+  assert.deepEqual(cancelled.cleared, [1])
+  assert.equal(cancelled.harness.instance.elRectRetryTasks.length, 0)
+  assert.equal(cancelled.selectorCalls(), 1)
 })
 
 test('loading and closed stores block checkout without blocking add requests', async () => {

@@ -348,6 +348,18 @@ test('detail navigates back when possible and falls back to the orders root', ()
   assert.equal(direct.calls.relaunches[0].url, '/pages/historyOrder/historyOrder')
 })
 
+test('detail opened from My returns to the My stack entry', () => {
+  const detail = detailsHarness({
+    pages: [{ route: 'pages/my/my' }, { route: 'pages/details/index' }]
+  })
+
+  detail.instance.goBack()
+
+  assert.equal(detail.calls.backs.length, 1)
+  assert.equal(detail.calls.backs[0].delta, 1)
+  assert.equal(detail.calls.relaunches.length, 0)
+})
+
 test('payment ignores duplicate taps and routes only after payment succeeds', async () => {
   const request = deferred()
   let paymentCalls = 0

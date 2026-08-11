@@ -215,6 +215,46 @@ test('checkout success keeps the existing payload and navigates to payment', asy
   assert.equal(order.calls.navigations.at(-1).url, '/pages/pay/index?orderId=88')
 })
 
+test('checkout normalizes a string delivery fee for display, total and payload', async () => {
+  let submittedParams
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [{ number: 2, amount: 10 }],
+      remarkData: '', addressData: {}, storeInfo: {},
+      shopInfo: { shopId: 7 }, deliveryFee: '3'
+    },
+    apis: {
+      submitOrderSubmit: async params => {
+        submittedParams = params
+        return { code: 1, data: { id: 91 } }
+      },
+      getAddressBookDefault: async () => ({ code: 1, data: {} }),
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      getEstimatedDeliveryTime: async () => ({ code: 1, data: '2026-08-11 10:00:00' })
+    }
+  })
+
+  assert.match(read('xiaochengxu-source/pages/order/index.vue'), /deliveryFeeAmount\.toFixed\(2\)/)
+  assert.equal(order.instance.deliveryFeeAmount, 3)
+  order.instance.computOrderInfo()
+  assert.equal(order.instance.orderDishPrice, 25)
+  assert.equal(typeof order.instance.orderDishPrice, 'number')
+
+  Object.assign(order.instance, {
+    address: '娴嬭瘯鍦板潃', addressBookId: 9, arrivalTime: '10:00',
+    remark: '', status: 0, num: 0
+  })
+  await order.instance.payOrderHandle()
+
+  assert.equal(submittedParams.amount, 25)
+  assert.equal(submittedParams.deliveryFee, 3)
+
+  const invalid = harness('xiaochengxu-source/pages/order/index.js', {
+    state: { orderListData: [], deliveryFee: 'not-a-number' }
+  })
+  assert.equal(invalid.instance.deliveryFeeAmount, 0)
+})
+
 test('checkout only routes to add-address after a successful empty-list load', async () => {
   const order = harness('xiaochengxu-source/pages/order/index.js', {
     state: {

@@ -58,7 +58,7 @@
         </view>
         <view class="fee-row">
           <text>配送费</text>
-          <text>￥{{ deliveryFee().toFixed(2) }}</text>
+          <text>￥{{ deliveryFeeAmount.toFixed(2) }}</text>
         </view>
       </view>
     </scroll-view>
