@@ -24222,7 +24222,11 @@ var _default = {
       menuLoadFailed: false,
       menuLifecycleId: 0,
       menuRequestId: 0,
-      categoryRequestId: 0
+      categoryRequestId: 0,
+      networkStatusHandler: null,
+      isUnloaded: false,
+      elRectRetryLimit: 50,
+      elRectRetryTasks: []
     };
   },
   //   组件
@@ -24281,18 +24285,36 @@ var _default = {
     this.getMenuItemTop();
   },
   onLoad: function onLoad(options) {
-    uni.onNetworkStatusChange(function (res) {
-      if (res.isConnected == false) {
+    var _this2 = this;
+    this.isUnloaded = false;
+    this.networkStatusHandler = function (res) {
+      if (!_this2.isUnloaded && res.isConnected === false) {
         uni.navigateTo({
           url: "/pages/nonet/index"
         });
       }
-    });
+    };
+    uni.onNetworkStatusChange(this.networkStatusHandler);
     if (options) {
       if (!options.status && !options.formOrder) {
         this.getData();
       }
     }
+  },
+  onUnload: function onUnload() {
+    this.isUnloaded = true;
+    this.menuLifecycleId += 1;
+    this.categoryRequestId += 1;
+    this.menuRequestId += 1;
+    if (this.networkStatusHandler && typeof uni.offNetworkStatusChange === "function") {
+      uni.offNetworkStatusChange(this.networkStatusHandler);
+    }
+    this.networkStatusHandler = null;
+    var retryTasks = this.elRectRetryTasks.splice(0);
+    retryTasks.forEach(function (task) {
+      clearTimeout(task.timer);
+      task.resolve(false);
+    });
   },
   onShow: function onShow() {
     if (this.token()) {
@@ -24407,27 +24429,27 @@ var _default = {
       }
     },
     init: function init() {
-      var _this2 = this;
+      var _this3 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee() {
         var requestId, lifecycleId, res, categories, loaded;
         return _regenerator.default.wrap(function _callee$(_context) {
           while (1) {
             switch (_context.prev = _context.next) {
               case 0:
-                requestId = ++_this2.categoryRequestId;
-                lifecycleId = ++_this2.menuLifecycleId;
-                _this2.menuLoading = true;
-                _this2.menuLoadFailed = false;
-                _this2.menuRequestId++;
-                if (_this2.typeIndex !== 0) _this2.typeIndex = 0;
-                _this2.getMerchantInfo();
-                _this2.getTableOrderDishListes();
+                requestId = ++_this3.categoryRequestId;
+                lifecycleId = ++_this3.menuLifecycleId;
+                _this3.menuLoading = true;
+                _this3.menuLoadFailed = false;
+                _this3.menuRequestId++;
+                if (_this3.typeIndex !== 0) _this3.typeIndex = 0;
+                _this3.getMerchantInfo();
+                _this3.getTableOrderDishListes();
                 _context.prev = 8;
                 _context.next = 11;
                 return (0, _api.getCategoryList)();
               case 11:
                 res = _context.sent;
-                if (!(requestId !== _this2.categoryRequestId || lifecycleId !== _this2.menuLifecycleId)) {
+                if (!(requestId !== _this3.categoryRequestId || lifecycleId !== _this3.menuLifecycleId)) {
                   _context.next = 14;
                   break;
                 }
@@ -24440,40 +24462,40 @@ var _default = {
                 throw new Error(res && res.msg || '菜单加载失败，请重试');
               case 16:
                 categories = Array.isArray(res.data) ? res.data : [];
-                _this2.typeListData = categories;
+                _this3.typeListData = categories;
                 if (!(categories.length > 0)) {
                   _context.next = 25;
                   break;
                 }
                 _context.next = 21;
-                return _this2.getDishListDataes(categories[_this2.typeIndex || 0], _this2.typeIndex || 0);
+                return _this3.getDishListDataes(categories[_this3.typeIndex || 0], _this3.typeIndex || 0);
               case 21:
                 loaded = _context.sent;
-                if (!(requestId !== _this2.categoryRequestId || lifecycleId !== _this2.menuLifecycleId)) {
+                if (!(requestId !== _this3.categoryRequestId || lifecycleId !== _this3.menuLifecycleId)) {
                   _context.next = 24;
                   break;
                 }
                 return _context.abrupt("return");
               case 24:
-                _this2.menuLoadFailed = loaded === false;
+                _this3.menuLoadFailed = loaded === false;
               case 25:
                 _context.next = 33;
                 break;
               case 27:
                 _context.prev = 27;
                 _context.t0 = _context["catch"](8);
-                if (!(requestId !== _this2.categoryRequestId || lifecycleId !== _this2.menuLifecycleId)) {
+                if (!(requestId !== _this3.categoryRequestId || lifecycleId !== _this3.menuLifecycleId)) {
                   _context.next = 31;
                   break;
                 }
                 return _context.abrupt("return");
               case 31:
-                _this2.menuLoadFailed = true;
-                _this2.showMenuError(_context.t0);
+                _this3.menuLoadFailed = true;
+                _this3.showMenuError(_context.t0);
               case 33:
                 _context.prev = 33;
-                if (requestId === _this2.categoryRequestId && lifecycleId === _this2.menuLifecycleId) {
-                  _this2.menuLoading = false;
+                if (requestId === _this3.categoryRequestId && lifecycleId === _this3.menuLifecycleId) {
+                  _this3.menuLoading = false;
                 }
                 return _context.finish(33);
               case 36:
@@ -24489,48 +24511,48 @@ var _default = {
     },
     // 点击左边的栏目切换
     swichMenu: function swichMenu(params, index) {
-      var _this3 = this;
+      var _this4 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee2() {
         var lifecycleId, loaded;
         return _regenerator.default.wrap(function _callee2$(_context2) {
           while (1) {
             switch (_context2.prev = _context2.next) {
               case 0:
-                if (!(_this3.arr.length == 0)) {
+                if (!(_this4.arr.length == 0)) {
                   _context2.next = 3;
                   break;
                 }
                 _context2.next = 3;
-                return _this3.getMenuItemTop();
+                return _this4.getMenuItemTop();
               case 3:
-                if (!(index == _this3.typeIndex)) {
+                if (!(index == _this4.typeIndex)) {
                   _context2.next = 5;
                   break;
                 }
                 return _context2.abrupt("return");
               case 5:
-                lifecycleId = ++_this3.menuLifecycleId;
-                _this3.menuLoading = true;
-                _this3.menuLoadFailed = false;
-                _this3.$nextTick(function () {
+                lifecycleId = ++_this4.menuLifecycleId;
+                _this4.menuLoading = true;
+                _this4.menuLoadFailed = false;
+                _this4.$nextTick(function () {
                   this.typeIndex = index;
                   this.leftMenuStatus(index);
                 });
                 _context2.prev = 9;
                 _context2.next = 12;
-                return _this3.getDishListDataes(params, index);
+                return _this4.getDishListDataes(params, index);
               case 12:
                 loaded = _context2.sent;
-                if (!(lifecycleId !== _this3.menuLifecycleId || loaded === null)) {
+                if (!(lifecycleId !== _this4.menuLifecycleId || loaded === null)) {
                   _context2.next = 15;
                   break;
                 }
                 return _context2.abrupt("return");
               case 15:
-                _this3.menuLoadFailed = loaded === false;
+                _this4.menuLoadFailed = loaded === false;
               case 16:
                 _context2.prev = 16;
-                if (lifecycleId === _this3.menuLifecycleId) _this3.menuLoading = false;
+                if (lifecycleId === _this4.menuLifecycleId) _this4.menuLoading = false;
                 return _context2.finish(16);
               case 19:
               case "end":
@@ -24542,46 +24564,66 @@ var _default = {
     },
     // 获取一个目标元素的高度
     getElRect: function getElRect(elClass, dataVal) {
-      var _this4 = this;
-      new Promise(function (resolve, reject) {
-        var query = uni.createSelectorQuery().in(_this4);
+      var _this5 = this;
+      var retryCount = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+      return new Promise(function (resolve) {
+        if (_this5.isUnloaded) {
+          resolve(false);
+          return;
+        }
+        var query = uni.createSelectorQuery().in(_this5);
         query.select("." + elClass).fields({
           size: true
         }, function (res) {
-          // 如果节点尚未生成，res值为null，循环调用执行
-          if (!res) {
-            setTimeout(function () {
-              _this4.getElRect(elClass);
-            }, 10);
+          if (_this5.isUnloaded) {
+            resolve(false);
             return;
           }
-          _this4[dataVal] = res.height;
-          resolve();
+          // 如果节点尚未生成，res值为null，循环调用执行
+          if (!res) {
+            if (retryCount >= _this5.elRectRetryLimit) {
+              resolve(false);
+              return;
+            }
+            var retryTask = {
+              timer: null,
+              resolve: resolve
+            };
+            retryTask.timer = setTimeout(function () {
+              var taskIndex = _this5.elRectRetryTasks.indexOf(retryTask);
+              if (taskIndex > -1) _this5.elRectRetryTasks.splice(taskIndex, 1);
+              _this5.getElRect(elClass, dataVal, retryCount + 1).then(resolve);
+            }, 10);
+            _this5.elRectRetryTasks.push(retryTask);
+            return;
+          }
+          _this5[dataVal] = res.height;
+          resolve(true);
         }).exec();
       });
     },
     // 设置左边菜单的滚动状态
     leftMenuStatus: function leftMenuStatus(index) {
-      var _this5 = this;
+      var _this6 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee3() {
         return _regenerator.default.wrap(function _callee3$(_context3) {
           while (1) {
             switch (_context3.prev = _context3.next) {
               case 0:
-                _this5.typeIndex = index;
+                _this6.typeIndex = index;
                 // 如果为0，意味着尚未初始化
-                if (!(_this5.menuHeight == 0 || _this5.menuItemHeight == 0)) {
+                if (!(_this6.menuHeight == 0 || _this6.menuItemHeight == 0)) {
                   _context3.next = 6;
                   break;
                 }
                 _context3.next = 4;
-                return _this5.getElRect("menu-scroll-view", "menuHeight");
+                return _this6.getElRect("menu-scroll-view", "menuHeight");
               case 4:
                 _context3.next = 6;
-                return _this5.getElRect("type_item", "menuItemHeight");
+                return _this6.getElRect("type_item", "menuItemHeight");
               case 6:
                 // 将菜单活动item垂直居中
-                _this5.scrollTop = index * _this5.menuItemHeight + _this5.menuItemHeight / 2 - _this5.menuHeight / 2;
+                _this6.scrollTop = index * _this6.menuItemHeight + _this6.menuItemHeight / 2 - _this6.menuHeight / 2;
               case 7:
               case "end":
                 return _context3.stop();
@@ -24592,29 +24634,29 @@ var _default = {
     },
     // 获取右边菜单每个item到顶部的距离
     getMenuItemTop: function getMenuItemTop() {
-      var _this6 = this;
+      var _this7 = this;
       return new Promise(function (resolve) {
-        var selectorQuery = uni.createSelectorQuery().in(_this6);
+        var selectorQuery = uni.createSelectorQuery().in(_this7);
         selectorQuery.selectAll(".type_list .type_item").boundingClientRect(function (rects) {
-          _this6.arr = rects || [];
-          resolve(_this6.arr);
+          _this7.arr = rects || [];
+          resolve(_this7.arr);
         }).exec();
       });
     },
     // 获取菜品列表
     getDishListDataes: function getDishListDataes(params, index) {
-      var _this7 = this;
+      var _this8 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee4() {
         var requestId, param, response, rows;
         return _regenerator.default.wrap(function _callee4$(_context4) {
           while (1) {
             switch (_context4.prev = _context4.next) {
               case 0:
-                requestId = ++_this7.menuRequestId;
-                if (index !== undefined) _this7.typeIndex = index;
-                _this7.dishListData = [];
-                _this7.dishListItems = [];
-                _this7.rightIdAndType = {
+                requestId = ++_this8.menuRequestId;
+                if (index !== undefined) _this8.typeIndex = index;
+                _this8.dishListData = [];
+                _this8.dishListItems = [];
+                _this8.rightIdAndType = {
                   id: params.id,
                   type: params.type
                 };
@@ -24639,7 +24681,7 @@ var _default = {
                 _context4.t0 = _context4.sent;
               case 16:
                 response = _context4.t0;
-                if (!(requestId !== _this7.menuRequestId)) {
+                if (!(requestId !== _this8.menuRequestId)) {
                   _context4.next = 19;
                   break;
                 }
@@ -24649,28 +24691,28 @@ var _default = {
                   _context4.next = 22;
                   break;
                 }
-                _this7.showMenuError(new Error(response && response.msg || '菜单加载失败，请重试'));
+                _this8.showMenuError(new Error(response && response.msg || '菜单加载失败，请重试'));
                 return _context4.abrupt("return", false);
               case 22:
                 rows = Array.isArray(response.data) ? response.data : [];
-                _this7.dishListData = rows.map(function (obj) {
+                _this8.dishListData = rows.map(function (obj) {
                   return _objectSpread(_objectSpread({}, obj), {}, {
                     type: params.type === 1 ? 1 : 2,
                     newCardNumber: 0
                   });
                 });
-                _this7.setOrderNum();
+                _this8.setOrderNum();
                 return _context4.abrupt("return", true);
               case 28:
                 _context4.prev = 28;
                 _context4.t1 = _context4["catch"](6);
-                if (!(requestId !== _this7.menuRequestId)) {
+                if (!(requestId !== _this8.menuRequestId)) {
                   _context4.next = 32;
                   break;
                 }
                 return _context4.abrupt("return", null);
               case 32:
-                _this7.showMenuError(_context4.t1);
+                _this8.showMenuError(_context4.t1);
                 return _context4.abrupt("return", false);
               case 34:
               case "end":
@@ -24682,7 +24724,7 @@ var _default = {
     },
     // 获取首页店铺信息
     getShopInfo: function getShopInfo() {
-      var _this8 = this;
+      var _this9 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee5() {
         return _regenerator.default.wrap(function _callee5$(_context5) {
           while (1) {
@@ -24690,9 +24732,9 @@ var _default = {
               case 0:
                 _context5.next = 2;
                 return (0, _api.getShopStatus)().then(function (res) {
-                  _this8.shopStatus = res.data;
+                  _this9.shopStatus = res.data;
                   console.log(res.data);
-                  _this8.setShopStatus(res.data);
+                  _this9.setShopStatus(res.data);
                 }).catch(function (err) {});
               case 2:
               case "end":
@@ -24704,7 +24746,7 @@ var _default = {
     },
     // 获取店铺电话
     getMerchantInfo: function getMerchantInfo() {
-      var _this9 = this;
+      var _this10 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee6() {
         return _regenerator.default.wrap(function _callee6$(_context6) {
           while (1) {
@@ -24712,9 +24754,9 @@ var _default = {
               case 0:
                 _context6.next = 2;
                 return (0, _api.getMerchantInfo)().then(function (res) {
-                  _this9.phoneData = res.data.phone;
+                  _this10.phoneData = res.data.phone;
                   console.log(res);
-                  _this9.setShopPhone(res.data);
+                  _this10.setShopPhone(res.data);
                 }).catch(function (err) {});
               case 2:
               case "end":
@@ -24730,7 +24772,7 @@ var _default = {
     },
     // 获取购物车订单列表
     getTableOrderDishListes: function getTableOrderDishListes() {
-      var _this10 = this;
+      var _this11 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee7() {
         return _regenerator.default.wrap(function _callee7$(_context7) {
           while (1) {
@@ -24740,8 +24782,8 @@ var _default = {
                 return (0, _api.getShoppingCartList)({}).then(function (res) {
                   if (res.code === 1) {
                     var orderList = Array.isArray(res.data) ? res.data : [];
-                    _this10.initdishListMut(orderList);
-                    _this10.computOrderInfo();
+                    _this11.initdishListMut(orderList);
+                    _this11.computOrderInfo();
                   }
                 }).catch(function (err) {});
               case 2:
@@ -24773,17 +24815,17 @@ var _default = {
       });
     },
     refreshCartAndMenu: function refreshCartAndMenu() {
-      var _this11 = this;
+      var _this12 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee8() {
         return _regenerator.default.wrap(function _callee8$(_context8) {
           while (1) {
             switch (_context8.prev = _context8.next) {
               case 0:
                 _context8.next = 2;
-                return _this11.getTableOrderDishListes();
+                return _this12.getTableOrderDishListes();
               case 2:
                 _context8.next = 4;
-                return _this11.getDishListDataes(_this11.rightIdAndType);
+                return _this12.getDishListDataes(_this12.rightIdAndType);
               case 4:
               case "end":
                 return _context8.stop();
@@ -24794,7 +24836,7 @@ var _default = {
     },
     // 加菜 - 添加菜品
     addDishAction: function addDishAction(item, form) {
-      var _this12 = this;
+      var _this13 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee9() {
         var dishFlavorDatas, flavorRemark, params, res;
         return _regenerator.default.wrap(function _callee9$(_context9) {
@@ -24806,7 +24848,7 @@ var _default = {
                   item = item.obj;
                 }
                 // 规格
-                if (!(_this12.openMoreNormPop && (!_this12.flavorDataes || _this12.flavorDataes.length <= 0))) {
+                if (!(_this13.openMoreNormPop && (!_this13.flavorDataes || _this13.flavorDataes.length <= 0))) {
                   _context9.next = 4;
                   break;
                 }
@@ -24816,14 +24858,14 @@ var _default = {
                 });
                 return _context9.abrupt("return", false);
               case 4:
-                _this12.openMoreNormPop = false;
+                _this13.openMoreNormPop = false;
                 // 实时更新obj.newCardNumber新添加的字段----加入购物车数量number
-                _this12.tablewareNumber++;
-                _this12.dishDetailes.dishNumber++;
-                if (_this12.orderListDataes && !_this12.orderListDataes.some(function (n) {
+                _this13.tablewareNumber++;
+                _this13.dishDetailes.dishNumber++;
+                if (_this13.orderListDataes && !_this13.orderListDataes.some(function (n) {
                   return n.id == item.dishId;
-                }) && _this12.flavorDataes.length > 0) {
-                  item.flavorRemark = JSON.stringify(_this12.flavorDataes);
+                }) && _this13.flavorDataes.length > 0) {
+                  item.flavorRemark = JSON.stringify(_this13.flavorDataes);
                 }
                 // 有sort字段是菜品
                 dishFlavorDatas = "";
@@ -24870,9 +24912,9 @@ var _default = {
                   break;
                 }
                 _context9.next = 21;
-                return _this12.refreshCartAndMenu();
+                return _this13.refreshCartAndMenu();
               case 21:
-                _this12.flavorDataes = [];
+                _this13.flavorDataes = [];
               case 22:
                 _context9.next = 26;
                 break;
@@ -24895,7 +24937,7 @@ var _default = {
     },
     // 减菜 - 添加菜品
     redDishAction: function redDishAction(item, form) {
-      var _this13 = this;
+      var _this14 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee10() {
         var dishFlavorDatas, flavorRemark, params, res;
         return _regenerator.default.wrap(function _callee10$(_context10) {
@@ -24907,8 +24949,8 @@ var _default = {
                   item = item.obj;
                 }
                 // 实时更新obj.newCardNumber新添加的字段----加入购物车数量number
-                _this13.tablewareNumber--;
-                _this13.dishDetailes.dishNumber--;
+                _this14.tablewareNumber--;
+                _this14.dishDetailes.dishNumber--;
                 dishFlavorDatas = "";
                 flavorRemark = [];
                 if (item.flavorRemark) {
@@ -24954,7 +24996,7 @@ var _default = {
                   break;
                 }
                 _context10.next = 16;
-                return _this13.refreshCartAndMenu();
+                return _this14.refreshCartAndMenu();
               case 16:
                 _context10.next = 20;
                 break;
@@ -24971,7 +25013,7 @@ var _default = {
     },
     // 清空购物车
     clearCardOrder: function clearCardOrder() {
-      var _this14 = this;
+      var _this15 = this;
       return (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee11() {
         var res;
         return _regenerator.default.wrap(function _callee11$(_context11) {
@@ -24987,9 +25029,9 @@ var _default = {
                   _context11.next = 8;
                   break;
                 }
-                _this14.openOrderCartList = false;
+                _this15.openOrderCartList = false;
                 _context11.next = 8;
-                return _this14.refreshCartAndMenu();
+                return _this15.refreshCartAndMenu();
               case 8:
                 _context11.next = 12;
                 break;
@@ -25006,15 +25048,15 @@ var _default = {
     },
     // 打开菜品牌详情
     openDetailHandle: function openDetailHandle(item) {
-      var _this15 = this;
+      var _this16 = this;
       this.dishDetailes = item;
       if (item.type === 2) {
         (0, _api.querySetmealDishById)({
           id: item.id
         }).then(function (res) {
           if (res.code === 1) {
-            _this15.openDetailPop = true;
-            _this15.dishMealData = res.data;
+            _this16.openDetailPop = true;
+            _this16.dishMealData = res.data;
           }
         }).catch(function (err) {});
       } else {
@@ -25027,7 +25069,7 @@ var _default = {
     },
     // 多规格数据处理
     moreNormDataesHandle: function moreNormDataesHandle(item) {
-      var _this16 = this;
+      var _this17 = this;
       this.flavorDataes.splice(0);
       this.moreNormDishdata = item;
       this.openDetailPop = false;
@@ -25039,18 +25081,18 @@ var _default = {
       });
       this.moreNormdata.forEach(function (item) {
         if (item.value && item.value.length > 0) {
-          _this16.flavorDataes.push(item.value[0]);
+          _this17.flavorDataes.push(item.value[0]);
         }
       });
     },
     // 选规格 处理一行只能选择一种
     checkMoreNormPop: function checkMoreNormPop(val) {
-      var _this17 = this;
+      var _this18 = this;
       var obj = val.obj;
       var item = val.item;
       var ind;
       var findst = obj.some(function (n) {
-        ind = _this17.flavorDataes.findIndex(function (o) {
+        ind = _this18.flavorDataes.findIndex(function (o) {
           return o == n;
         });
         return ind != -1;
@@ -25074,12 +25116,12 @@ var _default = {
     },
     // 订单里和总订单价格计算
     computOrderInfo: function computOrderInfo() {
-      var _this18 = this;
+      var _this19 = this;
       var oriData = this.orderListDataes;
       this.orderDishNumber = this.orderDishPrice = 0;
       oriData.map(function (n, i) {
-        _this18.orderDishNumber += n.number;
-        _this18.orderDishPrice += n.number * n.amount;
+        _this19.orderDishNumber += n.number;
+        _this19.orderDishPrice += n.number * n.amount;
       });
       this.orderDishPrice = this.orderDishPrice;
     },
@@ -26264,6 +26306,10 @@ var _default = {
         return total + item.number * item.amount;
       }, 0);
     },
+    deliveryFeeAmount: function deliveryFeeAmount() {
+      var amount = Number(this.deliveryFee());
+      return Number.isFinite(amount) ? amount : 0;
+    },
     // 菜品数据
     orderListDataes: function orderListDataes() {
       return this.orderListData();
@@ -26550,7 +26596,7 @@ var _default = {
         _this7.orderDishNumber += n.number;
         console.log(n);
       });
-      this.orderDishPrice = this.orderDishPrice + this.deliveryFee() + this.orderDishNumber;
+      this.orderDishPrice = this.orderDishPrice + this.deliveryFeeAmount + this.orderDishNumber;
     },
     // 返回上一级
     goBack: function goBack() {
@@ -26594,7 +26640,7 @@ var _default = {
                   remark: _this8.remark,
                   estimatedDeliveryTime: _this8.arrivalTime === '立即派送' ? (0, _index.presentFormat)() : (0, _index.dateFormat)(_this8.isTomorrow, _this8.arrivalTime),
                   deliveryStatus: _this8.arrivalTime === '立即派送' ? 1 : 0
-                }, (0, _defineProperty2.default)(_params, "remark", _this8.remark), (0, _defineProperty2.default)(_params, "tablewareStatus", _this8.status), (0, _defineProperty2.default)(_params, "tablewareNumber", _this8.num), (0, _defineProperty2.default)(_params, "packAmount", _this8.orderDishNumber), (0, _defineProperty2.default)(_params, "amount", _this8.orderDishPrice), (0, _defineProperty2.default)(_params, "shopId", _this8.shopInfo().shopId), (0, _defineProperty2.default)(_params, "deliveryFee", _this8.deliveryFee()), _params);
+                }, (0, _defineProperty2.default)(_params, "remark", _this8.remark), (0, _defineProperty2.default)(_params, "tablewareStatus", _this8.status), (0, _defineProperty2.default)(_params, "tablewareNumber", _this8.num), (0, _defineProperty2.default)(_params, "packAmount", _this8.orderDishNumber), (0, _defineProperty2.default)(_params, "amount", _this8.orderDishPrice), (0, _defineProperty2.default)(_params, "shopId", _this8.shopInfo().shopId), (0, _defineProperty2.default)(_params, "deliveryFee", _this8.deliveryFeeAmount), _params);
                 _context5.next = 10;
                 return (0, _api.submitOrderSubmit)(params);
               case 10:

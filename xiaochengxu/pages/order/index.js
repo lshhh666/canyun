@@ -127,7 +127,7 @@ var render = function () {
   var _c = _vm._self._c || _h
   var g0 = _vm.dishAmount.toFixed(2)
   var g1 = _vm.orderDishNumber.toFixed(2)
-  var g2 = _vm.deliveryFee().toFixed(2)
+  var g2 = _vm.deliveryFeeAmount.toFixed(2)
   var g3 = _vm.orderDishPrice.toFixed(2)
   _vm.$mp.data = Object.assign(
     {},

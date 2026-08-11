@@ -396,7 +396,7 @@ var _default = {
     },
     goDetail: function goDetail(id) {
       this.setAddressBackUrl('/pages/my/my');
-      uni.redirectTo({
+      uni.navigateTo({
         url: "/pages/details/index?orderId=".concat(id)
       });
     },
