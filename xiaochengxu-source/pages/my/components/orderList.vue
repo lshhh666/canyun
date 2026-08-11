@@ -1,112 +1,226 @@
-<!--最近订单-->
 <template>
-  <scroll-view scroll-y="true" :style="{ height: scrollH + 'px' }" @scrolltolower="lower">
-    <view class="main recent_orders">
-      <!-- 最近订单列表 -->
-      <view class="box order_lists" v-for="(item, index) in recentOrdersList" :key="index">
-        <!-- 时间和支付状态 -->
-        <view class="date_type">
-          <!-- 时间 -->
-          <text class="time">{{ item.orderTime }} {{ item.id }}</text>
-          <!-- 支付状态 -->
-          <text class="type status" :class="{ status: item.status == 2 }">{{
-            statusWord(item.status)
-          }}</text>
-        </view>
-        <!-- 点菜的内容 -->
-        <view class="orderBox" @click="goDetail(item.id)">
-          <view class="food_num">
-            <scroll-view scroll-x="true" class="pic" style="width: 100%; overflow: hidden; white-space: nowrap">
-              <view class="food_num_item" v-for="(num, y) in item.orderDetailList" :key="y">
-                <view class="img">
-                  <image :src="num.image"></image>
-                  <!-- <image src="../../static/img2.jpg"></image> -->
-                </view>
-                <view class="food">{{ num.name }}</view>
-              </view>
-            </scroll-view>
-          </view>
-          <view class="numAndAum">
-            <view><text>￥{{ item.amount.toFixed(2) }}</text></view>
-            <view><text>共{{ numes(item.orderDetailList).count }}件</text></view>
-          </view>
-        </view>
+  <view class="recent-orders">
+    <view
+      v-for="item in recentOrdersList"
+      :key="item.id"
+      class="order-card"
+    >
+      <view class="order-card__header">
+        <text class="order-card__time">{{ item.orderTime }}</text>
+        <text class="order-card__status">{{ statusWord(item.status) }}</text>
+      </view>
 
-        <view class="againBtn">
-          <button class="new_btn" type="default" @click="oneOrderFun(item.id)">
-            再来一单
-          </button>
-          <button class="new_btn btn" type="default" @click="goDetail(item.id)"
-            v-if="item.status === 1 && getOvertime(item.orderTime) > 0">
-            去支付
-          </button>
+      <view class="order-card__body" @click="goDetail(item.id)">
+        <view class="dish-preview">
+          <image
+            v-if="item.orderDetailList && item.orderDetailList.length"
+            class="dish-preview__image"
+            :src="item.orderDetailList[0].image"
+            mode="aspectFill"
+          />
+          <view class="dish-preview__copy">
+            <text class="dish-preview__name">{{ dishSummary(item.orderDetailList) }}</text>
+            <text class="dish-preview__count">共 {{ numes(item.orderDetailList).count }} 件</text>
+          </view>
+        </view>
+        <view class="order-card__total">
+          <text>￥{{ money(item.amount) }}</text>
+          <uni-icons type="right" color="#91a0b2" size="16" />
         </view>
       </view>
+
+      <view class="order-card__actions">
+        <button class="order-card__button" @click="oneOrderFun(item.id)">再来一单</button>
+        <button
+          v-if="Number(item.status) === 1 && getOvertime(item.orderTime) > 0"
+          class="order-card__button order-card__button--primary"
+          @click="goDetail(item.id)"
+        >去支付</button>
+      </view>
     </view>
-    <reach-bottom v-if="loading" :loadingText="loadingText"></reach-bottom>
-  </scroll-view>
+    <text v-if="loadingText" class="recent-orders__tip">{{ loadingText }}</text>
+  </view>
 </template>
+
 <script>
-import ReachBottom from "@/components/reach-bottom/reach-bottom.vue";
-import { statusWord } from "@/utils/index";
+import { statusWord, getOvertime } from '@/utils/index.js'
+
 export default {
-  // 获取父级传的数据
+  name: 'OrderList',
   props: {
-    // 头像
     scrollH: {
       type: Number,
-      default: 0,
+      default: 0
     },
-    //
     loading: {
       type: Boolean,
-      default: false,
+      default: false
     },
     loadingText: {
       type: String,
-      default: "",
+      default: ''
     },
-    // 例表数据
     recentOrdersList: {
       type: Array,
-      default: () => [],
-    },
-  },
-  components: {
-    ReachBottom,
+      default: () => []
+    }
   },
   methods: {
     lower() {
-      this.$emit("lower");
+      this.$emit('lower')
     },
-    //订单详情
     goDetail(id) {
-      this.$emit("goDetail", id);
+      this.$emit('goDetail', id)
     },
-    //  1待付款 2待接单 3 已接单 4 派送中 5 已完成 6 已取消 7 退款
-    numes(list) {
-      let count = 0;
-      let total = 0;
-      list.length > 0 &&
-        list.forEach((obj) => {
-          count += Number(obj.number);
-          total += Number(obj.number) * Number(obj.amount);
-        });
-      return { count: count, total: total };
-    },
-    // 再来一单
     oneOrderFun(id) {
-      this.$emit("oneOrderFun", id);
+      this.$emit('oneOrderFun', id)
     },
-    //
+    numes(list = []) {
+      const count = list.reduce((sum, item) => sum + Number(item.number || 0), 0)
+      return { count }
+    },
+    dishSummary(list = []) {
+      if (!list.length) return '订单餐品'
+      const names = list.map(item => item.name).filter(Boolean)
+      return names.slice(0, 2).join('、') || '订单餐品'
+    },
+    money(value) {
+      return Number(value || 0).toFixed(2)
+    },
     getOvertime(time) {
-      this.$emit("getOvertime", time);
+      return getOvertime(time)
     },
-    // 支付状态
-    statusWord(status, time) {
-      this.$emit("statusWord", { status: status, time: time });
-      return statusWord(status, time);
-    },
-  },
-};
+    statusWord(status) {
+      return statusWord(Number(status))
+    }
+  }
+}
 </script>
+
+<style lang="scss" scoped>
+@import '@/styles/tokens.scss';
+
+.recent-orders {
+  padding: 0 24rpx;
+}
+
+.order-card {
+  margin-bottom: 20rpx;
+  padding: 26rpx;
+  background: $cm-surface;
+  border: 1rpx solid $cm-border;
+  border-radius: $cm-radius-md;
+}
+
+.order-card__header,
+.order-card__body,
+.dish-preview,
+.order-card__total,
+.order-card__actions {
+  display: flex;
+  align-items: center;
+}
+
+.order-card__header {
+  justify-content: space-between;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid $cm-border;
+}
+
+.order-card__time {
+  color: $cm-text-secondary;
+  font-size: 24rpx;
+}
+
+.order-card__status {
+  color: $cm-primary;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.order-card__body {
+  justify-content: space-between;
+  padding: 24rpx 0;
+}
+
+.dish-preview {
+  min-width: 0;
+  flex: 1;
+}
+
+.dish-preview__image {
+  width: 96rpx;
+  height: 96rpx;
+  flex: 0 0 96rpx;
+  margin-right: 20rpx;
+  background: $cm-page;
+  border-radius: $cm-radius-sm;
+}
+
+.dish-preview__copy {
+  min-width: 0;
+}
+
+.dish-preview__name,
+.dish-preview__count {
+  display: block;
+}
+
+.dish-preview__name {
+  max-width: 300rpx;
+  overflow: hidden;
+  color: $cm-text;
+  font-size: 27rpx;
+  line-height: 40rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dish-preview__count {
+  margin-top: 6rpx;
+  color: $cm-text-secondary;
+  font-size: 23rpx;
+}
+
+.order-card__total {
+  margin-left: 20rpx;
+  color: $cm-text;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.order-card__actions {
+  justify-content: flex-end;
+  gap: 16rpx;
+}
+
+.order-card__button {
+  min-width: 168rpx;
+  height: 68rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  color: $cm-primary;
+  background: $cm-surface;
+  border: 1rpx solid $cm-primary;
+  border-radius: 34rpx;
+  font-size: 25rpx;
+  line-height: 66rpx;
+}
+
+.order-card__button::after {
+  border: 0;
+}
+
+.order-card__button--primary {
+  color: $cm-surface;
+  background: $cm-primary;
+}
+
+.recent-orders__tip {
+  display: block;
+  padding: 16rpx 0;
+  color: $cm-text-muted;
+  font-size: 23rpx;
+  text-align: center;
+}
+</style>

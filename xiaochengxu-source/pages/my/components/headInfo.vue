@@ -1,123 +1,77 @@
-<!--我的头部-->
 <template>
-    <view class="my_info">
-        <!-- 头像部分 -->
-        <view class="head">
-          <image class="head_image" :src="psersonUrl"></image>
-        </view>
-        <!-- 姓名及手机号 -->
-        <view class="phone_name">
-          <!-- 姓名 -->
-          <view class="name">
-            <text class="name_text">{{ nickName }}</text>
-            <image
-              v-if="gender === 2"
-              class="name_type"
-              src="../../../static/girl.png"
-            ></image>
-            <image
-              v-if="gender === 1"
-              class="name_type"
-              src="../../../static/boy.png"
-            ></image>
-          </view>
-          <!-- 电话号 -->
-          <view class="phone">
-            <text class="phone_text">{{ phoneNumber | getPhoneNum }}</text>
-          </view>
-        </view>
-      </view>
+  <view class="account-head">
+    <image class="account-head__avatar" :src="psersonUrl" mode="aspectFill" />
+    <view class="account-head__copy">
+      <text class="account-head__eyebrow">个人中心</text>
+      <text class="account-head__name">{{ nickName }}</text>
+    </view>
+  </view>
 </template>
+
 <script>
 export default {
-  // 获取父级传的数据
+  name: 'HeadInfo',
   props: {
-    // 头像
     psersonUrl: {
       type: String,
-      default: '',
+      default: '/static/brand/cloudmeal-logo.png'
     },
-    // 姓名
     nickName: {
       type: String,
-      default: '',
-    },
-    // 性别
-    gender: {
-      type: String,
-      default: '',
-    },
-    // 电话
-    phoneNumber: {
-      type: String,
-      default: '',
-    },
-    // 电话
-    getPhoneNum: {
-      type: String,
-      default: '',
-    }
-  },
-};
-</script>
-<style lang="scss" scoped>
-.my_info {
-    height: 172rpx;
-    width: 750rpx;
-    background-color: #ffc200;
-    display: flex;
-    // 头像
-    .head {
-      width: 172rpx;
-      height: 172rpx;
-      margin: auto;
-      text-align: center;
-      .head_image {
-        width: 116rpx;
-        height: 116rpx;
-        line-height: 172rpx;
-        vertical-align: top;
-        margin: 20rpx auto;
-        border-radius: 50%;
-        background-color: #fff;
-      }
-    }
-    // 姓名电话号
-    .phone_name {
-      flex: 1;
-      margin: auto;
-      .name {
-        .name_text {
-          font-size: 32rpx;
-          opacity: 1;
-          font-family: PingFangSC, PingFangSC-Medium;
-          font-weight: 550;
-          text-align: left;
-          color: #333333;
-          height: 44rpx;
-          line-height: 44rpx;
-          margin-right: 12rpx;
-        }
-
-        .name_type {
-          width: 32rpx;
-          height: 32rpx;
-          vertical-align: middle;
-          margin-bottom: 6rpx;
-        }
-      }
-      .phone {
-        .phone_text {
-          height: 40rpx;
-          opacity: 1;
-          font-size: 28rpx;
-          font-family: PingFangSC, PingFangSC-Regular;
-          font-weight: 400;
-          text-align: left;
-          color: #333333;
-          line-height: 40rpx;
-        }
-      }
+      default: '微信用户'
     }
   }
+}
+</script>
+
+<style lang="scss" scoped>
+@import '@/styles/tokens.scss';
+
+.account-head {
+  display: flex;
+  margin: 24rpx;
+  padding: 32rpx;
+  align-items: center;
+  background: $cm-surface;
+  border: 1rpx solid $cm-border;
+  border-radius: $cm-radius-md;
+  box-shadow: 0 8rpx 24rpx rgba(18, 38, 63, 0.06);
+}
+
+.account-head__avatar {
+  width: 112rpx;
+  height: 112rpx;
+  flex: 0 0 112rpx;
+  background: $cm-primary-soft;
+  border: 4rpx solid $cm-surface;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1rpx $cm-border;
+}
+
+.account-head__copy {
+  min-width: 0;
+  margin-left: 28rpx;
+}
+
+.account-head__eyebrow,
+.account-head__name {
+  display: block;
+}
+
+.account-head__eyebrow {
+  color: $cm-text-secondary;
+  font-size: 23rpx;
+  line-height: 34rpx;
+}
+
+.account-head__name {
+  margin-top: 8rpx;
+  overflow: hidden;
+  color: $cm-text;
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 50rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>
