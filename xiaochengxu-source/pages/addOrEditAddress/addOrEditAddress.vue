@@ -342,18 +342,18 @@ export default {
   flex: 1;
 }
 
-/deep/ .is-input-border {
+::v-deep .is-input-border {
   border: 0 !important;
 }
 
-/deep/ .uni-easyinput__content-input {
+::v-deep .uni-easyinput__content-input {
   padding-left: 0 !important;
   color: $cm-text;
   font-size: 27rpx;
 }
 
 .form-placeholder,
-/deep/ .form-placeholder {
+::v-deep .form-placeholder {
   color: $cm-text-muted !important;
   font-size: 26rpx;
 }

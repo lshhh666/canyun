@@ -550,3 +550,12 @@ test('user-facing source has no legacy brand or yellow theme', () => {
   const files = [...activeFiles, ...componentFiles].map(read).join('\n')
   expectNone(files, ['苍穹外卖', '#ffc200', '#FFC200', '月销量'])
 })
+
+test('source styles remain compatible with the current Dart Sass compiler', () => {
+  const sourceStyles = sourceFilesUnder('xiaochengxu-source')
+    .filter(file => file.endsWith('.vue') || file.endsWith('.scss'))
+    .map(read)
+    .join('\n')
+
+  expectNone(sourceStyles, ['/deep/', '../image/phone.png'])
+})
