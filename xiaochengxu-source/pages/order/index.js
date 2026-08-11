@@ -20,10 +20,12 @@ import {
 
 } from '../../utils/index.js'
 import Pikers from '@/components/uni-piker/index.vue'//餐具信息
+import CloudmealHeader from '@/components/cloudmeal-header/cloudmeal-header.vue'
 import AddressPop from "./components/address.vue" //地址
 import DishDetail from "./components/dishDetail.vue" //菜品详情
 import DishInfo from "./components/dishInfo.vue" //菜品信息
 import dayjs from "@/utils/lib/dayjs.min.js";
+import { getErrorMessage } from '../../utils/error-message'
 export default {
 	data() {
 		return {
@@ -88,6 +90,10 @@ export default {
 		}
 	},
 	computed: {
+		// 商品金额（提交总额仍沿用 orderDishPrice）
+		dishAmount: function () {
+			return this.orderListDataes.reduce((total, item) => total + item.number * item.amount, 0)
+		},
 		// 菜品数据
 		orderListDataes: function () {
 			return this.orderListData()
@@ -129,6 +135,7 @@ export default {
 	},
 	components: {
 		Pikers,
+		CloudmealHeader,
 		// Popup,
 		AddressPop,
 		DishDetail,
@@ -157,8 +164,8 @@ export default {
 			await this.getAddressBookDefault()
 		}
 
-		await this.getEstimatedDeliveryTime();
-		this.getDateDate()
+		const deliveryTimeResult = await this.getEstimatedDeliveryTime()
+		if (deliveryTimeResult) this.getDateDate()
 		this.setArrivalTime(this.arrivalTime)
 		this.setGender(this.gender)
 	},
@@ -182,9 +189,18 @@ export default {
 		},
 		// 获取用户送餐期望时间
 		async getEstimatedDeliveryTime() {
-			const result = await getEstimatedDeliveryTime({ shopId: this.shopInfo().shopId, customerAddress: this.address });
-			this.arrivalTime = dayjs(result.data).format('HH:mm')
-			this.orderTime = result.data
+			try {
+				const result = await getEstimatedDeliveryTime({ shopId: this.shopInfo().shopId, customerAddress: this.address })
+				this.arrivalTime = dayjs(result.data).format('HH:mm')
+				this.orderTime = result.data
+				return result
+			} catch (error) {
+				uni.showToast({
+					title: getErrorMessage(error, '送达时间获取失败，请重试'),
+					icon: 'none'
+				})
+				return null
+			}
 		},
 		// 根据系统派送时间 格式化时间  [16:00,16:30]
 		getDateDate() {
@@ -208,19 +224,29 @@ export default {
 			this.newDateData = list
 		},
 		// 获取地址
-		getAddressList() {
+		async getAddressList() {
 			this.testValue = false
-			queryAddressBookList().then(res => {
+			try {
+				const res = await queryAddressBookList()
 				if (res.code === 1) {
 					this.testValue = true
-					this.addressList = res.data
+					this.addressList = Array.isArray(res.data) ? res.data : []
 				}
-			})
+				return res
+			} catch (error) {
+				this.addressList = []
+				uni.showToast({
+					title: getErrorMessage(error, '地址列表加载失败，请重试'),
+					icon: 'none'
+				})
+				return null
+			}
 		},
 		// 默认地址查询
-		getAddressBookDefault() {
-			return getAddressBookDefault().then(res => {
-				if (res.code === 1) {
+		async getAddressBookDefault() {
+			try {
+				const res = await getAddressBookDefault()
+				if (res.code === 1 && res.data) {
 					this.addressBookId = ''
 					this.address = res.data.provinceName + res.data.cityName + res.data.districtName + res.data
 						.detail
@@ -231,7 +257,14 @@ export default {
 					this.addressLabel = getLableVal(res.data.label)
 					this.tagLabel = res.data.label
 				}
-			})
+				return res
+			} catch (error) {
+				uni.showToast({
+					title: getErrorMessage(error, '默认地址获取失败，请重试'),
+					icon: 'none'
+				})
+				return null
+			}
 		},
 		// 去地址页面
 		goAddress() {
@@ -272,9 +305,8 @@ export default {
 			this.openPayType = false
 		},
 		// 支付下单
-		payOrderHandle() {
-			this.isHandlePy = true
-
+		async payOrderHandle() {
+			if (this.isHandlePy) return false
 			if (!this.address) {
 				uni.showToast({
 					title: '请选择收货地址',
@@ -282,6 +314,7 @@ export default {
 				})
 				return false
 			}
+			this.isHandlePy = true
 			const params = {
 				payMethod: 1,
 				addressBookId: this.addressBookId,
@@ -298,9 +331,9 @@ export default {
 				deliveryFee: this.deliveryFee()
 			}
 
-			submitOrderSubmit(params).then(res => {
+			try {
+				const res = await submitOrderSubmit(params)
 				if (res.code === 1) {
-					this.isHandlePy = false
 					this.setOrderData(res.data)
 					this.setRemark('')
 
@@ -309,11 +342,20 @@ export default {
 					})
 				} else {
 					uni.showToast({
-						title: res.msg || '操作失败',
+						title: res.msg || '订单提交失败，请重试',
 						icon: 'none',
 					})
 				}
-			})
+				return res
+			} catch (error) {
+				uni.showToast({
+					title: getErrorMessage(error, '订单提交失败，请重试'),
+					icon: 'none'
+				})
+				return null
+			} finally {
+				this.isHandlePy = false
+			}
 		},
 		// 拨打电话
 		call() {

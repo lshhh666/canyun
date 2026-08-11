@@ -5,7 +5,8 @@
     <view class="top" @click="goAddress">
       <!-- 无地址 -->
       <view v-if="!address" class="address_name_disabled">
-        请选择收货地址
+        <text class="empty-title">还没有收货地址</text>
+        <text class="empty-action">新增收货地址</text>
       </view>
       <!-- end -->
       <!-- 有地址 -->
@@ -29,13 +30,13 @@
     </view>
     <!-- 送达时间 -->
     <view class="bottom">
-      <div class="bottomTime" @click="openTimePopuo('bottom')">
+      <view class="bottomTime" @click="openTimePopuo('bottom')">
         <text class="time_name_disabled">立即送出</text>
         <view class="address_image">
           <text class="">{{ arrivalTime }}送达</text>
           <view class="to_right"></view>
         </view>
-      </div>
+      </view>
 
       <view v-if="address" class="infoTip"
         >因配送订单较多，送达时间可能波动</view

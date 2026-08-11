@@ -1,0 +1,294 @@
+const test = require('node:test')
+const vm = require('node:vm')
+const { assert, read, expectAll, expectNone } = require('./helpers.cjs')
+
+function deferred() {
+  let resolve
+  let reject
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
+function componentOptions(relativePath, context) {
+  const source = read(relativePath)
+  const script = relativePath.endsWith('.vue')
+    ? source.match(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/)[1]
+    : source
+  const marker = 'export default '
+  const optionsSource = script.slice(script.indexOf(marker) + marker.length)
+  const sandbox = { module: { exports: {} }, console: { log() {} }, ...context }
+  vm.runInNewContext(`module.exports = ${optionsSource}`, sandbox)
+  return sandbox.module.exports
+}
+
+function mount(definition, { state = {}, mutations = [], refs = {} } = {}) {
+  const instance = { ...(definition.data ? definition.data() : {}) }
+  instance.$store = { state }
+  instance.$refs = refs
+  Object.entries(definition.methods || {}).forEach(([name, method]) => {
+    instance[name] = method.bind(instance)
+  })
+  Object.entries(definition.computed || {}).forEach(([name, getter]) => {
+    Object.defineProperty(instance, name, { get: getter.bind(instance) })
+  })
+  instance.__mutations = mutations
+  return instance
+}
+
+function sharedContext(calls, state, apis = {}) {
+  return {
+    CloudmealHeader: {},
+    AddressPop: {},
+    DishDetail: {},
+    DishInfo: {},
+    Empty: {},
+    Pikers: {},
+    simpleAddress: {},
+    uniNavBar: {},
+    baseUrl: 'http://example.test',
+    getLableVal: value => String(value),
+    dateFormat: () => '2026-08-11 10:00:00',
+    presentFormat: () => '2026-08-11 09:00:00',
+    getWeekDate: () => '周二',
+    getErrorMessage: (error, fallback) => (error && error.message) || fallback,
+    dayjs: () => ({
+      format: () => '10:00',
+      hour: () => 10,
+      minute: () => 0,
+      add() { return this },
+      set() { return this }
+    }),
+    mapState(names) {
+      return Object.fromEntries(names.map(name => [name, function getState() {
+        return state[name]
+      }]))
+    },
+    mapMutations(names) {
+      return Object.fromEntries(names.map(name => [name, function commit(payload) {
+        calls.mutations.push([name, payload])
+        if (name === 'setAddress') state.address = payload
+        if (name === 'setRemark') state.remark = payload
+      }]))
+    },
+    uni: {
+      showToast: options => calls.toasts.push(options),
+      showLoading: options => calls.loadings.push(options),
+      hideLoading: () => { calls.hidden += 1 },
+      redirectTo: options => calls.redirects.push(options),
+      navigateTo: options => calls.navigations.push(options),
+      navigateBack: options => calls.backs.push(options),
+      getSystemInfoSync: () => ({ platform: 'ios', statusBarHeight: 20 }),
+      removeStorage() {},
+      setNavigationBarTitle() {},
+      hideKeyboard() {}
+    },
+    setTimeout: callback => callback(),
+    ...apis
+  }
+}
+
+function harness(relativePath, { state = {}, apis = {}, refs = {} } = {}) {
+  const calls = {
+    backs: [], hidden: 0, loadings: [], mutations: [], navigations: [],
+    redirects: [], toasts: []
+  }
+  const definition = componentOptions(relativePath, sharedContext(calls, state, apis))
+  const instance = mount(definition, { state, mutations: calls.mutations, refs })
+  return { calls, definition, instance, state }
+}
+
+test('checkout renders address, dishes, remark, fees and submit in business order', () => {
+  const page = read('xiaochengxu-source/pages/order/index.vue')
+  const markers = ['<address-pop', '<dish-detail', '<dish-info', '费用明细', '@click="payOrderHandle()"']
+  markers.reduce((last, marker) => {
+    const index = page.indexOf(marker)
+    assert.ok(index > last, `${marker} is out of order`)
+    return index
+  }, -1)
+  expectAll(page, [
+    '<cloudmeal-header', 'show-back', ':disabled="isHandlePy"',
+    ':loading="isHandlePy"', '￥{{ orderDishPrice.toFixed(2) }}'
+  ])
+  expectNone(page, ['<app-tabbar', '#ffc200', '去支付</view>\n          <view v-else'])
+})
+
+test('checkout ignores duplicate submits and restores the guard after a failure', async () => {
+  const request = deferred()
+  let submitCalls = 0
+  let submittedParams
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [], remarkData: '', addressData: {},
+      storeInfo: {}, shopInfo: { shopId: 7 }, deliveryFee: 3
+    },
+    apis: {
+      submitOrderSubmit: params => {
+        submitCalls += 1
+        submittedParams = params
+        return request.promise
+      },
+      getAddressBookDefault: async () => ({ code: 1, data: {} }),
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      getEstimatedDeliveryTime: async () => ({ code: 1, data: '2026-08-11 10:00:00' })
+    }
+  })
+  Object.assign(order.instance, {
+    address: '测试地址', addressBookId: 9, arrivalTime: '10:00',
+    orderDishNumber: 2, orderDishPrice: 28, remark: '少辣', status: 0, num: 0
+  })
+
+  const first = order.instance.payOrderHandle()
+  const second = order.instance.payOrderHandle()
+  assert.equal(submitCalls, 1)
+  assert.equal(order.instance.isHandlePy, true)
+  assert.equal(submittedParams.amount, 28)
+  assert.equal(submittedParams.deliveryFee, 3)
+  assert.equal(submittedParams.addressBookId, 9)
+
+  request.reject(new Error('下单服务不可用'))
+  await first
+  await second
+  assert.equal(order.instance.isHandlePy, false)
+  assert.equal(order.calls.toasts.at(-1).title, '下单服务不可用')
+})
+
+test('checkout routes an empty address directly to the real add form', () => {
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [], remarkData: '', addressData: {}, storeInfo: {},
+      shopInfo: { shopId: 7 }, deliveryFee: 3
+    },
+    apis: {
+      submitOrderSubmit: async () => ({ code: 1, data: {} }),
+      getAddressBookDefault: async () => ({ code: 1, data: {} }),
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      getEstimatedDeliveryTime: async () => ({ code: 1, data: '2026-08-11 10:00:00' })
+    }
+  })
+
+  order.instance.addressList = []
+  order.instance.goAddress()
+  assert.equal(order.calls.redirects.at(-1).url, '/pages/addOrEditAddress/addOrEditAddress')
+  assert.deepEqual(order.calls.mutations.at(-1), ['setAddressBackUrl', '/pages/order/index'])
+
+  order.instance.addressList = [{ id: 1 }]
+  order.instance.goAddress()
+  assert.equal(order.calls.redirects.at(-1).url, '/pages/address/address')
+})
+
+test('address list preserves select, edit, add and default-address behavior', async () => {
+  const defaultCalls = []
+  const address = harness('xiaochengxu-source/pages/address/address.vue', {
+    state: { addressBackUrl: '/pages/order/index' },
+    apis: {
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      putAddressBookDefault: async params => {
+        defaultCalls.push(params)
+        return { code: 1 }
+      }
+    }
+  })
+  const item = { id: 12, isDefault: 0 }
+
+  address.instance.addOrEdit('新增')
+  assert.equal(address.calls.redirects.at(-1).url, '/pages/addOrEditAddress/addOrEditAddress')
+  address.instance.addOrEdit('编辑', item)
+  assert.match(address.calls.redirects.at(-1).url, /type=编辑&id=12$/)
+  address.instance.choseAddress(0, item)
+  assert.equal(address.calls.mutations.at(-1)[0], 'setAddress')
+  assert.match(address.calls.redirects.at(-1).url, /^\/pages\/order\/index\?address=/)
+
+  await address.instance.getRadio(0, item)
+  assert.equal(defaultCalls.length, 1)
+  assert.equal(defaultCalls[0].id, 12)
+  assert.equal(address.instance.isActive, 0)
+  assert.equal(address.calls.toasts.at(-1).title, '默认地址设置成功')
+})
+
+test('address form saves new data and deletes an existing address', async () => {
+  const adds = []
+  const deletes = []
+  const edit = harness('xiaochengxu-source/pages/addOrEditAddress/addOrEditAddress.vue', {
+    apis: {
+      addAddressBook: async params => { adds.push(params); return { code: 1 } },
+      editAddressBook: async () => ({ code: 1 }),
+      delAddressBook: async id => { deletes.push(id); return { code: 1 } },
+      queryAddressBookById: async () => ({ code: 1, data: {} })
+    }
+  })
+  Object.assign(edit.instance.form, {
+    name: '测试用户', phone: '13800138000', type: 2, sex: '0', detail: '1号楼101'
+  })
+  edit.instance.address = '浙江省/杭州市/西湖区'
+
+  await edit.instance.addAddressFun()
+  assert.equal(adds.length, 1)
+  assert.equal(adds[0].consignee, '测试用户')
+  assert.equal(adds[0].provinceName, '浙江省')
+  assert.equal(edit.calls.redirects.at(-1).url, '/pages/address/address')
+
+  edit.instance.delId = 22
+  edit.instance.showDel = true
+  await edit.instance.deleteAddressFun()
+  assert.deepEqual(deletes, [22])
+  assert.equal(edit.calls.toasts.at(-1).title, '地址删除成功')
+})
+
+test('address operation failures keep state recoverable and show server messages', async () => {
+  const defaultAddress = harness('xiaochengxu-source/pages/address/address.vue', {
+    state: { addressBackUrl: '/pages/order/index' },
+    apis: {
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      putAddressBookDefault: async () => { throw new Error('默认地址不可用') }
+    }
+  })
+  defaultAddress.instance.addressList = [{ id: 1, isDefault: 1 }, { id: 2, isDefault: 0 }]
+  defaultAddress.instance.isActive = 0
+  await defaultAddress.instance.getRadio(1, defaultAddress.instance.addressList[1])
+  assert.equal(defaultAddress.instance.isActive, 0)
+  assert.equal(defaultAddress.calls.toasts.at(-1).title, '默认地址不可用')
+
+  const save = harness('xiaochengxu-source/pages/addOrEditAddress/addOrEditAddress.vue', {
+    apis: {
+      addAddressBook: async () => { throw new Error('地址保存服务不可用') },
+      editAddressBook: async () => ({ code: 1 }),
+      delAddressBook: async () => ({ code: 1 }),
+      queryAddressBookById: async () => ({ code: 1, data: {} })
+    }
+  })
+  Object.assign(save.instance.form, {
+    name: '测试用户', phone: '13800138000', type: 2, sex: '0', detail: '1号楼101'
+  })
+  save.instance.address = '浙江省/杭州市/西湖区'
+  assert.equal(await save.instance.addAddressFun(), false)
+  assert.equal(save.calls.redirects.length, 0)
+  assert.equal(save.calls.toasts.at(-1).title, '地址保存服务不可用')
+})
+
+test('remark save commits the text before returning to checkout', () => {
+  const remark = harness('xiaochengxu-source/pages/remark/index.vue', {
+    state: { remarkData: '已有备注' }
+  })
+  remark.definition.onLoad.call(remark.instance)
+  assert.equal(remark.instance.remark, '已有备注')
+  remark.instance.remark = '门口放置即可'
+  remark.instance.handleSaveRemark()
+
+  assert.deepEqual(remark.calls.mutations.at(-1), ['setRemark', '门口放置即可'])
+  assert.equal(remark.calls.redirects.at(-1).url, '/pages/order/index')
+  expectAll(read('xiaochengxu-source/pages/remark/index.vue'), ['保存备注', 'maxlength="50"'])
+})
+
+test('all checkout task pages use the CloudMeal header without tabbars or yellow accents', () => {
+  const pages = [
+    'xiaochengxu-source/pages/order/index.vue',
+    'xiaochengxu-source/pages/address/address.vue',
+    'xiaochengxu-source/pages/addOrEditAddress/addOrEditAddress.vue',
+    'xiaochengxu-source/pages/remark/index.vue'
+  ].map(read).join('\n')
+  expectAll(pages, ['还没有收货地址', '新增收货地址', '保存地址', '删除地址', '保存备注'])
+  expectNone(pages, ['<app-tabbar', '<uni-nav-bar', '#ffc200', '#FFC200', 'linear-gradient'])
+})
