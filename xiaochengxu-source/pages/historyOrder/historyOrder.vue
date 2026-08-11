@@ -103,6 +103,7 @@ export default {
       recentOrdersList: [],
       pageInfo: { page: 1, pageSize: 10, total: 0 },
       loadedPages: {},
+      failedPage: null,
       isLoading: false,
       hasLoaded: false,
       loadError: '',
@@ -117,6 +118,7 @@ export default {
       return Math.ceil(Number(this.pageInfo.total) / Number(this.pageInfo.pageSize))
     },
     canLoadMore() {
+      if (this.failedPage !== null) return true
       if (!this.hasLoaded) return true
       return this.pageInfo.page < this.totalPages
     },
@@ -131,7 +133,7 @@ export default {
   methods: {
     ...mapMutations(['setAddressBackUrl', 'setOrderData']),
     statusWord(status) {
-      return statusWord(status)
+      return statusWord(Number(status))
     },
     getOrderActions(status, orderTime) {
       const timeout = Number(status) === 1 && orderTime ? getOvertime(orderTime) <= 0 : false
@@ -155,6 +157,7 @@ export default {
       this.recentOrdersList = []
       this.pageInfo = { ...this.pageInfo, page: 1, total: 0 }
       this.loadedPages = {}
+      this.failedPage = null
       this.hasLoaded = false
       this.loadError = ''
     },
@@ -178,6 +181,7 @@ export default {
 
           const data = res.data || {}
           const records = Array.isArray(data.records) ? data.records : []
+          this.failedPage = null
           this.recentOrdersList = this.recentOrdersList.concat(records)
           this.pageInfo.total = Number(data.total || 0)
           this.hasLoaded = true
@@ -188,6 +192,7 @@ export default {
         }
         return true
       } catch (error) {
+        this.failedPage = this.pageInfo.page
         delete this.loadedPages[this.pageInfo.page]
         this.loadError = (error && error.message) || '订单加载失败，请重试'
         uni.showToast({ title: this.loadError, icon: 'none' })
@@ -199,7 +204,11 @@ export default {
     },
     async loadNextPage() {
       if (this.isLoading || !this.canLoadMore) return false
-      this.pageInfo.page += 1
+      if (this.failedPage !== null) {
+        this.pageInfo.page = this.failedPage
+      } else {
+        this.pageInfo.page += 1
+      }
       return this.getList()
     },
     async changeSegment(segment) {

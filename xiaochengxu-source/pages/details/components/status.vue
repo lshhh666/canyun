@@ -1,12 +1,12 @@
 <template>
   <view class="status-card">
     <view class="status-card__copy">
-      <text class="status-card__title">{{ statusWord(orderDetailsData.status) }}</text>
-      <text v-if="timeout && orderDetailsData.status === 1" class="status-card__hint">订单已超时</text>
-      <text v-else-if="orderDetailsData.status === 1" class="status-card__hint">
+      <text class="status-card__title">{{ statusWord(status) }}</text>
+      <text v-if="timeout && status === 1" class="status-card__hint">订单已超时</text>
+      <text v-else-if="status === 1" class="status-card__hint">
         请在 {{ rocallTime }} 内完成支付
       </text>
-      <text v-else-if="orderDetailsData.status === 7" class="status-card__hint">
+      <text v-else-if="status === 7" class="status-card__hint">
         {{ cancellationReason }}
       </text>
     </view>
@@ -61,14 +61,17 @@ export default {
     },
   },
   computed: {
+    status() {
+      return Number(this.orderDetailsData.status)
+    },
     actions() {
-      return getOrderActions(this.orderDetailsData.status, { timeout: this.timeout })
+      return getOrderActions(this.status, { timeout: this.timeout })
     },
     canCancel() {
-      return !this.timeout && [1, 2].includes(Number(this.orderDetailsData.status))
+      return !this.timeout && [1, 2].includes(this.status)
     },
     canRefund() {
-      return Number(this.orderDetailsData.status) === 5
+      return this.status === 5
     },
     showActions() {
       return this.actions.length > 0 || this.canCancel || this.canRefund
@@ -80,8 +83,9 @@ export default {
   },
   methods: {
     statusWord(status) {
-      this.$emit('statusWord', status)
-      return statusWord(status)
+      const normalizedStatus = Number(status)
+      this.$emit('statusWord', normalizedStatus)
+      return statusWord(normalizedStatus)
     },
     paymentTime(value) {
       this.$emit('paymentTime', value)

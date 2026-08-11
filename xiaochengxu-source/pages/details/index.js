@@ -28,6 +28,8 @@ export default {
       orderId: null,
       times: null,
       phone: '',
+      isUnloaded: false,
+      detailRequestEpoch: 0,
     }
   },
   computed: {
@@ -39,18 +41,23 @@ export default {
     },
   },
   onLoad(options) {
+    this.isUnloaded = false
     this.orderId = options.orderId
     this.getBaseData(this.orderId)
   },
   onUnload() {
+    this.isUnloaded = true
+    this.detailRequestEpoch += 1
     clearTimeout(this.times)
   },
   methods: {
     ...mapMutations(['setOrderData', 'initdishListMut']),
     ...mapState(['orderListData']),
     async getBaseData(id) {
+      const requestEpoch = ++this.detailRequestEpoch
       try {
         const res = await getOrderDetail(id)
+        if (this.isUnloaded || requestEpoch !== this.detailRequestEpoch) return null
         if (!res || res.code !== 1) throw new Error((res && res.msg) || '订单详情加载失败，请重试')
         this.orderDetailsData = res.data || {}
         this.initdishListMut(this.orderDetailsData.orderDetailList || [])
@@ -59,6 +66,7 @@ export default {
         if (Number(this.orderDetailsData.status) === 1) this.runTimeBack(this.orderDetailsData.orderTime)
         return this.orderDetailsData
       } catch (error) {
+        if (this.isUnloaded || requestEpoch !== this.detailRequestEpoch) return null
         uni.showToast({ title: getErrorMessage(error, '订单详情加载失败，请重试'), icon: 'none' })
         return null
       }
@@ -118,7 +126,7 @@ export default {
       if (typeof value === 'string') this.rocallTime = value
     },
     runTimeBack(time) {
-      if (!time) return
+      if (this.isUnloaded || !time) return
       const end = Date.parse(String(time).replace(/-/g, '/'))
       const remaining = (15 * 60 * 1000) - (Date.now() - end)
       if (remaining <= 0) {
@@ -130,10 +138,17 @@ export default {
       const minutes = String(Math.floor(remaining / 60000)).padStart(2, '0')
       const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0')
       this.rocallTime = `${minutes}:${seconds}`
-      this.times = setTimeout(() => this.runTimeBack(time), 1000)
+      this.times = setTimeout(() => {
+        if (!this.isUnloaded) this.runTimeBack(time)
+      }, 1000)
     },
     goBack() {
-      uni.redirectTo({ url: '/pages/historyOrder/historyOrder' })
+      const pages = getCurrentPages()
+      if (pages.length > 1) {
+        uni.navigateBack({ delta: 1 })
+        return
+      }
+      uni.reLaunch({ url: '/pages/historyOrder/historyOrder' })
     },
     handleRefund(type) {
       this.showConfirm = false

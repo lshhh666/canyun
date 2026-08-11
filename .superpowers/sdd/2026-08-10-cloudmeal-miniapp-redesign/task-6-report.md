@@ -42,3 +42,18 @@
 
 - `xiaochengxu-source/package.json` 没有可调用的 uni-app 构建脚本，因此未执行编译；建议合入前在微信开发者工具中检查自定义页头、固定支付栏、长菜名/长地址和不同安全区高度。
 - 支付页延续现有 Vuex `orderData` 数据来源；未在本任务新增刷新支付页后重新拉取订单详情的跨任务恢复机制。
+
+## Fix round 1
+
+### Changes
+
+- 分页新增 `failedPage` 重试目标。初始页或任意中间页失败后，下一次加载会请求同一页；成功页不会重复请求，也不会因预先递增永久跳过失败页。
+- 订单中心状态文案与详情状态组件统一先用 `Number(status)` 归一化，字符串 `"1"`、`"7"` 仍能得到正确标签、提示与合法动作。
+- 详情请求新增 `detailRequestEpoch` 与 `isUnloaded`。页面卸载会令 pending 请求失效；迟到响应不再写入详情、提交菜品 mutation、显示 toast 或启动倒计时，倒计时回调也在卸载后停止。
+- 详情返回优先使用 `uni.navigateBack` 恢复已有订单页；只有直接打开且无上一页时才 `uni.reLaunch` 到订单中心，避免产生重复订单页栈。
+
+### TDD Evidence
+
+- RED：`node --test tests/miniapp/orders-ui.test.cjs` 为 9 passed / 5 failed；失败点依次为初始页跳页、中间失败页跳页、字符串状态空标签、卸载后迟到响应仍更新、详情返回未使用已有页面栈。
+- GREEN：`node --test tests/miniapp/orders-ui.test.cjs` 为 14 passed / 0 failed。
+- 新增行为覆盖：初始/中间失败页精确重试且不重放成功页；字符串状态标签/提示/动作；卸载早于详情响应时不更新且不启动 timer；有/无上一页的返回策略。

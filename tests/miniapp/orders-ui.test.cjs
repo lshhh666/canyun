@@ -50,11 +50,15 @@ function historyHarness(pages) {
     CloudmealHeader: {}, AppTabbar: {}, Empty: {},
     ...segments,
     resolveOrderActions: segments.getOrderActions,
-    statusWord: status => `状态${status}`,
+    statusWord: status => Number.isInteger(status) ? `状态${status}` : '',
     getOvertime: () => 100,
     getOrderPage: async params => {
       calls.requests.push(params.page)
-      return pages[params.page - 1] || { code: 1, data: { records: [], total: 0 } }
+      const configured = pages[params.page - 1]
+      const response = Array.isArray(configured) ? configured.shift() : configured
+      if (response instanceof Error) throw response
+      if (typeof response === 'function') return response(params)
+      return response || { code: 1, data: { records: [], total: 0 } }
     },
     repetitionOrder: async () => ({ code: 1 }),
     reminderOrder: async () => ({ code: 1 }),
@@ -74,6 +78,42 @@ function historyHarness(pages) {
   })
   const instance = mount(definition, { commonPopup: { open() {}, close() {} } })
   return { calls, definition, instance }
+}
+
+function detailsHarness({ getOrderDetail, pages = [{}] } = {}) {
+  const calls = { backs: [], mutations: [], relaunches: [], timers: 0, toasts: [] }
+  const state = { orderListData: [] }
+  const definition = componentOptions('xiaochengxu-source/pages/details/index.js', {
+    CloudmealHeader: {}, Status: {}, OrderDetail: {}, DeliveryInfo: {}, OrderInfo: {},
+    getOrderDetail: getOrderDetail || (async () => ({ code: 1, data: {} })),
+    repetitionOrder: async () => ({ code: 1 }),
+    delShoppingCart: async () => ({ code: 1 }),
+    reminderOrder: async () => ({ code: 1 }),
+    cancelOrder: async () => ({ code: 1 }),
+    call() {},
+    formatStatusWord: status => `状态${status}`,
+    getErrorMessage: (error, fallback) => (error && error.message) || fallback,
+    getOrderActions: () => [],
+    mapState(names) {
+      return Object.fromEntries(names.map(name => [name, () => state[name]]))
+    },
+    mapMutations(names) {
+      return Object.fromEntries(names.map(name => [name, payload => {
+        calls.mutations.push([name, payload])
+        if (name === 'initdishListMut') state.orderListData = payload
+      }]))
+    },
+    getCurrentPages: () => pages,
+    uni: {
+      navigateBack: options => calls.backs.push(options),
+      reLaunch: options => calls.relaunches.push(options),
+      redirectTo: options => calls.relaunches.push(options),
+      showToast: options => calls.toasts.push(options)
+    },
+    setTimeout() { calls.timers += 1; return calls.timers },
+    clearTimeout() {}
+  })
+  return { calls, definition, instance: mount(definition), state }
 }
 
 function payHarness({ paymentOrder, requestPayment }) {
@@ -151,6 +191,40 @@ test('pagination stops at the final page when a segment has no orders', async ()
   assert.equal(history.instance.canLoadMore, false)
 })
 
+test('initial page failures retry page one instead of skipping ahead', async () => {
+  const history = historyHarness([[
+    new Error('第一页暂不可用'),
+    { code: 1, data: { records: [{ id: 1, status: 2 }], total: 1 } }
+  ]])
+  history.instance.pageInfo.pageSize = 1
+
+  assert.equal(await history.instance.getList(), false)
+  assert.equal(await history.instance.loadNextPage(), true)
+
+  assert.deepEqual(history.calls.requests, [1, 1])
+  assert.deepEqual(Array.from(history.instance.visibleOrders, order => order.id), [1])
+})
+
+test('middle page failures retry the failed page without replaying successful pages', async () => {
+  const history = historyHarness([
+    { code: 1, data: { records: [{ id: 1, status: 2 }], total: 3 } },
+    [
+      new Error('第二页暂不可用'),
+      { code: 1, data: { records: [{ id: 2, status: 3 }], total: 3 } }
+    ],
+    { code: 1, data: { records: [{ id: 3, status: 4 }], total: 3 } }
+  ])
+  history.instance.pageInfo.pageSize = 1
+
+  assert.equal(await history.instance.getList(), true)
+  assert.equal(await history.instance.loadNextPage(), false)
+  assert.equal(await history.instance.loadNextPage(), true)
+
+  assert.deepEqual(history.calls.requests, [1, 2, 2])
+  assert.deepEqual(Array.from(history.instance.recentOrdersList, order => order.id), [1, 2])
+  assert.equal(history.instance.pageInfo.page, 2)
+})
+
 test('history page renders only actions allowed for each status', () => {
   const page = read('xiaochengxu-source/pages/historyOrder/historyOrder.vue')
   expectAll(page, [
@@ -180,6 +254,63 @@ test('detail status component preserves its props and event contract', () => {
   assert.deepEqual(events.map(event => event[0]), [
     'statusWord', 'paymentTime', 'handlePay', 'handleReminder', 'handleRefund'
   ])
+})
+
+test('string statuses keep list labels, detail hints and legal actions', () => {
+  const history = historyHarness([])
+  assert.equal(history.instance.statusWord('1'), '状态1')
+
+  const definition = componentOptions('xiaochengxu-source/pages/details/components/status.vue', {
+    statusWord: status => status === 1 ? '待付款' : (status === 7 ? '已取消' : ''),
+    getOrderActions: status => status === 1 ? ['pay'] : (status === 7 ? ['repeat'] : [])
+  })
+  const instance = mount(definition)
+  instance.$emit = () => {}
+  instance.orderDetailsData = { id: 8, status: '1', payStatus: '0' }
+  instance.timeout = false
+
+  assert.equal(instance.statusWord('1'), '待付款')
+  assert.equal(instance.canCancel, true)
+  assert.deepEqual(Array.from(instance.actions), ['pay'])
+  assert.equal(instance.hasAction('pay'), true)
+
+  instance.orderDetailsData = { id: 9, status: '7', rejectionReason: '商家取消' }
+  assert.equal(instance.statusWord('7'), '已取消')
+  assert.equal(instance.cancellationReason, '商家取消')
+  assert.deepEqual(Array.from(instance.actions), ['repeat'])
+})
+
+test('detail ignores responses that arrive after unload and never starts a timer', async () => {
+  const request = deferred()
+  const detail = detailsHarness({ getOrderDetail: () => request.promise })
+  detail.instance.orderId = 88
+  const pending = detail.instance.getBaseData(88)
+
+  detail.definition.onUnload.call(detail.instance)
+  request.resolve({
+    code: 1,
+    data: { id: 88, status: 1, orderTime: '2026-08-11 12:00:00', orderDetailList: [{ id: 1 }] }
+  })
+  await pending
+
+  assert.equal(Object.keys(detail.instance.orderDetailsData).length, 0)
+  assert.equal(detail.calls.timers, 0)
+  assert.equal(detail.calls.mutations.length, 0)
+  assert.equal(detail.calls.toasts.length, 0)
+})
+
+test('detail navigates back when possible and falls back to the orders root', () => {
+  const stacked = detailsHarness({ pages: [{ route: 'pages/historyOrder/historyOrder' }, { route: 'pages/details/index' }] })
+  stacked.instance.goBack()
+  assert.equal(stacked.calls.backs.length, 1)
+  assert.equal(stacked.calls.backs[0].delta, 1)
+  assert.equal(stacked.calls.relaunches.length, 0)
+
+  const direct = detailsHarness({ pages: [{ route: 'pages/details/index' }] })
+  direct.instance.goBack()
+  assert.equal(direct.calls.backs.length, 0)
+  assert.equal(direct.calls.relaunches.length, 1)
+  assert.equal(direct.calls.relaunches[0].url, '/pages/historyOrder/historyOrder')
 })
 
 test('payment ignores duplicate taps and routes only after payment succeeds', async () => {
