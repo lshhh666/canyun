@@ -81,7 +81,9 @@ function historyHarness(pages) {
 }
 
 function detailsHarness({ getOrderDetail, pages = [{}] } = {}) {
-  const calls = { backs: [], mutations: [], relaunches: [], timers: 0, toasts: [] }
+  const calls = {
+    backs: [], mutations: [], relaunches: [], timerCallbacks: [], timers: 0, toasts: []
+  }
   const state = { orderListData: [] }
   const definition = componentOptions('xiaochengxu-source/pages/details/index.js', {
     CloudmealHeader: {}, Status: {}, OrderDetail: {}, DeliveryInfo: {}, OrderInfo: {},
@@ -110,7 +112,11 @@ function detailsHarness({ getOrderDetail, pages = [{}] } = {}) {
       redirectTo: options => calls.relaunches.push(options),
       showToast: options => calls.toasts.push(options)
     },
-    setTimeout() { calls.timers += 1; return calls.timers },
+    setTimeout(callback) {
+      calls.timers += 1
+      calls.timerCallbacks.push(callback)
+      return calls.timers
+    },
     clearTimeout() {}
   })
   return { calls, definition, instance: mount(definition), state }
@@ -297,6 +303,35 @@ test('detail ignores responses that arrive after unload and never starts a timer
   assert.equal(detail.calls.timers, 0)
   assert.equal(detail.calls.mutations.length, 0)
   assert.equal(detail.calls.toasts.length, 0)
+})
+
+test('detail unload makes an already scheduled countdown callback inert', async () => {
+  const future = new Date(Date.now() + 5 * 60 * 1000)
+  const pad = value => String(value).padStart(2, '0')
+  const orderTime = [
+    `${future.getFullYear()}-${pad(future.getMonth() + 1)}-${pad(future.getDate())}`,
+    `${pad(future.getHours())}:${pad(future.getMinutes())}:${pad(future.getSeconds())}`
+  ].join(' ')
+  const detail = detailsHarness({
+    getOrderDetail: async () => ({
+      code: 1,
+      data: { id: 89, status: 1, orderTime, orderDetailList: [{ id: 1 }] }
+    })
+  })
+
+  await detail.instance.getBaseData(89)
+  assert.equal(detail.instance.orderDetailsData.id, 89)
+  assert.equal(detail.calls.timers, 1)
+  assert.equal(detail.calls.timerCallbacks.length, 1)
+
+  const staleTimerCallback = detail.calls.timerCallbacks[0]
+  detail.definition.onUnload.call(detail.instance)
+  detail.instance.rocallTime = '卸载后保持不变'
+  staleTimerCallback()
+
+  assert.equal(detail.instance.rocallTime, '卸载后保持不变')
+  assert.equal(detail.calls.timers, 1)
+  assert.equal(detail.calls.timerCallbacks.length, 1)
 })
 
 test('detail navigates back when possible and falls back to the orders root', () => {
