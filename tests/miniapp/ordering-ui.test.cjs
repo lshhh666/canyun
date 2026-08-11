@@ -63,6 +63,8 @@ function loadOrderingController(overrides = {}) {
       return Object.fromEntries(names.map(name => [name, function commitVuex(payload) {
         calls.mutations.push([name, payload])
         if (name === 'initdishListMut') state.orderListData = payload
+        if (name === 'setShopInfo') state.shopInfo = payload
+        if (name === 'setDeliveryFee') state.deliveryFee = payload
       }]))
     },
     uni: {
@@ -128,7 +130,7 @@ test('ordering layout keeps browsing available while checkout follows store stat
   const styles = read('xiaochengxu-source/pages/index/style.scss')
   expectAll(page, [
     'class="menu-layout"',
-    'v-if="dishListItems && dishListItems.length > 0"',
+    'v-else-if="dishListItems && dishListItems.length > 0"',
     ':disabled="orderListData().length === 0 || shopStatus !== 1"',
     "shopStatus === null ? '状态加载中'",
     '<state-panel'
@@ -145,13 +147,38 @@ test('ordering layout keeps browsing available while checkout follows store stat
     'if (item && item.obj)',
     'form = item.item',
     'item = item.obj',
-    'await this.getDishListDataes(categories[this.typeIndex || 0], this.typeIndex || 0)',
+    'const loaded = await this.getDishListDataes(',
     'const requestId = ++this.menuRequestId',
     'if (requestId !== this.menuRequestId) return',
     'selectAll(".type_list .type_item")',
     'this.arr = rects || []'
   ])
   expectNone(page + styles + script, ['linear-gradient', '#ffc200', '#FFC200', 'selectAll(".class-item")'])
+})
+
+test('ordering loading overlay is structural and missing metadata has stable copy', () => {
+  const page = read('xiaochengxu-source/pages/index/index.vue')
+  expectAll(page, [
+    'v-if="menuLoading"',
+    'v-if="menuLoadFailed"',
+    'actionText="閲嶆柊鍔犺浇"',
+    '@action="reloadMenu"',
+    '{{ shopAddressText }}',
+    '锟{ deliveryFeeText }}'
+  ])
+  expectNone(page, ['v-show="loaddingSt"', '锟{ deliveryFee() }}', '姝ｅ湪鑾峰彇闂ㄥ簵淇℃伅'])
+
+  const missing = loadOrderingController({
+    state: { shopInfo: null, deliveryFee: null }
+  })
+  assert.equal(missing.instance.shopAddressText, '闂ㄥ簵淇℃伅鏆傛湭瀹屽杽')
+  assert.equal(missing.instance.deliveryFeeText, '0.00')
+
+  const valid = loadOrderingController({
+    state: { shopInfo: { shopAddress: '鏈涗含闂ㄥ簵' }, deliveryFee: '3' }
+  })
+  assert.equal(valid.instance.shopAddressText, '鏈涗含闂ㄥ簵')
+  assert.equal(valid.instance.deliveryFeeText, '3.00')
 })
 
 test('Vuex state helpers run as bound methods and null carts normalize to arrays', async () => {
@@ -225,6 +252,74 @@ test('overlapping category requests ignore the older response', async () => {
 
   assert.equal(harness.instance.typeListData[0].id, 'new')
   assert.deepEqual(dishRequests, ['new'])
+})
+
+test('latest initialization owns loading until its first menu settles', async () => {
+  const categories = deferred()
+  const dishes = deferred()
+  const harness = loadOrderingController({
+    apis: {
+      getCategoryList: () => categories.promise,
+      dishListByCategoryId: () => dishes.promise
+    }
+  })
+  harness.instance.getMerchantInfo = async () => {}
+  harness.instance.getTableOrderDishListes = async () => {}
+
+  const loading = harness.instance.init()
+  assert.equal(harness.instance.menuLoading, true)
+  categories.resolve({ code: 1, data: [{ id: 1, type: 1 }] })
+  await Promise.resolve()
+  assert.equal(harness.instance.menuLoading, true)
+  dishes.resolve({ code: 1, data: [] })
+  await loading
+
+  assert.equal(harness.instance.menuLoading, false)
+  assert.equal(harness.instance.menuLoadFailed, false)
+})
+
+test('failed initialization clears loading and retry can recover', async () => {
+  let calls = 0
+  const harness = loadOrderingController({
+    apis: {
+      getCategoryList: async () => {
+        calls += 1
+        if (calls === 1) throw new Error('network down')
+        return { code: 1, data: [] }
+      }
+    }
+  })
+  harness.instance.getMerchantInfo = async () => {}
+  harness.instance.getTableOrderDishListes = async () => {}
+
+  await harness.instance.init()
+  assert.equal(harness.instance.menuLoading, false)
+  assert.equal(harness.instance.menuLoadFailed, true)
+  await harness.instance.reloadMenu()
+  assert.equal(harness.instance.menuLoading, false)
+  assert.equal(harness.instance.menuLoadFailed, false)
+})
+
+test('an older initialization cannot clear the newer loading state', async () => {
+  const oldRequest = deferred()
+  const newRequest = deferred()
+  let calls = 0
+  const harness = loadOrderingController({
+    apis: {
+      getCategoryList: () => (++calls === 1 ? oldRequest.promise : newRequest.promise)
+    }
+  })
+  harness.instance.getMerchantInfo = async () => {}
+  harness.instance.getTableOrderDishListes = async () => {}
+
+  const oldInit = harness.instance.init()
+  const newInit = harness.instance.init()
+  oldRequest.resolve({ code: 1, data: [] })
+  await oldInit
+  assert.equal(harness.instance.menuLoading, true)
+  newRequest.resolve({ code: 1, data: [] })
+  await newInit
+  assert.equal(harness.instance.menuLoading, false)
 })
 
 test('loading and closed stores block checkout without blocking add requests', async () => {

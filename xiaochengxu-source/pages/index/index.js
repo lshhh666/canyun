@@ -77,6 +77,8 @@ export default {
 			menuItemHeight: 0, // 左边菜单item的高度
 			itemId: "", // 栏目右边scroll-view用于滚动的id
 			arr: [],
+			menuLoading: false,
+			menuLoadFailed: false,
 			menuRequestId: 0,
 			categoryRequestId: 0,
 		}
@@ -101,8 +103,15 @@ export default {
 		orderListDataes: function () {
 			return this.orderListData()
 		},
-		loaddingSt: function () {
-			return this.lodding()
+		shopAddressText: function () {
+			const info = this.shopInfo()
+			return info && typeof info === 'object' && info.shopAddress
+				? info.shopAddress
+				: '闂ㄥ簵淇℃伅鏆傛湭瀹屽杽'
+		},
+		deliveryFeeText: function () {
+			const fee = Number(this.deliveryFee())
+			return Number.isFinite(fee) && fee >= 0 ? fee.toFixed(2) : '0.00'
 		},
 		// 计算购物车清单
 		orderAndUserInfo: function () {
@@ -164,7 +173,6 @@ export default {
 			"initdishListMut", //设置购物车订单
 			"setStoreInfo",
 			"setBaseUserInfo", //设置用户基本信息
-			"setLodding",
 			"setToken", //设置token
 			"setDeliveryFee", //设置配送费
 		]),
@@ -174,7 +182,6 @@ export default {
 			"shopPhone", //电话
 			"orderListData",
 			"baseUserInfo", //用户信息
-			"lodding",
 			"token", //token
 			"deliveryFee", //配送费
 		]),
@@ -271,31 +278,40 @@ export default {
 
 		async init() {
 			const requestId = ++this.categoryRequestId
-			// 新一轮初始化开始时，使上一轮已发出的菜品请求立即失效
+			this.menuLoading = true
+			this.menuLoadFailed = false
 			this.menuRequestId++
-			// 获取菜品和套餐分类接口
-			if (this.typeIndex !== 0) {
-				this.typeIndex = 0
-			}
+			if (this.typeIndex !== 0) this.typeIndex = 0
 
-			// 获取店铺联系方式
 			this.getMerchantInfo()
-			// 调用一次购物车集合---初始化
 			this.getTableOrderDishListes()
 			try {
 				const res = await getCategoryList()
 				if (requestId !== this.categoryRequestId) return
-				if (res && res.code === 1) {
-					const categories = Array.isArray(res.data) ? res.data : []
-					this.typeListData = categories
-					if (categories.length > 0) {
-						await this.getDishListDataes(categories[this.typeIndex || 0], this.typeIndex || 0)
-					}
+				if (!res || res.code !== 1) {
+					throw new Error((res && res.msg) || '鑿滃崟鍔犺浇澶辫触锛岃閲嶈瘯')
+				}
+
+				const categories = Array.isArray(res.data) ? res.data : []
+				this.typeListData = categories
+				if (categories.length > 0) {
+					const loaded = await this.getDishListDataes(
+						categories[this.typeIndex || 0],
+						this.typeIndex || 0
+					)
+					if (requestId !== this.categoryRequestId) return
+					this.menuLoadFailed = loaded === false
 				}
 			} catch (error) {
 				if (requestId !== this.categoryRequestId) return
+				this.menuLoadFailed = true
 				this.showMenuError(error)
+			} finally {
+				if (requestId === this.categoryRequestId) this.menuLoading = false
 			}
+		},
+		reloadMenu() {
+			return this.init()
 		},
 		// 点击左边的栏目切换
 		async swichMenu(params, index) {
@@ -307,7 +323,8 @@ export default {
 				this.typeIndex = index
 				this.leftMenuStatus(index)
 			})
-			this.getDishListDataes(params, index)
+			const loaded = await this.getDishListDataes(params, index)
+			if (loaded !== null) this.menuLoadFailed = loaded === false
 		},
 		// 获取一个目标元素的高度
 		getElRect(elClass, dataVal) {
@@ -367,7 +384,6 @@ export default {
 			if (index !== undefined) this.typeIndex = index
 			this.dishListData = []
 			this.dishListItems = []
-			this.rightIdAndType = {}
 			this.rightIdAndType = {
 				id: params.id,
 				type: params.type,
@@ -375,49 +391,30 @@ export default {
 			const param = {
 				categoryId: params.id,
 			}
-			// type：1是菜品、2是套餐
-			if (params.type === 1) {
-				await dishListByCategoryId(param)
-					.then((res) => {
-						if (requestId !== this.menuRequestId) return
-						if (res && res.code === 1) {
-							// 添加一个字段去实时更新加入购物车number数量 ----- newCardNumber
-							this.dishListData =
-								res.data &&
-								res.data.map((obj) => ({
-									...obj,
-									type: 1,
-									newCardNumber: 0,
-								}))
-						}
-					})
-					.catch((error) => {
-						if (requestId !== this.menuRequestId) return
-						this.showMenuError(error)
-					})
-			} else {
-				// 套餐
-				await querySetmeaList(param)
-					.then((success) => {
-						if (requestId !== this.menuRequestId) return
-						if (success && success.code === 1) {
-							// dishListItems被转换数组---原始this.dishListData
-							this.dishListData =
-								success.data &&
-								success.data.map((obj) => ({
-									...obj,
-									type: 2,
-									newCardNumber: 0,
-								}))
-						}
-					})
-					.catch((error) => {
-						if (requestId !== this.menuRequestId) return
-						this.showMenuError(error)
-					})
+
+			try {
+				const response = params.type === 1
+					? await dishListByCategoryId(param)
+					: await querySetmeaList(param)
+				if (requestId !== this.menuRequestId) return null
+				if (!response || response.code !== 1) {
+					this.showMenuError(new Error((response && response.msg) || '鑿滃崟鍔犺浇澶辫触锛岃閲嶈瘯'))
+					return false
+				}
+
+				const rows = Array.isArray(response.data) ? response.data : []
+				this.dishListData = rows.map((obj) => ({
+					...obj,
+					type: params.type === 1 ? 1 : 2,
+					newCardNumber: 0,
+				}))
+				this.setOrderNum()
+				return true
+			} catch (error) {
+				if (requestId !== this.menuRequestId) return null
+				this.showMenuError(error)
+				return false
 			}
-			if (requestId !== this.menuRequestId) return
-			this.setOrderNum()
 		},
 		// 获取首页店铺信息
 		async getShopInfo() {

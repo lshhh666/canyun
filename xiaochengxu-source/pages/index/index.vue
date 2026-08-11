@@ -2,17 +2,17 @@
   <view class="ordering-page" :class="{ 'ordering-page--closed': shopStatus !== 1 }">
     <cloudmeal-header
       title="餐云点餐"
-      :subtitle="shopInfo().shopAddress || '正在获取门店信息'"
+      :subtitle="shopAddressText"
       :status="shopStatusText"
     />
 
     <view class="store-contact" @click="handlePhone('bottom')">
       <view class="store-contact__fee">
         <text class="store-contact__label">配送费</text>
-        <text>￥{{ deliveryFee() }}</text>
+        <text>锟{ deliveryFeeText }}</text>
       </view>
       <view class="store-contact__action">
-        <text>{{ shopInfo().shopAddress || '门店信息获取中' }}</text>
+        <text>{{ shopAddressText }}</text>
         <text class="store-contact__phone">联系门店</text>
       </view>
     </view>
@@ -42,11 +42,19 @@
         </scroll-view>
       </view>
 
+      <state-panel
+        v-if="menuLoadFailed"
+        class="menu-empty"
+        title="鑿滃崟鍔犺浇澶辫触"
+        description="璇锋鏌ョ綉缁滃悗閲嶆柊鍔犺浇"
+        actionText="閲嶆柊鍔犺浇"
+        @action="reloadMenu"
+      />
       <scroll-view
         class="vegetable_order_list"
         scroll-y="true"
         scroll-top="0rpx"
-        v-if="dishListItems && dishListItems.length > 0"
+        v-else-if="dishListItems && dishListItems.length > 0"
       >
         <view class="type_item" v-for="(item, index) in dishListItems" :key="index">
           <view class="dish_img" @click="openDetailHandle(item)">
@@ -142,7 +150,7 @@
       />
     </view>
 
-    <view class="pop_mask loading-mask" v-show="loaddingSt">
+    <view class="pop_mask loading-mask" v-if="menuLoading">
       <view class="loading-card">菜单加载中…</view>
     </view>
 
