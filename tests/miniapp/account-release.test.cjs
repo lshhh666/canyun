@@ -329,6 +329,23 @@ function runSync(sandbox, args = []) {
   ], { encoding: 'utf8' })
 }
 
+function runSyncWithSecondMoveFailure(sandbox) {
+  const runner = path.join(sandbox.root, 'inject-second-move-failure.ps1')
+  fs.writeFileSync(runner, [
+    '$script:moveCount = 0',
+    'function Move-Item {',
+    '  param([string]$LiteralPath, [string]$Destination)',
+    '  $script:moveCount += 1',
+    "  if ($script:moveCount -eq 2) { throw 'Injected second move failure.' }",
+    '  Microsoft.PowerShell.Management\\Move-Item -LiteralPath $LiteralPath -Destination $Destination',
+    '}',
+    '& $args[0]'
+  ].join('\r\n'))
+  return spawnSync('powershell.exe', [
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', runner, sandbox.script
+  ], { encoding: 'utf8' })
+}
+
 function removeSandbox(sandbox) {
   fs.rmSync(sandbox.root, { recursive: true, force: true })
 }
@@ -350,23 +367,64 @@ test('release sync stops before deleting target output when the build is missing
   }
 })
 
-test('release sync refuses escaped build paths before it touches target output', () => {
+test('release sync refuses a source junction before it touches target output', () => {
   const sandbox = makeSyncSandbox()
   let outsideBuild
   try {
-    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.config.json'), '{}')
-    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'do not delete')
-    outsideBuild = path.join(path.dirname(sandbox.root), `${path.basename(sandbox.root)}-outside`)
-    fs.mkdirSync(outsideBuild, { recursive: true })
-    fs.writeFileSync(path.join(outsideBuild, 'sentinel.txt'), 'do not delete')
+    fs.rmSync(sandbox.buildRoot, { recursive: true, force: true })
+    outsideBuild = fs.mkdtempSync(path.join(os.tmpdir(), 'cloudmeal-miniapp-outside-'))
+    fs.writeFileSync(path.join(outsideBuild, 'app.json'), '{}')
+    fs.writeFileSync(path.join(outsideBuild, 'sentinel.txt'), 'outside build must stay unchanged')
+    fs.symlinkSync(outsideBuild, sandbox.buildRoot, 'junction')
 
-    const result = runSync(sandbox, ['-BuildRelativePath', `..\\${path.basename(outsideBuild)}`])
+    const config = Buffer.from([0xff, 0x00, 0x7f])
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.config.json'), config)
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'do not delete')
+
+    const result = runSync(sandbox)
 
     assert.notEqual(result.status, 0)
-    assert.equal(fs.readFileSync(path.join(outsideBuild, 'sentinel.txt'), 'utf8'), 'do not delete')
+    assert.match(result.stderr, /reparse point/i)
+    assert.equal(
+      fs.readFileSync(path.join(outsideBuild, 'sentinel.txt'), 'utf8'),
+      'outside build must stay unchanged'
+    )
     assert.equal(fs.readFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'utf8'), 'do not delete')
+    assert.deepEqual(fs.readFileSync(path.join(sandbox.targetRoot, 'project.config.json')), config)
   } finally {
+    if (fs.existsSync(sandbox.buildRoot)) fs.rmSync(sandbox.buildRoot, { recursive: true, force: true })
     if (outsideBuild) fs.rmSync(outsideBuild, { recursive: true, force: true })
+    removeSandbox(sandbox)
+  }
+})
+
+test('release sync refuses a nested build junction without traversing or replacing target', () => {
+  const sandbox = makeSyncSandbox()
+  let outsideDirectory
+  const nestedJunction = path.join(sandbox.buildRoot, 'linked-pages')
+  try {
+    outsideDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'cloudmeal-miniapp-linked-'))
+    fs.writeFileSync(path.join(outsideDirectory, 'sentinel.txt'), 'nested outside data must stay unchanged')
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'app.json'), '{}')
+    fs.symlinkSync(outsideDirectory, nestedJunction, 'junction')
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.config.json'), '{}')
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'target must stay unchanged')
+
+    const result = runSync(sandbox)
+
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /reparse point/i)
+    assert.equal(
+      fs.readFileSync(path.join(outsideDirectory, 'sentinel.txt'), 'utf8'),
+      'nested outside data must stay unchanged'
+    )
+    assert.equal(
+      fs.readFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'utf8'),
+      'target must stay unchanged'
+    )
+  } finally {
+    if (fs.existsSync(nestedJunction)) fs.rmSync(nestedJunction, { recursive: true, force: true })
+    if (outsideDirectory) fs.rmSync(outsideDirectory, { recursive: true, force: true })
     removeSandbox(sandbox)
   }
 })
@@ -401,6 +459,34 @@ test('release sync preserves WeChat config bytes and replaces only stale generat
   }
 })
 
+test('release sync restores the old target when staging activation fails', () => {
+  const sandbox = makeSyncSandbox()
+  try {
+    const config = Buffer.from([0xff, 0x00, 0x7f, 0x0d, 0x0a])
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.config.json'), config)
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'old target must be restored')
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'app.json'), '{}')
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'app.js'), 'new generated output')
+
+    const result = runSyncWithSecondMoveFailure(sandbox)
+
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Injected second move failure/i)
+    assert.equal(
+      fs.readFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'utf8'),
+      'old target must be restored'
+    )
+    assert.equal(fs.existsSync(path.join(sandbox.targetRoot, 'app.js')), false)
+    assert.deepEqual(fs.readFileSync(path.join(sandbox.targetRoot, 'project.config.json')), config)
+    assert.deepEqual(
+      fs.readdirSync(sandbox.root).filter(name => name.startsWith('.miniapp-sync-')),
+      []
+    )
+  } finally {
+    removeSandbox(sandbox)
+  }
+})
+
 test('release sync requires the current target project configuration before cleanup', () => {
   const sandbox = makeSyncSandbox()
   try {
@@ -416,15 +502,24 @@ test('release sync requires the current target project configuration before clea
   }
 })
 
-test('release sync validates paths and preserves WeChat configs', () => {
+test('release sync fixes both paths and stages an atomic rollback-capable exchange', () => {
   const script = read('scripts/sync-miniapp-output.ps1')
   expectAll(script, [
     'xiaochengxu-source\\unpackage\\dist\\dev\\mp-weixin',
     'xiaochengxu\\project.config.json',
     'xiaochengxu\\project.private.config.json',
     'StartsWith($repoRoot',
-    'Remove-Item -LiteralPath'
+    '[System.IO.FileAttributes]::ReparsePoint',
+    'Source and target paths must not overlap.',
+    '.miniapp-sync-staging-',
+    '.miniapp-sync-backup-',
+    '$targetMovedToBackup',
+    'Move-Item -LiteralPath $targetRoot -Destination $backupRoot',
+    'Move-Item -LiteralPath $stagingRoot -Destination $targetRoot',
+    'Move-Item -LiteralPath $backupRoot -Destination $targetRoot',
+    'Remove-Item -LiteralPath $backupRoot'
   ])
+  expectNone(script, ['BuildRelativePath', 'TargetRelativePath', 'WriteAllBytes'])
 })
 
 function sourceFilesUnder(relativeDirectory) {
