@@ -32,7 +32,8 @@ function accountHarness(state = {}, overrides = {}) {
     phones: [],
     redirects: [],
     navigations: [],
-    backs: []
+    backs: [],
+    relaunches: []
   }
   const definition = componentOptions('xiaochengxu-source/pages/my/my.vue', {
     HeadInfo: {},
@@ -41,6 +42,7 @@ function accountHarness(state = {}, overrides = {}) {
     AppTabbar: {},
     DEFAULT_AVATAR: '/static/brand/cloudmeal-logo.png',
     DEFAULT_NICKNAME: '微信用户',
+    getErrorMessage: (error, fallback) => (error && error.message) || fallback,
     statusWord: status => `状态${status}`,
     getOvertime: () => 30,
     getOrderPage: overrides.getOrderPage || (async () => ({ code: 1, data: { records: [], total: 0 } })),
@@ -59,6 +61,7 @@ function accountHarness(state = {}, overrides = {}) {
       redirectTo: options => calls.redirects.push(options),
       navigateTo: options => calls.navigations.push(options),
       navigateBack: options => calls.backs.push(options),
+      reLaunch: options => calls.relaunches.push(options),
       getSystemInfo: () => {},
       upx2px: value => value
     }
@@ -204,7 +207,95 @@ test('recent order events reach account detail and repeat-order handlers', async
   assert.deepEqual(events, [['goDetail', 31], ['oneOrderFun', 32]])
   assert.equal(account.calls.redirects.at(-1).url, '/pages/details/index?orderId=31')
   assert.deepEqual(sequence, ['clear-cart', 'repeat:32'])
-  assert.equal(account.calls.backs.at(-1).delta, 2)
+  assert.equal(account.calls.backs.at(-1).delta, 1)
+  assert.equal(account.calls.relaunches.length, 0)
+})
+
+test('repeat order returns to an existing ordering page or relaunches it from a single-page stack', async () => {
+  const stacked = accountHarness({}, {
+    getCurrentPages: () => [{ route: 'pages/index/index' }, { route: 'pages/my/my' }]
+  })
+  assert.equal(await stacked.instance.oneOrderFun(41), true)
+  assert.equal(stacked.calls.backs[0].delta, 1)
+  assert.equal(stacked.calls.relaunches.length, 0)
+
+  const direct = accountHarness({}, {
+    getCurrentPages: () => [{ route: 'pages/my/my' }]
+  })
+  assert.equal(await direct.instance.oneOrderFun(42), true)
+  assert.equal(direct.calls.backs.length, 0)
+  assert.equal(direct.calls.relaunches[0].url, '/pages/index/index')
+})
+
+test('repeat order API failures stay put and show specific or fallback errors', async () => {
+  let repeatCalls = 0
+  const clearFailure = accountHarness({}, {
+    delShoppingCart: async () => { throw new Error('购物车清理失败') },
+    repetitionOrder: async () => { repeatCalls += 1; return { code: 1 } }
+  })
+  assert.equal(await clearFailure.instance.oneOrderFun(51), false)
+  assert.equal(repeatCalls, 0)
+  assert.equal(clearFailure.calls.toasts[0].title, '购物车清理失败')
+  assert.equal(clearFailure.calls.backs.length + clearFailure.calls.relaunches.length, 0)
+
+  const repeatFailure = accountHarness({}, {
+    delShoppingCart: async () => ({ code: 1 }),
+    repetitionOrder: async () => ({ code: 0 })
+  })
+  assert.equal(await repeatFailure.instance.oneOrderFun(52), false)
+  assert.equal(repeatFailure.calls.toasts[0].title, '再来一单失败，请重试')
+  assert.equal(repeatFailure.calls.backs.length + repeatFailure.calls.relaunches.length, 0)
+})
+
+test('recent-order pagination retries a failed page without advancing or replaying successes', async () => {
+  const requests = []
+  let pageTwoAttempts = 0
+  const harness = accountHarness({}, {
+    getOrderPage: async params => {
+      requests.push(params.page)
+      if (params.page === 2 && pageTwoAttempts++ === 0) throw new Error('第二页暂不可用')
+      return {
+        code: 1,
+        data: {
+          records: [{ id: params.page, orderDetailList: [] }],
+          total: 3
+        }
+      }
+    }
+  })
+  harness.instance.pageInfo.pageSize = 1
+
+  assert.equal(await harness.instance.getList(), true)
+  assert.equal(await harness.instance.lower(), false)
+  assert.equal(harness.instance.pageInfo.page, 1)
+  assert.equal(harness.instance.failedPage, 2)
+  assert.equal(harness.instance.loading, false)
+  assert.equal(harness.instance.loadingText, '第二页暂不可用')
+  assert.equal(harness.calls.toasts.at(-1).title, '第二页暂不可用')
+
+  assert.equal(await harness.instance.lower(), true)
+  assert.equal(harness.instance.pageInfo.page, 2)
+  assert.equal(harness.instance.failedPage, null)
+  assert.equal(await harness.instance.lower(), true)
+  assert.equal(harness.instance.pageInfo.page, 3)
+  assert.deepEqual(requests, [1, 2, 2, 3])
+  assert.deepEqual(Array.from(harness.instance.recentOrdersList, order => order.id), [1, 2, 3])
+})
+
+test('recent order helpers normalize null detail lists', () => {
+  const definition = componentOptions('xiaochengxu-source/pages/my/components/orderList.vue', {
+    statusWord: status => `状态${status}`,
+    getOvertime: () => 30
+  })
+  const instance = mount(definition)
+
+  assert.equal(instance.orderDetails(null).length, 0)
+  assert.equal(instance.numes(null).count, 0)
+  assert.equal(instance.dishSummary(null), '订单餐品')
+  expectAll(read('xiaochengxu-source/pages/my/components/orderList.vue'), [
+    'orderDetails(item.orderDetailList).length',
+    'orderDetails(item.orderDetailList)[0].image'
+  ])
 })
 
 test('network and empty states expose recovery through state-panel', () => {

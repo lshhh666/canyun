@@ -13,9 +13,9 @@
       <view class="order-card__body" @click="goDetail(item.id)">
         <view class="dish-preview">
           <image
-            v-if="item.orderDetailList && item.orderDetailList.length"
+            v-if="orderDetails(item.orderDetailList).length"
             class="dish-preview__image"
-            :src="item.orderDetailList[0].image"
+            :src="orderDetails(item.orderDetailList)[0].image"
             mode="aspectFill"
           />
           <view class="dish-preview__copy">
@@ -75,13 +75,18 @@ export default {
     oneOrderFun(id) {
       this.$emit('oneOrderFun', id)
     },
-    numes(list = []) {
-      const count = list.reduce((sum, item) => sum + Number(item.number || 0), 0)
+    orderDetails(list) {
+      return Array.isArray(list) ? list : []
+    },
+    numes(list) {
+      const count = this.orderDetails(list)
+        .reduce((sum, item) => sum + Number(item.number || 0), 0)
       return { count }
     },
-    dishSummary(list = []) {
-      if (!list.length) return '订单餐品'
-      const names = list.map(item => item.name).filter(Boolean)
+    dishSummary(list) {
+      const details = this.orderDetails(list)
+      if (!details.length) return '订单餐品'
+      const names = details.map(item => item.name).filter(Boolean)
       return names.slice(0, 2).join('、') || '订单餐品'
     },
     money(value) {

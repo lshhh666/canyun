@@ -54,6 +54,7 @@ import HeadInfo from './components/headInfo.vue'
 import OrderList from './components/orderList.vue'
 import CloudmealHeader from '@/components/cloudmeal-header/cloudmeal-header.vue'
 import AppTabbar from '@/components/app-tabbar/app-tabbar.vue'
+import { getErrorMessage } from '@/utils/error-message.js'
 
 const DEFAULT_AVATAR = '/static/brand/cloudmeal-logo.png'
 const DEFAULT_NICKNAME = '微信用户'
@@ -71,6 +72,7 @@ export default {
         pageSize: 10,
         total: 0
       },
+      failedPage: null,
       loadingText: '',
       loading: false
     }
@@ -88,18 +90,33 @@ export default {
   },
   methods: {
     ...mapMutations(['setAddressBackUrl']),
-    async getList() {
-      const res = await getOrderPage({
-        pageSize: this.pageInfo.pageSize,
-        page: this.pageInfo.page
-      })
-      if (res.code !== 1) return false
-      const data = res.data || {}
-      this.recentOrdersList = this.recentOrdersList.concat(data.records || [])
-      this.pageInfo.total = Number(data.total) || 0
-      this.loadingText = ''
-      this.loading = false
-      return true
+    async getList(page = this.pageInfo.page) {
+      if (this.loading) return false
+      this.loading = true
+      try {
+        const res = await getOrderPage({
+          pageSize: this.pageInfo.pageSize,
+          page
+        })
+        if (!res || res.code !== 1) {
+          throw new Error((res && res.msg) || '订单加载失败，请重试')
+        }
+        const data = res.data || {}
+        const records = Array.isArray(data.records) ? data.records : []
+        this.recentOrdersList = this.recentOrdersList.concat(records)
+        this.failedPage = null
+        this.pageInfo.page = page
+        this.pageInfo.total = Number(data.total) || 0
+        this.loadingText = ''
+        return true
+      } catch (error) {
+        this.failedPage = page
+        this.loadingText = getErrorMessage(error, '订单加载失败，请重试')
+        uni.showToast({ title: this.loadingText, icon: 'none' })
+        return false
+      } finally {
+        this.loading = false
+      }
     },
     handlePhone() {
       if (!this.phoneNumber) {
@@ -116,14 +133,33 @@ export default {
       uni.navigateTo({ url: '/pages/historyOrder/historyOrder' })
     },
     async oneOrderFun(id) {
-      const pages = getCurrentPages()
-      const routeIndex = pages.findIndex(item => item.route === 'pages/index/index')
-      await delShoppingCart()
-      const res = await repetitionOrder(id)
-      if (res.code === 1) {
-        uni.navigateBack({
-          delta: routeIndex > -1 ? pages.length - routeIndex : 1
+      try {
+        const clearRes = await delShoppingCart()
+        if (!clearRes || ![1, 200].includes(Number(clearRes.code))) {
+          throw new Error((clearRes && clearRes.msg) || '再来一单失败，请重试')
+        }
+        const res = await repetitionOrder(id)
+        if (!res || ![1, 200].includes(Number(res.code))) {
+          throw new Error((res && res.msg) || '再来一单失败，请重试')
+        }
+
+        const pages = getCurrentPages()
+        const routeIndex = pages.findIndex(item => item.route === 'pages/index/index')
+        if (routeIndex > -1) {
+          const delta = pages.length - 1 - routeIndex
+          if (delta > 0) {
+            uni.navigateBack({ delta })
+            return true
+          }
+        }
+        uni.reLaunch({ url: '/pages/index/index' })
+        return true
+      } catch (error) {
+        uni.showToast({
+          title: getErrorMessage(error, '再来一单失败，请重试'),
+          icon: 'none'
         })
+        return false
       }
     },
     goDetail(id) {
@@ -131,15 +167,18 @@ export default {
       uni.redirectTo({ url: `/pages/details/index?orderId=${id}` })
     },
     async lower() {
-      const totalPages = Math.ceil(this.pageInfo.total / this.pageInfo.pageSize)
-      if (this.loading || this.pageInfo.page >= totalPages) {
-        if (this.recentOrdersList.length) this.loadingText = '没有更多了'
-        return
+      if (this.loading) return false
+      if (this.failedPage !== null) {
+        this.loadingText = '数据加载中…'
+        return this.getList(this.failedPage)
       }
-      this.loading = true
+      const totalPages = Math.ceil(this.pageInfo.total / this.pageInfo.pageSize)
+      if (this.pageInfo.page >= totalPages) {
+        if (this.recentOrdersList.length) this.loadingText = '没有更多了'
+        return false
+      }
       this.loadingText = '数据加载中…'
-      this.pageInfo.page += 1
-      await this.getList()
+      return this.getList(this.pageInfo.page + 1)
     }
   }
 }
