@@ -1,3 +1,14 @@
+## 本地预览与发布前同步
+
+1. 启动餐云后端，确认 `http://localhost:8080` 可访问。
+2. 在 HBuilderX 导入 `D:\canyun\xiaochengxu-source`。
+3. 选择“运行 → 运行到小程序模拟器 → 微信开发者工具”。
+4. 确认已生成 `xiaochengxu-source\unpackage\dist\dev\mp-weixin\app.json`。
+5. 在 PowerShell 执行 `powershell -ExecutionPolicy Bypass -File D:\canyun\scripts\sync-miniapp-output.ps1`。
+6. 用微信开发者工具打开 `D:\canyun\xiaochengxu`。
+
+同步脚本会拒绝缺少构建产物或目标 `project.config.json` 的情况，并保留微信项目配置。真机调试不能使用 `localhost`：将 `utils/env.js` 的 `currentEnvironment` 改为 `lan` 并填写电脑局域网地址；发布前改为已在微信后台配置的 HTTPS 合法域名。
+
 <!-- ## 苍穹外卖 - 小程序  即（苍穹外卖）
 
 #### 技术：

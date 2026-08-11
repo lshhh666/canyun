@@ -1,6 +1,8 @@
 const test = require('node:test')
 const vm = require('node:vm')
-const { assert, read, expectAll, expectNone } = require('./helpers.cjs')
+const { assert, fs, path, repoRoot, read, expectAll, expectNone } = require('./helpers.cjs')
+const os = require('node:os')
+const { spawnSync } = require('node:child_process')
 
 function componentOptions(relativePath, context = {}) {
   const source = read(relativePath)
@@ -304,4 +306,152 @@ test('network and empty states expose recovery through state-panel', () => {
   expectAll(nonet, ['<state-panel', '网络连接失败', '请检查网络后重新加载', '重新加载'])
   expectAll(empty, ['<state-panel', ':action-text="actionText"', '@action="handleAction"'])
   expectNone(nonet + empty, ['#ffc200', '#FFC200', 'linear-gradient'])
+})
+
+function makeSyncSandbox() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cloudmeal-miniapp-sync-'))
+  const scriptDir = path.join(root, 'scripts')
+  const buildRoot = path.join(root, 'xiaochengxu-source', 'unpackage', 'dist', 'dev', 'mp-weixin')
+  const targetRoot = path.join(root, 'xiaochengxu')
+  fs.mkdirSync(scriptDir, { recursive: true })
+  fs.mkdirSync(buildRoot, { recursive: true })
+  fs.mkdirSync(targetRoot, { recursive: true })
+  fs.copyFileSync(
+    path.join(repoRoot, 'scripts', 'sync-miniapp-output.ps1'),
+    path.join(scriptDir, 'sync-miniapp-output.ps1')
+  )
+  return { root, buildRoot, targetRoot, script: path.join(scriptDir, 'sync-miniapp-output.ps1') }
+}
+
+function runSync(sandbox, args = []) {
+  return spawnSync('powershell.exe', [
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', sandbox.script, ...args
+  ], { encoding: 'utf8' })
+}
+
+function removeSandbox(sandbox) {
+  fs.rmSync(sandbox.root, { recursive: true, force: true })
+}
+
+test('release sync stops before deleting target output when the build is missing', () => {
+  const sandbox = makeSyncSandbox()
+  try {
+    const config = Buffer.from([0xff, 0x00, 0x7f, 0x0d, 0x0a])
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.config.json'), config)
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'keep until build exists')
+
+    const result = runSync(sandbox)
+
+    assert.notEqual(result.status, 0)
+    assert.equal(fs.readFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'utf8'), 'keep until build exists')
+    assert.deepEqual(fs.readFileSync(path.join(sandbox.targetRoot, 'project.config.json')), config)
+  } finally {
+    removeSandbox(sandbox)
+  }
+})
+
+test('release sync refuses escaped build paths before it touches target output', () => {
+  const sandbox = makeSyncSandbox()
+  let outsideBuild
+  try {
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.config.json'), '{}')
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'do not delete')
+    outsideBuild = path.join(path.dirname(sandbox.root), `${path.basename(sandbox.root)}-outside`)
+    fs.mkdirSync(outsideBuild, { recursive: true })
+    fs.writeFileSync(path.join(outsideBuild, 'sentinel.txt'), 'do not delete')
+
+    const result = runSync(sandbox, ['-BuildRelativePath', `..\\${path.basename(outsideBuild)}`])
+
+    assert.notEqual(result.status, 0)
+    assert.equal(fs.readFileSync(path.join(outsideBuild, 'sentinel.txt'), 'utf8'), 'do not delete')
+    assert.equal(fs.readFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'utf8'), 'do not delete')
+  } finally {
+    if (outsideBuild) fs.rmSync(outsideBuild, { recursive: true, force: true })
+    removeSandbox(sandbox)
+  }
+})
+
+test('release sync preserves WeChat config bytes and replaces only stale generated output', () => {
+  const sandbox = makeSyncSandbox()
+  try {
+    const projectConfig = Buffer.from([0xff, 0x00, 0x7f, 0x0d, 0x0a])
+    const privateConfig = Buffer.from([0xfe, 0x01, 0x0d, 0x0a])
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.config.json'), projectConfig)
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'project.private.config.json'), privateConfig)
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'remove me')
+    fs.mkdirSync(path.join(sandbox.targetRoot, 'stale-directory'))
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale-directory', 'old.json'), '{}')
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'app.json'), '{"pages":[]}')
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'app.js'), 'App({})')
+    fs.mkdirSync(path.join(sandbox.buildRoot, 'pages'))
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'pages', 'index.js'), 'Page({})')
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'project.config.json'), 'generated config must not replace target config')
+
+    const result = runSync(sandbox)
+
+    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(fs.existsSync(path.join(sandbox.targetRoot, 'stale.js')), false)
+    assert.equal(fs.existsSync(path.join(sandbox.targetRoot, 'stale-directory')), false)
+    assert.equal(fs.readFileSync(path.join(sandbox.targetRoot, 'app.js'), 'utf8'), 'App({})')
+    assert.equal(fs.readFileSync(path.join(sandbox.targetRoot, 'pages', 'index.js'), 'utf8'), 'Page({})')
+    assert.deepEqual(fs.readFileSync(path.join(sandbox.targetRoot, 'project.config.json')), projectConfig)
+    assert.deepEqual(fs.readFileSync(path.join(sandbox.targetRoot, 'project.private.config.json')), privateConfig)
+  } finally {
+    removeSandbox(sandbox)
+  }
+})
+
+test('release sync requires the current target project configuration before cleanup', () => {
+  const sandbox = makeSyncSandbox()
+  try {
+    fs.writeFileSync(path.join(sandbox.buildRoot, 'app.json'), '{}')
+    fs.writeFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'keep until target config exists')
+
+    const result = runSync(sandbox)
+
+    assert.notEqual(result.status, 0)
+    assert.equal(fs.readFileSync(path.join(sandbox.targetRoot, 'stale.js'), 'utf8'), 'keep until target config exists')
+  } finally {
+    removeSandbox(sandbox)
+  }
+})
+
+test('release sync validates paths and preserves WeChat configs', () => {
+  const script = read('scripts/sync-miniapp-output.ps1')
+  expectAll(script, [
+    'xiaochengxu-source\\unpackage\\dist\\dev\\mp-weixin',
+    'xiaochengxu\\project.config.json',
+    'xiaochengxu\\project.private.config.json',
+    'StartsWith($repoRoot',
+    'Remove-Item -LiteralPath'
+  ])
+})
+
+function sourceFilesUnder(relativeDirectory) {
+  const directory = path.join(repoRoot, relativeDirectory)
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const relativePath = path.join(relativeDirectory, entry.name)
+    if (entry.isDirectory()) return sourceFilesUnder(relativePath)
+    return /\.(vue|scss)$/.test(entry.name) ? [relativePath] : []
+  })
+}
+
+test('user-facing source has no legacy brand or yellow theme', () => {
+  const activeFiles = [
+    'App.vue', 'manifest.json', 'pages.json', 'styles/common.scss',
+    'pages/index/index.vue', 'pages/index/index.js', 'pages/index/style.scss',
+    'pages/order/index.vue', 'pages/order/index.js', 'pages/order/style.scss',
+    'pages/address/address.vue', 'pages/addOrEditAddress/addOrEditAddress.vue',
+    'pages/remark/index.vue', 'pages/historyOrder/historyOrder.vue',
+    'pages/details/index.vue', 'pages/details/index.js', 'pages/pay/index.vue',
+    'pages/success/index.vue', 'pages/my/my.vue', 'pages/nonet/index.vue'
+  ].map(file => path.join('xiaochengxu-source', file))
+  const componentFiles = [
+    'xiaochengxu-source/pages/index/components',
+    'xiaochengxu-source/pages/order/components',
+    'xiaochengxu-source/pages/details/components',
+    'xiaochengxu-source/pages/my/components'
+  ].flatMap(sourceFilesUnder)
+  const files = [...activeFiles, ...componentFiles].map(read).join('\n')
+  expectNone(files, ['苍穹外卖', '#ffc200', '#FFC200', '月销量'])
 })
