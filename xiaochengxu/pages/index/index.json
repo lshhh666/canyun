@@ -1,8 +1,13 @@
 {
   "navigationStyle": "custom",
-  "navigationBarTitleText": "苍穹外卖",
+  "navigationBarTitleText": "餐云点餐",
   "usingComponents": {
-    "nav-bar": "/pages/common/Navbar/navbar",
-    "phone": "/components/uni-phone/index"
+    "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
+    "state-panel": "/components/state-panel/state-panel",
+    "app-tabbar": "/components/app-tabbar/app-tabbar",
+    "phone": "/components/uni-phone/index",
+    "pop-mask": "/pages/index/components/popMask",
+    "pop-cart": "/pages/index/components/popCart",
+    "dish-detail": "/pages/index/components/dishDetail"
   }
 }

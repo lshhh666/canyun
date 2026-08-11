@@ -1,104 +1,36 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	/*每个页面公共css */
-
-	/* uni.css - 通用组件、模板样式库，可以当作一套ui库应用 */
-	/* 	    @import './common/uni.css'; */
-	/* H5 兼容 pc 所需 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	/* 以下样式用于 hello uni-app 演示所需 */
+@charset "UTF-8";
+/**
+ * 这里是uni-app内置的常用样式变量
+ *
+ * uni-app 官方扩展插件及插件市场（https://ext.dcloud.net.cn）上很多三方插件均使用了这些样式变量
+ * 如果你是插件开发者，建议你使用scss预处理，并在插件代码中直接使用这些变量（无需 import 这个文件），方便用户通过搭积木的方式开发整体风格一致的App
+ *
+ */
+/**
+ * 如果你是App开发者（插件使用者），你可以通过修改这些变量来定制自己的插件主题，实现自定义主题功能
+ *
+ * 如果你的项目同样使用了scss预处理，你也可以直接在你的 scss 代码中使用如下变量，同时无需 import 这个文件
+ */
+/* 颜色变量 */
+/* 行为相关颜色 */
+/* 文字基本颜色 */
+/* 背景颜色 */
+/* 边框颜色 */
+/* 尺寸变量 */
+/* 文字尺寸 */
+/* 图片尺寸 */
+/* Border Radius */
+/* 水平间距 */
+/* 垂直间距 */
+/* 透明度 */
+/* 文章场景相关 */
 page {
-	        background-color: #efeff4;
-	        height: 100%;
-	        font-size: 28rpx;
-	        line-height: 1.8;
-			/* overflow: hidden; */
+  min-height: 100%;
+  color: #12263f;
+  background-color: #f5f7fa;
+  font-size: 28rpx;
+  line-height: 1.8;
 }
-.fix-pc-padding {
-			padding: 0 100rpx;
-}
-.uni-header-logo {
-	        padding: 30rpx;
-	        flex-direction: column;
-	        justify-content: center;
-	        align-items: center;
-	        margin-top: 10rpx;
-}
-.uni-header-image {
-	        width: 200rpx;
-	        height: 200rpx;
-}
-.uni-hello-text {
-	        color: #7A7E83;
-}
-.uni-hello-addfile {
-	        text-align: center;
-	        line-height: 300rpx;
-	        background: #FFF;
-	        padding: 50rpx;
-	        margin-top: 20rpx;
-	        font-size: 38rpx;
-	        color: #808080;
-}
-
-	/*checkbox 选项框大小  */
-	/* uni-checkbox .uni-checkbox-input {
-		width: 30rpx !important;
-		height: 30rpx !important; 
-	} */
-	/*checkbox选中后样式  */
-	/* uni-checkbox .uni-checkbox-input.uni-checkbox-input-checked {
-		background: #3D7EFF;
-		border-color:#3D7EFF;
-	} */
-	/*checkbox选中后图标样式  */
-	/* uni-checkbox .uni-checkbox-input.uni-checkbox-input-checked::before {
-		width: 20rpx;
-		height: 20rpx;  
-		line-height: 20rpx;
-		text-align: center;
-		font-size: 18rpx;
-		color: #fff;
-		background: transparent;
-		transform: translate(-70%, -50%) scale(1);
-		-webkit-transform: translate(-70%, -50%) scale(1);
-	} */
-
 @charset "UTF-8";
 /**
  * 这里是uni-app内置的常用样式变量
@@ -256,15 +188,13 @@ page {
   display: inline-block;
 }
 .againBtn .btn {
-  background: #ffc200;
+  color: #fff;
+  background: #147ee8;
 }
-.phoneIcon {
-  background: url(data:image/png;base64,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);
-  background-size: contain;
-  width: 42rpx;
-  height: 42rpx;
-  display: inline-block;
-  vertical-align: middle;
+.againBtn .danger {
+  color: #d94b4b;
+  background: #fff;
+  border-color: #d94b4b;
 }
 .container .popup-content {
   height: auto;
@@ -458,9 +388,9 @@ page {
 .payBox .wx-checkbox-input-checked,
 .payBox .wx-radio-input-checked,
 .payBox .wx-switch-input-checked {
-  background-color: #ffc200 !important;
-  border-color: #ffc200 !important;
-  color: #000 !important;
+  background-color: #147ee8 !important;
+  border-color: #147ee8 !important;
+  color: #fff !important;
   -webkit-transform: scale(0.7);
           transform: scale(0.7);
 }
@@ -476,13 +406,11 @@ radio .wx-radio-input.wx-radio-input-checked::before {
   font-size: 40rpx;
   /* 对勾大小 30rpx */
   font-weight: 600;
-  color: #000;
-  /* 对勾颜色 白色 */
-  border: 1rpx solid #ffc200;
-  background: #ffc200;
+  color: #fff;
+  border: 1rpx solid #147ee8;
+  background: #147ee8;
 }
 .dish_dishFlavor {
   font-size: 20rpx;
   color: #666;
 }
-

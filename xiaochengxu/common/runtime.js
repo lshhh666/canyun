@@ -104,46 +104,7 @@
 /******/ 		var promises = [];
 /******/
 /******/
-/******/ 		// mini-css-extract-plugin CSS loading
-/******/ 		var cssChunks = {"components/uni-phone/index":1,"pages/common/Navbar/navbar":1,"components/uni-nav-bar/uni-nav-bar":1,"components/uni-piker/index":1,"components/uni-popup/index":1,"node-modules/@dcloudio/uni-ui/lib/uni-list-item/uni-list-item":1,"uni_modules/uni-list/components/uni-list-item/uni-list-item":1,"uni_modules/uni-list/components/uni-list/uni-list":1,"uni_modules/uni-popup/components/uni-popup/uni-popup":1,"components/empty/empty":1,"components/reach-bottom/reach-bottom":1,"pages/common/simple-address/simple-address":1,"node-modules/@dcloudio/uni-ui/lib/uni-easyinput/uni-easyinput":1,"uni_modules/uni-easyinput/components/uni-easyinput/uni-easyinput":1,"components/uni-icons/uni-icons":1,"components/uni-status-bar/uni-status-bar":1,"uni_modules/uni-badge/components/uni-badge/uni-badge":1};
-/******/ 		if(installedCssChunks[chunkId]) promises.push(installedCssChunks[chunkId]);
-/******/ 		else if(installedCssChunks[chunkId] !== 0 && cssChunks[chunkId]) {
-/******/ 			promises.push(installedCssChunks[chunkId] = new Promise(function(resolve, reject) {
-/******/ 				var href = "" + ({"components/uni-phone/index":"components/uni-phone/index","pages/common/Navbar/navbar":"pages/common/Navbar/navbar","components/uni-nav-bar/uni-nav-bar":"components/uni-nav-bar/uni-nav-bar","components/uni-piker/index":"components/uni-piker/index","components/uni-popup/index":"components/uni-popup/index","node-modules/@dcloudio/uni-ui/lib/uni-list-item/uni-list-item":"node-modules/@dcloudio/uni-ui/lib/uni-list-item/uni-list-item","uni_modules/uni-list/components/uni-list-item/uni-list-item":"uni_modules/uni-list/components/uni-list-item/uni-list-item","uni_modules/uni-list/components/uni-list/uni-list":"uni_modules/uni-list/components/uni-list/uni-list","uni_modules/uni-popup/components/uni-popup/uni-popup":"uni_modules/uni-popup/components/uni-popup/uni-popup","components/empty/empty":"components/empty/empty","components/reach-bottom/reach-bottom":"components/reach-bottom/reach-bottom","pages/common/simple-address/simple-address":"pages/common/simple-address/simple-address","node-modules/@dcloudio/uni-ui/lib/uni-easyinput/uni-easyinput":"node-modules/@dcloudio/uni-ui/lib/uni-easyinput/uni-easyinput","uni_modules/uni-easyinput/components/uni-easyinput/uni-easyinput":"uni_modules/uni-easyinput/components/uni-easyinput/uni-easyinput","components/uni-icons/uni-icons":"components/uni-icons/uni-icons","components/uni-status-bar/uni-status-bar":"components/uni-status-bar/uni-status-bar","uni_modules/uni-badge/components/uni-badge/uni-badge":"uni_modules/uni-badge/components/uni-badge/uni-badge","uni_modules/uni-transition/components/uni-transition/uni-transition":"uni_modules/uni-transition/components/uni-transition/uni-transition"}[chunkId]||chunkId) + ".wxss";
-/******/ 				var fullhref = __webpack_require__.p + href;
-/******/ 				var existingLinkTags = document.getElementsByTagName("link");
-/******/ 				for(var i = 0; i < existingLinkTags.length; i++) {
-/******/ 					var tag = existingLinkTags[i];
-/******/ 					var dataHref = tag.getAttribute("data-href") || tag.getAttribute("href");
-/******/ 					if(tag.rel === "stylesheet" && (dataHref === href || dataHref === fullhref)) return resolve();
-/******/ 				}
-/******/ 				var existingStyleTags = document.getElementsByTagName("style");
-/******/ 				for(var i = 0; i < existingStyleTags.length; i++) {
-/******/ 					var tag = existingStyleTags[i];
-/******/ 					var dataHref = tag.getAttribute("data-href");
-/******/ 					if(dataHref === href || dataHref === fullhref) return resolve();
-/******/ 				}
-/******/ 				var linkTag = document.createElement("link");
-/******/ 				linkTag.rel = "stylesheet";
-/******/ 				linkTag.type = "text/css";
-/******/ 				linkTag.onload = resolve;
-/******/ 				linkTag.onerror = function(event) {
-/******/ 					var request = event && event.target && event.target.src || fullhref;
-/******/ 					var err = new Error("Loading CSS chunk " + chunkId + " failed.\n(" + request + ")");
-/******/ 					err.code = "CSS_CHUNK_LOAD_FAILED";
-/******/ 					err.request = request;
-/******/ 					delete installedCssChunks[chunkId]
-/******/ 					linkTag.parentNode.removeChild(linkTag)
-/******/ 					reject(err);
-/******/ 				};
-/******/ 				linkTag.href = fullhref;
 /******/
-/******/ 				var head = document.getElementsByTagName("head")[0];
-/******/ 				head.appendChild(linkTag);
-/******/ 			}).then(function() {
-/******/ 				installedCssChunks[chunkId] = 0;
-/******/ 			}));
-/******/ 		}
 /******/
 /******/ 		// JSONP chunk loading for javascript
 /******/

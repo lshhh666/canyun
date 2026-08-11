@@ -1,0 +1,167 @@
+@charset "UTF-8";
+/**
+ * 这里是uni-app内置的常用样式变量
+ *
+ * uni-app 官方扩展插件及插件市场（https://ext.dcloud.net.cn）上很多三方插件均使用了这些样式变量
+ * 如果你是插件开发者，建议你使用scss预处理，并在插件代码中直接使用这些变量（无需 import 这个文件），方便用户通过搭积木的方式开发整体风格一致的App
+ *
+ */
+/**
+ * 如果你是App开发者（插件使用者），你可以通过修改这些变量来定制自己的插件主题，实现自定义主题功能
+ *
+ * 如果你的项目同样使用了scss预处理，你也可以直接在你的 scss 代码中使用如下变量，同时无需 import 这个文件
+ */
+/* 颜色变量 */
+/* 行为相关颜色 */
+/* 文字基本颜色 */
+/* 背景颜色 */
+/* 边框颜色 */
+/* 尺寸变量 */
+/* 文字尺寸 */
+/* 图片尺寸 */
+/* Border Radius */
+/* 水平间距 */
+/* 垂直间距 */
+/* 透明度 */
+/* 文章场景相关 */
+.dish-sheet.data-v-0142b43e {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 82vh;
+  padding: 12rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 16rpx 16rpx 0 0;
+  box-sizing: border-box;
+}
+.sheet-handle.data-v-0142b43e {
+  width: 72rpx;
+  height: 6rpx;
+  margin: 0 auto 18rpx;
+  background: #d9e0e8;
+  border-radius: 3rpx;
+}
+.sheet-header.data-v-0142b43e,
+.sheet-footer.data-v-0142b43e,
+.meal-item.data-v-0142b43e,
+.quantity-control.data-v-0142b43e {
+  display: flex;
+  align-items: center;
+}
+.sheet-header.data-v-0142b43e {
+  justify-content: space-between;
+}
+.sheet-title.data-v-0142b43e {
+  color: #12263f;
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 48rpx;
+}
+.sheet-subtitle.data-v-0142b43e,
+.detail-desc.data-v-0142b43e,
+.meal-desc.data-v-0142b43e {
+  color: #748396;
+  font-size: 24rpx;
+  line-height: 36rpx;
+}
+.sheet-close.data-v-0142b43e {
+  width: 56rpx;
+  color: #647489;
+  font-size: 46rpx;
+  line-height: 56rpx;
+  text-align: center;
+}
+.sheet-content.data-v-0142b43e {
+  max-height: 54vh;
+  margin-top: 22rpx;
+}
+.detail-image.data-v-0142b43e {
+  display: block;
+  width: 100%;
+  height: 360rpx;
+  border-radius: 16rpx;
+  background: #eef2f6;
+}
+.detail-desc.data-v-0142b43e {
+  padding: 20rpx 0 8rpx;
+}
+.meal-item.data-v-0142b43e {
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #e8edf2;
+}
+.meal-image.data-v-0142b43e {
+  width: 112rpx;
+  height: 112rpx;
+  flex: 0 0 112rpx;
+  border-radius: 12rpx;
+  background: #eef2f6;
+}
+.meal-info.data-v-0142b43e {
+  min-width: 0;
+  margin-left: 20rpx;
+}
+.meal-name.data-v-0142b43e {
+  color: #12263f;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+}
+.meal-name text.data-v-0142b43e {
+  margin-left: 8rpx;
+  color: #748396;
+  font-weight: 400;
+}
+.sheet-footer.data-v-0142b43e {
+  min-height: 96rpx;
+  padding-top: 20rpx;
+  justify-content: space-between;
+  border-top: 1rpx solid #e8edf2;
+}
+.detail-price.data-v-0142b43e {
+  color: #12263f;
+  font-size: 40rpx;
+  font-weight: 600;
+}
+.detail-price text.data-v-0142b43e {
+  font-size: 24rpx;
+}
+.quantity-button.data-v-0142b43e {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  align-items: center;
+  justify-content: center;
+  color: #147ee8;
+  background: #ffffff;
+  border: 1rpx solid #147ee8;
+  border-radius: 50%;
+  box-sizing: border-box;
+  font-size: 34rpx;
+}
+.quantity-button--add.data-v-0142b43e {
+  color: #ffffff;
+  background: #147ee8;
+}
+.quantity-button--minus.data-v-0142b43e {
+  color: #d94b4b;
+  border-color: #d94b4b;
+}
+.dish-number.data-v-0142b43e {
+  min-width: 52rpx;
+  color: #12263f;
+  font-size: 28rpx;
+  text-align: center;
+}
+.primary-action.data-v-0142b43e {
+  min-width: 204rpx;
+  padding: 0 28rpx;
+  color: #ffffff;
+  background: #147ee8;
+  border-radius: 8rpx;
+  font-size: 27rpx;
+  line-height: 72rpx;
+  text-align: center;
+  box-sizing: border-box;
+}

@@ -1,4 +1,6 @@
 {
-  "navigationBarTitleText": "无网络",
-  "usingComponents": {}
+  "navigationBarTitleText": "暂无网络",
+  "usingComponents": {
+    "state-panel": "/components/state-panel/state-panel"
+  }
 }

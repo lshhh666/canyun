@@ -1,0 +1,1 @@
+<view class="account-head data-v-7f94e65d"><image class="account-head__avatar data-v-7f94e65d" src="{{psersonUrl}}" mode="aspectFill"></image><view class="account-head__copy data-v-7f94e65d"><text class="account-head__eyebrow data-v-7f94e65d">个人中心</text><text class="account-head__name data-v-7f94e65d">{{nickName}}</text></view></view>

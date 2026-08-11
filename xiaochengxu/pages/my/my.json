@@ -1,10 +1,13 @@
 {
   "navigationStyle": "custom",
-  "navigationBarTitleText": "个人中心",
+  "navigationBarTitleText": "我的餐云",
   "enablePullDownRefresh": false,
-  "navigationBarBackgroundColor": "#ffc200",
+  "navigationBarBackgroundColor": "#147EE8",
   "usingComponents": {
-    "uni-nav-bar": "/components/uni-nav-bar/uni-nav-bar",
-    "reach-bottom": "/components/reach-bottom/reach-bottom"
+    "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
+    "uni-icons": "/components/uni-icons/uni-icons",
+    "app-tabbar": "/components/app-tabbar/app-tabbar",
+    "head-info": "/pages/my/components/headInfo",
+    "order-list": "/pages/my/components/orderList"
   }
 }

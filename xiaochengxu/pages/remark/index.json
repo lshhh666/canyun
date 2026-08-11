@@ -2,8 +2,8 @@
   "navigationStyle": "custom",
   "navigationBarTitleText": "订单备注",
   "enablePullDownRefresh": false,
-  "navigationBarBackgroundColor": "#333333",
+  "navigationBarBackgroundColor": "#147EE8",
   "usingComponents": {
-    "uni-nav-bar": "/components/uni-nav-bar/uni-nav-bar"
+    "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header"
   }
 }

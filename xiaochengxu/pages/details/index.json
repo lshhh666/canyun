@@ -2,10 +2,13 @@
   "navigationStyle": "custom",
   "navigationBarTitleText": "订单详情",
   "enablePullDownRefresh": false,
-  "navigationBarBackgroundColor": "#333333",
+  "navigationBarBackgroundColor": "#147EE8",
   "usingComponents": {
-    "uni-nav-bar": "/components/uni-nav-bar/uni-nav-bar",
+    "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
     "uni-popup": "/uni_modules/uni-popup/components/uni-popup/uni-popup",
-    "uni-list-item": "/node-modules/@dcloudio/uni-ui/lib/uni-list-item/uni-list-item"
+    "status": "/pages/details/components/status",
+    "order-detail": "/pages/details/components/orderDetail",
+    "delivery-info": "/pages/details/components/deliveryInfo",
+    "order-info": "/pages/details/components/orderInfo"
   }
 }

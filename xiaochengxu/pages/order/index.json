@@ -2,13 +2,12 @@
   "navigationStyle": "custom",
   "navigationBarTitleText": "提交订单",
   "enablePullDownRefresh": false,
-  "navigationBarBackgroundColor": "#333333",
+  "navigationBarBackgroundColor": "#147EE8",
   "usingComponents": {
-    "uni-nav-bar": "/components/uni-nav-bar/uni-nav-bar",
-    "uni-list": "/uni_modules/uni-list/components/uni-list/uni-list",
-    "uni-list-item": "/node-modules/@dcloudio/uni-ui/lib/uni-list-item/uni-list-item",
-    "uni-popup": "/uni_modules/uni-popup/components/uni-popup/uni-popup",
+    "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
     "pikers": "/components/uni-piker/index",
-    "popup": "/components/uni-popup/index"
+    "address-pop": "/pages/order/components/address",
+    "dish-detail": "/pages/order/components/dishDetail",
+    "dish-info": "/pages/order/components/dishInfo"
   }
 }

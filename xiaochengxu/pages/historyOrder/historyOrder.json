@@ -1,11 +1,12 @@
 {
   "navigationStyle": "custom",
-  "navigationBarTitleText": "历史订单",
+  "navigationBarTitleText": "餐云订单",
   "enablePullDownRefresh": false,
-  "navigationBarBackgroundColor": "#333333",
+  "navigationBarBackgroundColor": "#147EE8",
   "usingComponents": {
-    "uni-nav-bar": "/components/uni-nav-bar/uni-nav-bar",
+    "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
+    "empty": "/components/empty/empty",
     "uni-popup": "/uni_modules/uni-popup/components/uni-popup/uni-popup",
-    "empty": "/components/empty/empty"
+    "app-tabbar": "/components/app-tabbar/app-tabbar"
   }
 }

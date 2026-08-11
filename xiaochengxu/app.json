@@ -15,10 +15,17 @@
   "subPackages": [],
   "window": {
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "苍穹外卖",
-    "navigationBarBackgroundColor": "#E95F3C",
-    "backgroundColor": "#F8F8F8"
+    "navigationBarTitleText": "餐云点餐",
+    "navigationBarBackgroundColor": "#147EE8",
+    "backgroundColor": "#F5F7FA"
   },
-  "usingComponents": {},
-  "sitemapLocation": "sitemap.json"
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
+  "permission": {
+    "scope.userLocation": {
+      "desc": "你的位置信息将用于小程序位置接口的效果展示"
+    }
+  },
+  "usingComponents": {}
 }

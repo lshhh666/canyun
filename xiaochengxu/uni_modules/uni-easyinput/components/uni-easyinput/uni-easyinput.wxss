@@ -37,9 +37,11 @@
   width: 100%;
   display: flex;
   box-sizing: border-box;
-  min-height: 36px;
   flex-direction: row;
   align-items: center;
+  border-color: #fff;
+  transition-property: border-color;
+  transition-duration: 0.3s;
 }
 .uni-easyinput__content-input {
   width: auto;
@@ -48,11 +50,11 @@
   flex: 1;
   line-height: 1;
   font-size: 14px;
+  height: 35px;
 }
 .uni-easyinput__placeholder-class {
   color: #999;
   font-size: 12px;
-  font-weight: 200;
 }
 .is-textarea {
   align-items: flex-start;
@@ -66,9 +68,10 @@
   flex: 1;
   line-height: 1.5;
   font-size: 14px;
-  padding-top: 6px;
-  padding-bottom: 10px;
+  margin: 6px;
+  margin-left: 0;
   height: 80px;
+  min-height: 80px;
   min-height: 80px;
   width: auto;
 }
@@ -87,7 +90,7 @@
   box-sizing: border-box;
   flex-direction: row;
   align-items: center;
-  border: 1px solid #DCDFE6;
+  border: 1px solid #dcdfe6;
   border-radius: 4px;
 }
 .uni-error-message {
@@ -122,12 +125,10 @@
   border: none;
 }
 .is-disabled {
-  border-color: red;
-  background-color: #F7F6F6;
-  color: #D5D5D5;
+  background-color: #f7f6f6;
+  color: #d5d5d5;
 }
 .is-disabled .uni-easyinput__placeholder-class {
-  color: #D5D5D5;
+  color: #d5d5d5;
   font-size: 12px;
 }
-
