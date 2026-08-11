@@ -23,3 +23,24 @@
 ## Concerns
 
 - `xiaochengxu-source/package.json` 未提供可调用的构建脚本，因此本任务未执行 uni-app 编译；建议合入前在微信开发者工具中做一次真机/模拟器视觉检查，重点查看弹层与不同安全区高度。
+
+## Fix round 1
+
+### Changes
+
+- 将下单参数构造与 `submitOrderSubmit` 调用放入同一 `try/catch/finally`。`dateFormat`、Vuex accessor、门店信息读取或请求同步/异步抛错时，均使用 `getErrorMessage` 提示并解除 `isHandlePy`。
+- 新增 `addressLoadState`：仅 `ready` 且服务端成功返回空列表时进入新增地址；`loading` 显示“地址加载中，请稍候”且不跳转；`error` 保留失败状态并进入地址管理页重试，不再伪造成成功空列表。
+- 删除地址管理页无效的 `onShow(options)`、`formRouter` 查询读取逻辑，返回路径继续只依赖已有 `addressBackUrl`。
+- 补充成功提交、同步参数构造异常、地址 loading/error/ready-empty、编辑保存失败和删除失败行为测试；原 API URL、提交 payload、props 和 emits 未改。
+
+### TDD evidence
+
+- RED：`node --test tests/miniapp/checkout-ui.test.cjs` 为 8 passed / 3 failed；失败点分别是同步异常未解锁、缺少 loading 状态、缺少 error 状态。
+- GREEN：`node --test tests/miniapp/checkout-ui.test.cjs` 为 11 passed / 0 failed。
+- 回归：`node --test tests/miniapp/*.test.cjs` 为 30 passed / 0 failed。
+- `git diff --check`：通过。
+
+### Failure coverage
+
+- 已执行验证：下单请求失败、下单参数同步构造失败、地址列表失败、默认地址设置失败、新增地址失败、编辑地址失败、删除地址失败，以及对应的解锁、不误跳转或状态回滚行为。
+- 未声称覆盖：地址详情加载失败和默认地址查询失败目前保留实现级 `getErrorMessage` 处理，但本轮没有新增对应行为测试。

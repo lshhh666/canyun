@@ -155,7 +155,67 @@ test('checkout ignores duplicate submits and restores the guard after a failure'
   assert.equal(order.calls.toasts.at(-1).title, '下单服务不可用')
 })
 
-test('checkout routes an empty address directly to the real add form', () => {
+test('checkout unlocks and reports synchronous payload construction failures', async () => {
+  let submitCalls = 0
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [], remarkData: '', addressData: {}, storeInfo: {},
+      shopInfo: { shopId: 7 }, deliveryFee: 3
+    },
+    apis: {
+      dateFormat: () => { throw new Error('配送时间格式化失败') },
+      submitOrderSubmit: async () => { submitCalls += 1; return { code: 1, data: { id: 1 } } },
+      getAddressBookDefault: async () => ({ code: 1, data: {} }),
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      getEstimatedDeliveryTime: async () => ({ code: 1, data: '2026-08-11 10:00:00' })
+    }
+  })
+  Object.assign(order.instance, {
+    address: '测试地址', arrivalTime: '10:00', orderDishNumber: 2,
+    orderDishPrice: 28, status: 0, num: 0
+  })
+
+  assert.equal(await order.instance.payOrderHandle(), null)
+  assert.equal(submitCalls, 0)
+  assert.equal(order.instance.isHandlePy, false)
+  assert.equal(order.calls.toasts.at(-1).title, '配送时间格式化失败')
+})
+
+test('checkout success keeps the existing payload and navigates to payment', async () => {
+  let submittedParams
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [], remarkData: '', addressData: {}, storeInfo: {},
+      shopInfo: { shopId: 7 }, deliveryFee: 3
+    },
+    apis: {
+      submitOrderSubmit: async params => {
+        submittedParams = params
+        return { code: 1, data: { id: 88 } }
+      },
+      getAddressBookDefault: async () => ({ code: 1, data: {} }),
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      getEstimatedDeliveryTime: async () => ({ code: 1, data: '2026-08-11 10:00:00' })
+    }
+  })
+  Object.assign(order.instance, {
+    address: '测试地址', addressBookId: 9, arrivalTime: '10:00',
+    orderDishNumber: 2, orderDishPrice: 28, remark: '少辣', status: 0, num: 0
+  })
+
+  const result = await order.instance.payOrderHandle()
+  assert.equal(result.code, 1)
+  assert.equal(submittedParams.amount, 28)
+  assert.equal(submittedParams.deliveryFee, 3)
+  assert.equal(order.instance.isHandlePy, false)
+  assert.deepEqual(order.calls.mutations.slice(-2), [
+    ['setOrderData', { id: 88 }],
+    ['setRemark', '']
+  ])
+  assert.equal(order.calls.navigations.at(-1).url, '/pages/pay/index?orderId=88')
+})
+
+test('checkout only routes to add-address after a successful empty-list load', async () => {
   const order = harness('xiaochengxu-source/pages/order/index.js', {
     state: {
       orderListData: [], remarkData: '', addressData: {}, storeInfo: {},
@@ -169,13 +229,41 @@ test('checkout routes an empty address directly to the real add form', () => {
     }
   })
 
-  order.instance.addressList = []
+  assert.equal(order.instance.addressLoadState, 'loading')
+  order.instance.goAddress()
+  assert.equal(order.calls.redirects.length, 0)
+  assert.equal(order.calls.toasts.at(-1).title, '地址加载中，请稍候')
+
+  await order.instance.getAddressList()
+  assert.equal(order.instance.addressLoadState, 'ready')
   order.instance.goAddress()
   assert.equal(order.calls.redirects.at(-1).url, '/pages/addOrEditAddress/addOrEditAddress')
   assert.deepEqual(order.calls.mutations.at(-1), ['setAddressBackUrl', '/pages/order/index'])
 
   order.instance.addressList = [{ id: 1 }]
   order.instance.goAddress()
+  assert.equal(order.calls.redirects.at(-1).url, '/pages/address/address')
+})
+
+test('checkout address-list errors never masquerade as a confirmed empty list', async () => {
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [], remarkData: '', addressData: {}, storeInfo: {},
+      shopInfo: { shopId: 7 }, deliveryFee: 3
+    },
+    apis: {
+      submitOrderSubmit: async () => ({ code: 1, data: {} }),
+      getAddressBookDefault: async () => ({ code: 1, data: {} }),
+      queryAddressBookList: async () => { throw new Error('地址列表暂不可用') },
+      getEstimatedDeliveryTime: async () => ({ code: 1, data: '2026-08-11 10:00:00' })
+    }
+  })
+
+  await order.instance.getAddressList()
+  assert.equal(order.instance.addressLoadState, 'error')
+  assert.equal(order.calls.toasts.at(-1).title, '地址列表暂不可用')
+  order.instance.goAddress()
+  assert.ok(order.calls.redirects.every(call => call.url !== '/pages/addOrEditAddress/addOrEditAddress'))
   assert.equal(order.calls.redirects.at(-1).url, '/pages/address/address')
 })
 
@@ -266,6 +354,36 @@ test('address operation failures keep state recoverable and show server messages
   assert.equal(await save.instance.addAddressFun(), false)
   assert.equal(save.calls.redirects.length, 0)
   assert.equal(save.calls.toasts.at(-1).title, '地址保存服务不可用')
+
+  const editSave = harness('xiaochengxu-source/pages/addOrEditAddress/addOrEditAddress.vue', {
+    apis: {
+      addAddressBook: async () => ({ code: 1 }),
+      editAddressBook: async () => { throw new Error('地址修改服务不可用') },
+      delAddressBook: async () => ({ code: 1 }),
+      queryAddressBookById: async () => ({ code: 1, data: {} })
+    }
+  })
+  Object.assign(editSave.instance.form, {
+    name: '测试用户', phone: '13800138000', type: 2, sex: '0', detail: '1号楼101', id: 23
+  })
+  editSave.instance.address = '浙江省/杭州市/西湖区'
+  editSave.instance.showDel = true
+  assert.equal(await editSave.instance.addAddressFun(), false)
+  assert.equal(editSave.calls.redirects.length, 0)
+  assert.equal(editSave.calls.toasts.at(-1).title, '地址修改服务不可用')
+
+  const deletion = harness('xiaochengxu-source/pages/addOrEditAddress/addOrEditAddress.vue', {
+    apis: {
+      addAddressBook: async () => ({ code: 1 }),
+      editAddressBook: async () => ({ code: 1 }),
+      delAddressBook: async () => { throw new Error('地址删除服务不可用') },
+      queryAddressBookById: async () => ({ code: 1, data: {} })
+    }
+  })
+  deletion.instance.delId = 24
+  assert.equal(await deletion.instance.deleteAddressFun(), false)
+  assert.equal(deletion.calls.redirects.length, 0)
+  assert.equal(deletion.calls.toasts.at(-1).title, '地址删除服务不可用')
 })
 
 test('remark save commits the text before returning to checkout', () => {

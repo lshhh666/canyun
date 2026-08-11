@@ -57,16 +57,12 @@ export default {
     return {
       testValue: true,
       addressList: [],
-      formRouter: '',
       isActive: null,
       isEmpty: false
     }
   },
-  onShow (options) {
+  onShow () {
     this.getAddressList()
-    if (options && options.form) {
-      this.formRouter = options.form
-    }
   },
   computed: {
     ...mapState(['addressBackUrl']),

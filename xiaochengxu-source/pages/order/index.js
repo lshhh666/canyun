@@ -86,6 +86,7 @@ export default {
 			weeks: [],
 			scrollTop: 0,
 			addressList: [],
+			addressLoadState: 'loading',
 			isHandlePy: false
 		}
 	},
@@ -226,15 +227,18 @@ export default {
 		// 获取地址
 		async getAddressList() {
 			this.testValue = false
+			this.addressLoadState = 'loading'
 			try {
 				const res = await queryAddressBookList()
 				if (res.code === 1) {
 					this.testValue = true
 					this.addressList = Array.isArray(res.data) ? res.data : []
+					this.addressLoadState = 'ready'
+					return res
 				}
-				return res
+				throw new Error(res.msg || '地址列表加载失败，请重试')
 			} catch (error) {
-				this.addressList = []
+				this.addressLoadState = 'error'
 				uni.showToast({
 					title: getErrorMessage(error, '地址列表加载失败，请重试'),
 					icon: 'none'
@@ -269,7 +273,14 @@ export default {
 		// 去地址页面
 		goAddress() {
 			this.setAddressBackUrl('/pages/order/index')
-			if (this.addressList.length === 0) {
+			if (this.addressLoadState === 'loading') {
+				uni.showToast({
+					title: '地址加载中，请稍候',
+					icon: 'none'
+				})
+				return false
+			}
+			if (this.addressLoadState === 'ready' && this.addressList.length === 0) {
 				uni.redirectTo({
 					url: '/pages/addOrEditAddress/addOrEditAddress'
 				})
@@ -278,7 +289,7 @@ export default {
 					url: '/pages/address/address'
 				})
 			}
-
+			return true
 		},
 		// // 重新拼装image
 		getNewImage(image) {
@@ -315,23 +326,22 @@ export default {
 				return false
 			}
 			this.isHandlePy = true
-			const params = {
-				payMethod: 1,
-				addressBookId: this.addressBookId,
-				remark: this.remark,
-				estimatedDeliveryTime: this.arrivalTime === '立即派送' ? presentFormat() : dateFormat(this.isTomorrow,
-					this.arrivalTime),
-				deliveryStatus: this.arrivalTime === '立即派送' ? 1 : 0,
-				remark: this.remark,
-				tablewareStatus: this.status,
-				tablewareNumber: this.num,
-				packAmount: this.orderDishNumber,
-				amount: this.orderDishPrice,
-				shopId: this.shopInfo().shopId,
-				deliveryFee: this.deliveryFee()
-			}
-
 			try {
+				const params = {
+					payMethod: 1,
+					addressBookId: this.addressBookId,
+					remark: this.remark,
+					estimatedDeliveryTime: this.arrivalTime === '立即派送' ? presentFormat() : dateFormat(this.isTomorrow,
+						this.arrivalTime),
+					deliveryStatus: this.arrivalTime === '立即派送' ? 1 : 0,
+					remark: this.remark,
+					tablewareStatus: this.status,
+					tablewareNumber: this.num,
+					packAmount: this.orderDishNumber,
+					amount: this.orderDishPrice,
+					shopId: this.shopInfo().shopId,
+					deliveryFee: this.deliveryFee()
+				}
 				const res = await submitOrderSubmit(params)
 				if (res.code === 1) {
 					this.setOrderData(res.data)
