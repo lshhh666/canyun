@@ -1,342 +1,369 @@
-<!--历史订单-->
 <template>
-  <view class="history_order">
-    <uni-nav-bar @clickLeft="goBack" left-icon="back" leftIcon="arrowleft" title="历史订单" statusBar="true" fixed="true"
-      color="#ffffff" backgroundColor="#333333"></uni-nav-bar>
-    <!-- 根据scrollinto和:id="'tab'+index"切换下方轮播 -->
-    <scroll-view scroll-x class="scroll-row" :scroll-into-view="scrollinto" :scroll-with-animation="true" enable-flex>
-      <view v-for="(item, index) in tabBars" :key="index" :id="'tab' + index" class="scroll-row-item"
-        @click="changeTab(index)">
-        <view :class="tabIndex == index ? 'scroll-row-item-act' : ''"><text class="line"></text>{{ item }}</view>
-      </view>
-    </scroll-view>
-    <!--  滑块内容 对应的是顶部选项卡的切换 :current="tabIndex"  设置的是y方向上可以滚动-->
-    <swiper :current="tabIndex" @change="onChangeSwiperTab" :style="{ height: scrollH + 'px' }">
-      <swiper-item v-for="(item, index) in tabBars" :key="index">
-        <!-- 垂直滚动区域  scroll和swiper的高度都要给且是一样的高度-->
-        <scroll-view scroll-y="true" :style="{ height: scrollH + 'px' }" @scrolltolower="lower">
-          <!-- 可垂直滚动区域 显示真正内容-->
-          <view class="main recent_orders" v-if="recentOrdersList && recentOrdersList.length > 0">
-            <!-- 历史订单列表 -->
-            <view class="box order_lists" v-for="(item, index) in recentOrdersList" :key="index" :class="{
-              'item-last': Number(index) + 1 === recentOrdersList.length,
-            }">
-              <!-- 时间和支付状态 -->
-              <view class="date_type">
-                <!-- 时间 -->
-                <text class="time">{{ item.orderTime }}</text>
-                <!-- 支付状态 -->
-                <text class="type status" :class="{ status: item.status == 2 }">{{
-                  statusWord(item.status)
-                }}</text>
-              </view>
-              <!-- 点菜的内容 -->
-              <view class="orderBox" @click="goDetail(item.id)">
-                <view class="food_num">
-                  <scroll-view scroll-x="true" class="pic" style="width: 100%; overflow: hidden; white-space: nowrap">
-                    <view class="food_num_item" v-for="(num, y) in item.orderDetailList" :key="y">
-                      <view class="img">
-                        <image :src="num.image"></image>
-                      </view>
-                      <view class="food">{{ num.name }}</view>
-                    </view>
-                  </scroll-view>
-                </view>
-                <!-- 商品数量及金额 -->
-                <view class="numAndAum">
-                  <view><text>￥{{ item.amount.toFixed(2) }}</text></view>
-                  <view><text>共{{ numes(item.orderDetailList).count }}件</text></view>
-                </view>
-              </view>
-              <view class="againBtn">
-                <button class="new_btn" type="default" @click="oneMoreOrder(item.id)">
-                  再来一单
-                </button>
-                <button class="new_btn btn" type="default" @click="goDetail(item.id)"
-                  v-if="item.status === 1 && getOvertime(item.orderTime) > 0">
-                  去支付
-                </button>
-                <button class="new_btn btn" type="default" @click="handleReminder('center', item.id)"
-                  v-if="item.status === 2">
-                  催单
-                </button>
+  <view class="orders-page">
+    <cloudmeal-header title="订单中心" subtitle="查看进行中与历史订单" />
+
+    <view class="segment-tabs" role="tablist">
+      <button
+        v-for="segment in segments"
+        :key="segment.key"
+        class="segment-tab"
+        :class="{ 'segment-tab--active': activeSegment === segment.key }"
+        @click="changeSegment(segment.key)"
+      >
+        {{ segment.label }}
+      </button>
+    </view>
+
+    <scroll-view class="orders-scroll" scroll-y @scrolltolower="loadNextPage">
+      <view v-if="visibleOrders.length" class="orders-list">
+        <view v-for="item in visibleOrders" :key="item.id" class="order-card">
+          <view class="order-card__header">
+            <text class="order-card__time">{{ item.orderTime }}</text>
+            <text class="order-card__status">{{ statusWord(item.status) }}</text>
+          </view>
+
+          <view class="order-card__body" @click="goDetail(item.id)">
+            <view class="dish-summary">
+              <image
+                v-if="item.orderDetailList && item.orderDetailList.length"
+                class="dish-summary__image"
+                mode="aspectFill"
+                :src="item.orderDetailList[0].image"
+              />
+              <view class="dish-summary__copy">
+                <text class="dish-summary__name">{{ dishSummary(item.orderDetailList) }}</text>
+                <text class="dish-summary__count">共 {{ dishCount(item.orderDetailList) }} 件</text>
               </view>
             </view>
+            <view class="order-total">
+              <text class="order-total__label">实付</text>
+              <text class="order-total__amount">￥{{ money(item.amount) }}</text>
+              <text class="order-total__arrow">›</text>
+            </view>
           </view>
-        </scroll-view>
-      </swiper-item>
-    </swiper>
+
+          <view v-if="getOrderActions(item.status, item.orderTime).length" class="order-actions">
+            <button
+              v-if="hasAction(item, 'pay')"
+              class="order-action order-action--primary"
+              @click="goPay(item)"
+            >继续支付</button>
+            <button
+              v-if="hasAction(item, 'reminder')"
+              class="order-action order-action--primary"
+              @click="handleReminder('center', item.id)"
+            >催单</button>
+            <button
+              v-if="hasAction(item, 'repeat')"
+              class="order-action order-action--primary"
+              @click="oneMoreOrder(item)"
+            >再来一单</button>
+          </view>
+        </view>
+
+        <view class="list-tip">{{ canLoadMore ? '上拉加载更多' : '没有更多订单了' }}</view>
+      </view>
+
+      <empty
+        v-else-if="hasLoaded && !isLoading && !canLoadMore"
+        :text-label="activeSegment === 'current' ? '暂无当前订单' : '暂无历史订单'"
+      />
+      <view v-else class="list-tip">{{ loadError || '订单加载中…' }}</view>
+    </scroll-view>
+
     <uni-popup ref="commonPopup" class="comPopupBox">
       <view class="popup-content">
         <view class="text">{{ textTip }}</view>
-        <view class="btn" v-if="showConfirm">
-          <view @click="closePopup">确认</view>
-        </view>
+        <view class="btn"><view @click="closePopup">知道了</view></view>
       </view>
     </uni-popup>
+
+    <app-tabbar active="orders" />
   </view>
 </template>
 
 <script>
-import {
-  getOrderPage,
-  repetitionOrder,
-  reminderOrder,
-  delShoppingCart,
-  queryOrdersCheckStatus
-} from "../api/api.js";
-import { mapMutations } from "vuex";
-import Empty from "@/components/empty/empty";
-import { statusWord, getOvertime } from "@/utils/index.js";
+import { getOrderPage, repetitionOrder, reminderOrder, delShoppingCart } from '../api/api.js'
+import { mapMutations } from 'vuex'
+import Empty from '@/components/empty/empty.vue'
+import CloudmealHeader from '@/components/cloudmeal-header/cloudmeal-header.vue'
+import AppTabbar from '@/components/app-tabbar/app-tabbar.vue'
+import { statusWord, getOvertime } from '@/utils/index.js'
+import { filterOrdersBySegment, getOrderActions as resolveOrderActions } from '@/utils/order-segments.js'
+
 export default {
-  components: {
-    Empty,
-  },
+  components: { Empty, CloudmealHeader, AppTabbar },
   data() {
     return {
+      segments: [
+        { key: 'current', label: '当前订单' },
+        { key: 'history', label: '历史订单' },
+      ],
+      activeSegment: 'current',
       recentOrdersList: [],
-      pageInfo: {
-        page: 1,
-        pageSize: 10,
-        total: 0,
-      },
-      status: "",
-      payStatus: "",
-      loadingType: 0,
-      showTitle: false,
-      scrollinto: "tab0",
-      scrollH: 0,
-      tabIndex: 0,
-      // tabBars: ["全部订单", "待付款", "退款", "已完成", "派送中"],
-      tabBars: ["全部订单", "待付款", "退款"],
-      // 状态对应的接口和参数
-      urlMap: {
-        0: {
-          fn: getOrderPage,
-          key: "status",
-        },
-        1: {
-          fn: getOrderPage,
-          key: "status",
-        },
-        2: {
-          fn: queryOrdersCheckStatus,
-          key: "payStatus",
-        },
-      },
-      textTip: "",
-      showConfirm: false,
-      isEmpty: false,
-    };
-  },
-  onLoad() {
-    this.getList();
-  },
-  onUnload() {
-    this.showTitle = false;
-  },
-  onReady() {
-    uni.getSystemInfo({
-      success: (res) => {
-        this.scrollH = res.windowHeight - uni.upx2px(100);
-      },
-    });
-  },
-  onPullDownRefresh() {
-    this.pageInfo.page = 1;
-    this.loadingType = 0;
-    this.recentOrdersList = [];
-    this.finished = false;
-    this.getList();
-    uni.stopPullDownRefresh();
-    this.showTitle = true;
-  },
-  onReachBottom() {
-    if (this.recentOrdersList.length < Number(this.pageInfo.total)) {
-      this.pageInfo.page++;
-      this.loadingStatus = "loading";
-      this.getList(this.status);
-      this.showTitle = true;
+      pageInfo: { page: 1, pageSize: 10, total: 0 },
+      loadedPages: {},
+      isLoading: false,
+      hasLoaded: false,
+      loadError: '',
+      textTip: '',
     }
   },
-  methods: {
-    ...mapMutations(["setAddressBackUrl"]),
-    numes(list) {
-      let count = 0;
-      let total = 0;
-      list.length > 0 &&
-        list.forEach((obj) => {
-          count += Number(obj.number);
-          total += Number(obj.number) * Number(obj.amount);
-        });
-      return { count: count, total: total };
+  computed: {
+    visibleOrders() {
+      return filterOrdersBySegment(this.recentOrdersList, this.activeSegment)
     },
-    statusWord(status) {
-      return statusWord(status);
+    totalPages() {
+      return Math.ceil(Number(this.pageInfo.total) / Number(this.pageInfo.pageSize))
     },
-    getOvertime(time) {
-      return getOvertime(time);
-    },
-    // 获取历史订单列表
-    getList() {
-      const key = this.urlMap[this.tabIndex].key;
-      const fn = this.urlMap[this.tabIndex].fn;
-      const params = {
-        pageSize: 10,
-        page: this.pageInfo.page,
-      };
-      params[key] = this[key]
-      uni.showLoading({ title: "加载中", mask: true });
-      fn(params).then((res) => {
-        if (res.code === 1) {
-          setTimeout(function () {
-            uni.hideLoading();
-          }, 100);
-          this.recentOrdersList = this.recentOrdersList.concat(
-            res.data.records
-          );
-          this.pageInfo.total = res.data.total;
-          this.isEmpty = true;
-        }
-      });
-    },
-    // 再来一单
-    async oneMoreOrder(id) {
-      let pages = getCurrentPages();
-      let routeIndex = pages.findIndex(
-        (item) => item.route === "pages/index/index"
-      );
-      // 先清空购物车
-      await delShoppingCart();
-      repetitionOrder(id).then((res) => {
-        if (res.code === 1) {
-          uni.navigateBack({
-            delta: routeIndex > -1 ? pages.length - routeIndex : 1,
-          });
-        }
-      });
-    },
-    // tab选项卡切换轮播
-    changeTab(index) {
-      // 点击的还是当前数据的时候直接return
-      if (this.tabIndex == index) {
-        return;
-      }
-      this.tabIndex = index;
-      if (index === 1) {
-        // 待付款
-        this.status = 1;
-        this.payStatus = 0
-      } else if (index === 2) {
-        // 退款
-        this.status = 6;
-        this.payStatus = 2
-      }
-      else {
-        // 全部
-        this.status = "";
-        this.payStatus = ""
-      }
-      this.pageInfo.page = 1;
-      this.recentOrdersList = [];
-      this.getList();
-      // 滑动
-      this.scrollinto = "tab" + index;
-    },
-    onChangeSwiperTab(e) {
-      this.changeTab(e.detail.current);
-    },
-    dataAdd() {
-      const pages = Math.ceil(this.pageInfo.total / 10); //计算总页数
-      if (this.pageInfo.page === pages) {
-        this.loadingText = "没有更多了";
-        this.loading = true;
-      } else {
-        this.pageInfo.page++;
-        this.getList();
-      }
-    },
-
-    lower() {
-      this.loadingText = "数据加载中...";
-      this.loading = true;
-      this.dataAdd();
-    },
-    // 去详情页面
-    goDetail(id) {
-      this.setAddressBackUrl("/pages/historyOrder/historyOrder");
-      uni.navigateTo({ url: "/pages/details/index?orderId=" + id });
-    },
-    // 催单
-    handleReminder(type, id) {
-      reminderOrder(id).then((res) => {
-        if (res.code === 1) {
-          this.showConfirm = true;
-          this.textTip = "您的催单信息已发出！";
-          this.$refs.commonPopup.open(type);
-          this.getList(this.status);
-        }
-      });
-    },
-    // 关闭弹层
-    closePopup(type) {
-      this.$refs.commonPopup.close(type);
-    },
-    // 返回我的
-    goBack() {
-      uni.redirectTo({
-        url: "/pages/my/my",
-      });
+    canLoadMore() {
+      if (!this.hasLoaded) return true
+      return this.pageInfo.page < this.totalPages
     },
   },
-};
+  onLoad() {
+    this.getList()
+  },
+  onPullDownRefresh() {
+    this.resetList()
+    return this.getList().finally(() => uni.stopPullDownRefresh())
+  },
+  methods: {
+    ...mapMutations(['setAddressBackUrl', 'setOrderData']),
+    statusWord(status) {
+      return statusWord(status)
+    },
+    getOrderActions(status, orderTime) {
+      const timeout = Number(status) === 1 && orderTime ? getOvertime(orderTime) <= 0 : false
+      return resolveOrderActions(status, { timeout })
+    },
+    hasAction(item, action) {
+      return this.getOrderActions(item.status, item.orderTime).includes(action)
+    },
+    dishCount(list) {
+      return (Array.isArray(list) ? list : []).reduce((total, dish) => total + Number(dish.number || 0), 0)
+    },
+    dishSummary(list) {
+      const names = (Array.isArray(list) ? list : []).map(dish => dish.name).filter(Boolean)
+      return names.length ? names.join('、') : '订单菜品'
+    },
+    money(amount) {
+      const value = Number(amount)
+      return Number.isFinite(value) ? value.toFixed(2) : '0.00'
+    },
+    resetList() {
+      this.recentOrdersList = []
+      this.pageInfo = { ...this.pageInfo, page: 1, total: 0 }
+      this.loadedPages = {}
+      this.hasLoaded = false
+      this.loadError = ''
+    },
+    async getList() {
+      if (this.isLoading) return false
+      this.isLoading = true
+      this.loadError = ''
+      uni.showLoading({ title: '加载中', mask: true })
+
+      try {
+        while (!this.loadedPages[this.pageInfo.page]) {
+          const requestPage = this.pageInfo.page
+          this.loadedPages = { ...this.loadedPages, [requestPage]: true }
+          const res = await getOrderPage({
+            page: requestPage,
+            pageSize: this.pageInfo.pageSize,
+          })
+          if (!res || res.code !== 1) {
+            throw new Error((res && res.msg) || '订单加载失败，请重试')
+          }
+
+          const data = res.data || {}
+          const records = Array.isArray(data.records) ? data.records : []
+          this.recentOrdersList = this.recentOrdersList.concat(records)
+          this.pageInfo.total = Number(data.total || 0)
+          this.hasLoaded = true
+
+          const reachedLastPage = requestPage >= this.totalPages || records.length === 0
+          if (this.visibleOrders.length || reachedLastPage) break
+          this.pageInfo.page = requestPage + 1
+        }
+        return true
+      } catch (error) {
+        delete this.loadedPages[this.pageInfo.page]
+        this.loadError = (error && error.message) || '订单加载失败，请重试'
+        uni.showToast({ title: this.loadError, icon: 'none' })
+        return false
+      } finally {
+        this.isLoading = false
+        uni.hideLoading()
+      }
+    },
+    async loadNextPage() {
+      if (this.isLoading || !this.canLoadMore) return false
+      this.pageInfo.page += 1
+      return this.getList()
+    },
+    async changeSegment(segment) {
+      if (segment === this.activeSegment) return false
+      this.activeSegment = segment
+      if (!this.visibleOrders.length && this.canLoadMore) return this.loadNextPage()
+      return true
+    },
+    goDetail(id) {
+      this.setAddressBackUrl('/pages/historyOrder/historyOrder')
+      uni.navigateTo({ url: `/pages/details/index?orderId=${id}` })
+    },
+    goPay(item) {
+      if (!this.hasAction(item, 'pay')) return
+      this.setOrderData({
+        orderNumber: item.number,
+        orderAmount: item.amount,
+        orderTime: item.orderTime,
+      })
+      uni.navigateTo({ url: `/pages/pay/index?orderId=${item.id}` })
+    },
+    async oneMoreOrder(item) {
+      if (!this.hasAction(item, 'repeat')) return false
+      try {
+        await delShoppingCart()
+        const res = await repetitionOrder(item.id)
+        if (!res || res.code !== 1) throw new Error((res && res.msg) || '加购失败，请重试')
+        uni.reLaunch({ url: '/pages/index/index' })
+        return true
+      } catch (error) {
+        uni.showToast({ title: (error && error.message) || '加购失败，请重试', icon: 'none' })
+        return false
+      }
+    },
+    async handleReminder(type, id) {
+      const item = this.recentOrdersList.find(order => order.id === id)
+      if (!item || !this.hasAction(item, 'reminder')) return false
+      try {
+        const res = await reminderOrder(id)
+        if (!res || res.code !== 1) throw new Error((res && res.msg) || '催单失败，请重试')
+        this.textTip = '您的催单信息已发出！'
+        this.$refs.commonPopup.open(type)
+        return true
+      } catch (error) {
+        uni.showToast({ title: (error && error.message) || '催单失败，请重试', icon: 'none' })
+        return false
+      }
+    },
+    closePopup(type) {
+      this.$refs.commonPopup.close(type)
+    },
+  },
+}
 </script>
 
 <style lang="scss" scoped>
-.history_order {
-  height: 100%;
+@import '@/styles/tokens.scss';
 
-  .recent_orders {
-    padding-top: 8rpx;
-  }
+.orders-page {
+  min-height: 100vh;
+  color: $cm-text;
+  background: $cm-page;
 }
 
-.scroll-row {
-  height: 88rpx;
-  line-height: 88rpx;
-  background-color: #fff;
-  padding: 0 30rpx;
-  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.06);
-  width: 100vw;
-  box-sizing: border-box;
-  flex-wrap: nowrap;
-  overflow: auto;
+.segment-tabs {
   display: flex;
+  margin: 20rpx 24rpx 0;
+  padding: 6rpx;
+  background: $cm-surface;
+  border: 1rpx solid $cm-border;
+  border-radius: $cm-radius-md;
 }
 
-.scroll-row-item {
-  margin-right: 88rpx;
-  color: #666;
-  display: inline-block;
-  font-size: 28rpx;
-  flex-shrink: 0;
+.segment-tab {
+  height: 70rpx;
+  flex: 1;
+  margin: 0;
+  color: $cm-text-secondary;
+  background: transparent;
+  border: 0;
+  border-radius: 10rpx;
+  font-size: 27rpx;
+  line-height: 70rpx;
 }
 
-.scroll-row-item-act {
-  color: #333;
-  position: relative;
+.segment-tab::after,
+.order-action::after { border: 0; }
+
+.segment-tab--active {
+  color: $cm-primary;
+  background: $cm-primary-soft;
   font-weight: 600;
-
-  .line {
-    width: 32rpx;
-    height: 8rpx;
-    display: block;
-    background: #ffc200;
-    border-radius: 8rpx;
-    transform: translate(-50%, -50%);
-    position: absolute;
-    bottom: -4rpx;
-    left: 50%;
-  }
 }
+
+.orders-scroll {
+  height: calc(100vh - 96rpx - env(safe-area-inset-top) - 112rpx - 112rpx - env(safe-area-inset-bottom));
+}
+
+.orders-list {
+  padding: 20rpx 24rpx calc(32rpx + env(safe-area-inset-bottom));
+}
+
+.order-card {
+  margin-bottom: 20rpx;
+  padding: 26rpx;
+  background: $cm-surface;
+  border: 1rpx solid $cm-border;
+  border-radius: $cm-radius-md;
+}
+
+.order-card__header,
+.order-card__body,
+.dish-summary,
+.order-total,
+.order-actions {
+  display: flex;
+  align-items: center;
+}
+
+.order-card__header {
+  justify-content: space-between;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid $cm-border;
+}
+
+.order-card__time { color: $cm-text-secondary; font-size: 24rpx; }
+.order-card__status { color: $cm-primary; font-size: 25rpx; font-weight: 600; }
+.order-card__body { justify-content: space-between; padding: 24rpx 0; }
+.dish-summary { min-width: 0; flex: 1; }
+.dish-summary__image { width: 104rpx; height: 104rpx; flex: none; border-radius: $cm-radius-sm; }
+.dish-summary__copy { overflow: hidden; min-width: 0; margin-left: 18rpx; }
+.dish-summary__name { display: block; overflow: hidden; color: $cm-text; font-size: 27rpx; text-overflow: ellipsis; white-space: nowrap; }
+.dish-summary__count { display: block; margin-top: 10rpx; color: $cm-text-muted; font-size: 23rpx; }
+.order-total { flex: none; margin-left: 20rpx; }
+.order-total__label { color: $cm-text-secondary; font-size: 22rpx; }
+.order-total__amount { margin-left: 8rpx; color: $cm-text; font-size: 29rpx; font-weight: 700; }
+.order-total__arrow { margin-left: 10rpx; color: $cm-text-muted; font-size: 38rpx; }
+
+.order-actions {
+  justify-content: flex-end;
+  padding-top: 20rpx;
+  border-top: 1rpx solid $cm-border;
+}
+
+.order-action {
+  min-width: 176rpx;
+  height: 68rpx;
+  margin: 0 0 0 16rpx;
+  border-radius: $cm-radius-sm;
+  font-size: 26rpx;
+  line-height: 68rpx;
+}
+
+.order-action--primary { color: $cm-surface; background: $cm-primary; }
+.list-tip { padding: 34rpx; color: $cm-text-muted; font-size: 24rpx; text-align: center; }
+
+.popup-content {
+  overflow: hidden;
+  width: 500rpx;
+  background: $cm-surface;
+  border-radius: $cm-radius-md;
+  text-align: center;
+}
+
+.popup-content .text { padding: 54rpx 36rpx; color: $cm-text; font-size: 28rpx; }
+.popup-content .btn { padding: 24rpx; color: $cm-primary; border-top: 1rpx solid $cm-border; }
 </style>

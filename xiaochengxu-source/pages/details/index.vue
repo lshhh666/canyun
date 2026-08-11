@@ -1,69 +1,128 @@
 <template>
-  <view>
-    <!-- 导航 -->
-    <uni-nav-bar @clickLeft="goBack" left-icon="back" leftIcon="arrowleft" title="订单详情" statusBar="true" fixed="true"
-      color="#ffffff" backgroundColor="#333333"></uni-nav-bar>
-    <!-- end -->
-    <view class="order_content orderDetail">
-      <view class="order_content_box" scroll-y="true" scroll-top="0rpx">
-        <!-- 支付状态 -->
-        <status ref="status" :timeout="timeout" :orderDetailsData="orderDetailsData" :rocallTime="rocallTime"
-          @statusWord="statusWord" @paymentTime="paymentTime" @handlePay="handlePay" @handleReminder="handleReminder"
-          @handleRefund="handleRefund"></status>
-        <!-- end -->
-        <!-- 订单详情 -->
-        <order-detail :orderDataes="orderDataes" :orderDetailsData="orderDetailsData"
-          :showDisplay="showDisplay"></order-detail>
-        <!-- end -->
-        <!-- 联系商家 -->
-        <view class="box contactMerchant">
-          <button @click="handlePhone('bottom', orderDetailsData.shopTelephone)">
-            <view class="phoneIcon"></view>
-            联系商家
-          </button>
-          <!-- 4 派送中 5 派送中 -->
-          <button class="call-rider" v-if="[4, 5].includes(orderDetailsData.status)"
-            @click="handlePhone('bottom', orderDetailsData.courierTelephone)">
-            <view class="phoneIcon"></view>
-            联系骑手
-          </button>
-        </view>
-        <!-- end -->
-        <!-- 配送信息 -->
-        <delivery-info :orderDetailsData="orderDetailsData"></delivery-info>
-        <!-- end -->
-        <!-- 订单信息 -->
-        <order-info :orderDetailsData="orderDetailsData"></order-info>
-        <!-- end -->
+  <view class="detail-shell">
+    <cloudmeal-header title="订单详情" show-back @back="goBack" />
+
+    <scroll-view class="detail-page" scroll-y>
+      <status
+        ref="status"
+        :timeout="timeout"
+        :order-details-data="orderDetailsData"
+        :rocall-time="rocallTime"
+        @statusWord="statusWord"
+        @paymentTime="paymentTime"
+        @handlePay="handlePay"
+        @handleReminder="handleReminder"
+        @handleRefund="handleRefund"
+        @handleCancel="handleCancel"
+        @oneMoreOrder="oneMoreOrder"
+      />
+
+      <order-detail
+        :order-dataes="orderDataes"
+        :order-details-data="orderDetailsData"
+        :show-display="showDisplay"
+        @toggle="showDisplay = !showDisplay"
+      />
+
+      <view class="contact-card">
+        <button class="contact-button" @click="handlePhone('bottom', orderDetailsData.shopTelephone)">
+          联系商家
+        </button>
+        <button
+          v-if="[4, 5].includes(Number(orderDetailsData.status)) && orderDetailsData.courierTelephone"
+          class="contact-button"
+          @click="handlePhone('bottom', orderDetailsData.courierTelephone)"
+        >联系骑手</button>
       </view>
-      <!-- 联系商家弹层 -->
-      <uni-popup ref="commonPopup" class="comPopupBox">
-        <view class="popup-content">
-          <view class="text">{{ textTip }}</view>
-          <view class="btn" v-if="showConfirm">
-            <view @click="closePopupInfo">确认</view>
-          </view>
-          <view class="btn" v-else>
-            <view @click="closePopupInfo">先等等</view>
-            <view @click="handlePhone('bottom')">拨打电话</view>
-          </view>
+
+      <delivery-info :order-details-data="orderDetailsData" />
+      <order-info :order-details-data="orderDetailsData" />
+    </scroll-view>
+
+    <uni-popup ref="commonPopup" class="detail-popup">
+      <view class="popup-content">
+        <view class="popup-content__text">{{ textTip }}</view>
+        <view v-if="showConfirm" class="popup-content__actions">
+          <view @click="closePopupInfo">知道了</view>
         </view>
-      </uni-popup>
-      <!-- 拨打电话弹层 -->
-      <view class="container phoneCon">
-        <uni-popup ref="phone" @change="change" class="popupBox">
-          <view class="popup-content">
-            <view>{{ phone }}</view>
-            <view @click="call">呼叫</view>
-            <view @click="closePopup" class="closePopup">取消</view>
-          </view>
-        </uni-popup>
+        <view v-else class="popup-content__actions">
+          <view @click="closePopupInfo">先等等</view>
+          <view @click="handlePhone('bottom', orderDetailsData.shopTelephone)">联系商家</view>
+        </view>
       </view>
-      <!-- end -->
-    </view>
+    </uni-popup>
+
+    <uni-popup ref="phone" class="phone-popup">
+      <view class="phone-sheet">
+        <view class="phone-sheet__number">{{ phone }}</view>
+        <view class="phone-sheet__action" @click="call">呼叫</view>
+        <view class="phone-sheet__cancel" @click="closePopup">取消</view>
+      </view>
+    </uni-popup>
   </view>
 </template>
-<script src="../../utils/common.js"></script>
+
 <script src="./index.js"></script>
-<style src="./../common/Navbar/navbar.scss" lang="scss" scoped></style>
-<style src="../order/style.scss" lang="scss"></style>
+
+<style lang="scss" scoped>
+@import '@/styles/tokens.scss';
+
+.detail-shell {
+  min-height: 100vh;
+  color: $cm-text;
+  background: $cm-page;
+}
+
+.detail-page {
+  height: calc(100vh - 96rpx - env(safe-area-inset-top));
+  padding: 24rpx 24rpx calc(32rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.contact-card {
+  display: flex;
+  margin-top: 20rpx;
+  padding: 12rpx;
+  background: $cm-surface;
+  border: 1rpx solid $cm-border;
+  border-radius: $cm-radius-md;
+}
+
+.contact-button {
+  height: 70rpx;
+  flex: 1;
+  margin: 0;
+  color: $cm-primary;
+  background: $cm-surface;
+  border: 0;
+  font-size: 26rpx;
+  line-height: 70rpx;
+}
+
+.contact-button + .contact-button { border-left: 1rpx solid $cm-border; }
+.contact-button::after { border: 0; }
+
+.popup-content {
+  overflow: hidden;
+  width: 520rpx;
+  background: $cm-surface;
+  border-radius: $cm-radius-md;
+}
+
+.popup-content__text { padding: 54rpx 40rpx; color: $cm-text; font-size: 28rpx; text-align: center; }
+.popup-content__actions { display: flex; color: $cm-text-secondary; border-top: 1rpx solid $cm-border; }
+.popup-content__actions view { flex: 1; padding: 24rpx; text-align: center; }
+.popup-content__actions view + view { color: $cm-primary; border-left: 1rpx solid $cm-border; }
+
+.phone-sheet {
+  padding-bottom: env(safe-area-inset-bottom);
+  background: $cm-surface;
+  border-radius: 24rpx 24rpx 0 0;
+  text-align: center;
+}
+
+.phone-sheet view { padding: 34rpx; font-size: 29rpx; }
+.phone-sheet__number { color: $cm-text-secondary; border-bottom: 1rpx solid $cm-border; }
+.phone-sheet__action { color: $cm-primary; }
+.phone-sheet__cancel { color: $cm-text-secondary; background: $cm-page; }
+</style>

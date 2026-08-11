@@ -1,110 +1,159 @@
-<!-- 订单状态 -->
 <template>
-  <view>
-    <view class="box">
-      <view class="orderInfoTip">
-        <view class="tit">{{ statusWord(orderDetailsData.status) }} <text class="smw"
-            v-if="timeout && orderDetailsData.status === 1"> ( 已经超时)</text></view>
-        <view class="rejectionReason" v-if="orderDetailsData.status === 7">
-          <text v-if="orderDetailsData.payStatus === 1 || orderDetailsData.payStatus === 2">退款成功</text>
-          <text v-else-if="orderDetailsData.cancelReason">{{ orderDetailsData.cancelReason }}</text>
-          <text v-else-if="orderDetailsData.rejectionReason">{{ orderDetailsData.rejectionReason }}</text>
-        </view>
-        <view v-if="!timeout && orderDetailsData.status === 1">
-          <view class="time">
-            <view class="timeIcon"></view>
-            等待支付：
-            <text>{{ rocallTime }}</text>
-            <text>{{ paymentTime }}</text>
-          </view>
-        </view>
-        <view class="againBtn">
-          <button class="new_btn" type="default" @click="handleCancel('center', orderDetailsData)" v-if="(!timeout && orderDetailsData.status === 1) ||
-            orderDetailsData.status === 2 ||
-            orderDetailsData.status === 3 ||
-            orderDetailsData.status === 4
-            ">
-            取消订单
-          </button>
-          <button class="new_btn btn" type="default" @click="handlePay(orderDetailsData.id)"
-            v-if="!timeout && orderDetailsData.status === 1">
-            立即支付
-          </button>
-          <button class="new_btn btn" type="default" @click="handleReminder('center', orderDetailsData.id)"
-            v-if="orderDetailsData.status === 2">
-            催单
-          </button>
-          <button class="new_btn" type="default" @click="handleRefund('center')" v-if="orderDetailsData.status == 5">
-            申请退款
-          </button>
-          <button class="new_btn" type="default" @click="oneMoreOrder(orderDetailsData.id)"
-            v-if="orderDetailsData.status !== 7">
-            再来一单
-          </button>
-        </view>
-      </view>
+  <view class="status-card">
+    <view class="status-card__copy">
+      <text class="status-card__title">{{ statusWord(orderDetailsData.status) }}</text>
+      <text v-if="timeout && orderDetailsData.status === 1" class="status-card__hint">订单已超时</text>
+      <text v-else-if="orderDetailsData.status === 1" class="status-card__hint">
+        请在 {{ rocallTime }} 内完成支付
+      </text>
+      <text v-else-if="orderDetailsData.status === 7" class="status-card__hint">
+        {{ cancellationReason }}
+      </text>
     </view>
-    <view class="box timeTip" v-if="!timeout && orderDetailsData.status === 1">
-      <view class="icon newIcon"></view>
-      请在15分钟内完成支付，超时将自动取消。
-    </view>
-    <view class="box timeTip" v-if="orderDetailsData.status === 6 && orderDetailsData.payStatus === 2">
-      <view class="icon moneyIcon"></view>
-      您的订单已
-      <text>退款成功</text>
-      。
+
+    <view v-if="showActions" class="status-actions">
+      <button
+        v-if="canCancel"
+        class="status-action status-action--secondary"
+        @click="handleCancel('center', orderDetailsData)"
+      >取消订单</button>
+      <button
+        v-if="hasAction('pay')"
+        class="status-action status-action--primary"
+        @click="handlePay(orderDetailsData.id)"
+      >继续支付</button>
+      <button
+        v-if="hasAction('reminder')"
+        class="status-action status-action--primary"
+        @click="handleReminder('center', orderDetailsData.id)"
+      >催单</button>
+      <button
+        v-if="canRefund"
+        class="status-action status-action--danger"
+        @click="handleRefund('center')"
+      >申请退款</button>
+      <button
+        v-if="hasAction('repeat')"
+        class="status-action status-action--primary"
+        @click="oneMoreOrder(orderDetailsData.id)"
+      >再来一单</button>
     </view>
   </view>
 </template>
+
 <script>
-import { statusWord } from "@/utils/index";
+import { statusWord } from '@/utils/index.js'
+import { getOrderActions } from '@/utils/order-segments.js'
+
 export default {
-  // 获取父级传的数据
   props: {
-    // 订单详情
     orderDetailsData: {
       type: Object,
       default: () => ({}),
     },
-    // 倒计时间
     timeout: {
       type: Boolean,
       default: false,
     },
-    // 支付时间
     rocallTime: {
       type: String,
-      default: "",
+      default: '',
+    },
+  },
+  computed: {
+    actions() {
+      return getOrderActions(this.orderDetailsData.status, { timeout: this.timeout })
+    },
+    canCancel() {
+      return !this.timeout && [1, 2].includes(Number(this.orderDetailsData.status))
+    },
+    canRefund() {
+      return Number(this.orderDetailsData.status) === 5
+    },
+    showActions() {
+      return this.actions.length > 0 || this.canCancel || this.canRefund
+    },
+    cancellationReason() {
+      if ([1, 2].includes(Number(this.orderDetailsData.payStatus))) return '退款成功'
+      return this.orderDetailsData.cancelReason || this.orderDetailsData.rejectionReason || '订单已取消'
     },
   },
   methods: {
-    // 地址选择
     statusWord(status) {
-      this.$emit("statusWord", status);
-      // return errr;
-      return statusWord(status);
+      this.$emit('statusWord', status)
+      return statusWord(status)
     },
-    //取消订单
+    paymentTime(value) {
+      this.$emit('paymentTime', value)
+    },
+    hasAction(action) {
+      return this.actions.includes(action)
+    },
     handleCancel(type, obj) {
-      this.$emit("handleCancel", { type: type, obj: obj });
+      this.$emit('handleCancel', { type, obj })
     },
-    // 立即支付
     handlePay(id) {
-      this.$emit("handlePay", id);
+      this.$emit('handlePay', id)
     },
-    // 催单
     handleReminder(type, id) {
-      this.$emit("handleReminder", { type: type, id: id });
+      this.$emit('handleReminder', { type, id })
     },
-    // 申请退款
     handleRefund(type) {
-      this.$emit("handleRefund", type);
+      this.$emit('handleRefund', type)
     },
-    // 再来一单
     oneMoreOrder(id) {
-      this.$emit("oneMoreOrder", id);
+      this.$emit('oneMoreOrder', id)
     },
   },
-};
+}
 </script>
-<style src="../../order/style.scss" lang="scss"></style>
+
+<style lang="scss" scoped>
+@import '@/styles/tokens.scss';
+
+.status-card {
+  padding: 30rpx;
+  background: $cm-surface;
+  border: 1rpx solid $cm-border;
+  border-radius: $cm-radius-md;
+}
+
+.status-card__title {
+  display: block;
+  color: $cm-text;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 48rpx;
+}
+
+.status-card__hint {
+  display: block;
+  margin-top: 10rpx;
+  color: $cm-text-secondary;
+  font-size: 24rpx;
+  line-height: 36rpx;
+}
+
+.status-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 26rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid $cm-border;
+}
+
+.status-action {
+  min-width: 172rpx;
+  height: 68rpx;
+  margin: 0 0 0 16rpx;
+  padding: 0 22rpx;
+  border-radius: $cm-radius-sm;
+  font-size: 26rpx;
+  line-height: 68rpx;
+}
+
+.status-action::after { border: 0; }
+.status-action--primary { color: $cm-surface; background: $cm-primary; }
+.status-action--secondary { color: $cm-text-secondary; background: $cm-surface; border: 1rpx solid $cm-border; }
+.status-action--danger { color: $cm-danger; background: $cm-surface; border: 1rpx solid rgba(217, 75, 75, 0.45); }
+</style>

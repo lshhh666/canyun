@@ -145,7 +145,13 @@
     display: inline-block;
   }
   .btn {
-    background: #ffc200;
+    color: #fff;
+    background: #147ee8;
+  }
+  .danger {
+    color: #d94b4b;
+    background: #fff;
+    border-color: #d94b4b;
   }
 }
 //
@@ -368,9 +374,9 @@
   .wx-checkbox-input-checked,
   .wx-radio-input-checked,
   .wx-switch-input-checked {
-    background-color: #ffc200 !important;
-    border-color: #ffc200 !important;
-    color: #000 !important;
+    background-color: #147ee8 !important;
+    border-color: #147ee8 !important;
+    color: #fff !important;
     transform: scale(0.7);
   }
 }
@@ -382,9 +388,9 @@ radio .wx-radio-input.wx-radio-input-checked::before {
   text-align: center;
   font-size: 40rpx; /* 对勾大小 30rpx */
   font-weight: 600;
-  color: #000; /* 对勾颜色 白色 */
-  border: 1rpx solid #ffc200;
-  background: #ffc200;
+  color: #fff;
+  border: 1rpx solid #147ee8;
+  background: #147ee8;
   // transform:scale(1);
   // -webkit-transform:translate(-50%, -50%) scale(1);
 }

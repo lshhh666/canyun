@@ -28,6 +28,7 @@
     {
       "path": "pages/pay/index",
       "style": {
+        "navigationStyle": "custom",
         "navigationBarTitleText": "支付订单",
         "enablePullDownRefresh": false,
         "navigationBarBackgroundColor": "#147EE8"
@@ -36,7 +37,7 @@
     {
       "path": "pages/success/index",
       "style": {
-        "navigationBarTitleText": "提交成功",
+        "navigationBarTitleText": "支付成功",
         "enablePullDownRefresh": false,
         "navigationBarBackgroundColor": "#147EE8"
       }
