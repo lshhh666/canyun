@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @Service
@@ -22,10 +23,10 @@ public class ImageUploadServiceImpl implements ImageUploadService {
 
     @Override
     public String uploadImage(MultipartFile file, String serverDirectory) {
-        validateFile(file);
+        String extension = validateFile(file);
         validateServerDirectory(serverDirectory);
 
-        String objectName = serverDirectory + "/" + UUID.randomUUID() + extensionFor(file.getContentType());
+        String objectName = serverDirectory + "/" + UUID.randomUUID() + extension;
         try {
             return aliOssUtil.upload(file.getBytes(), objectName);
         } catch (Exception e) {
@@ -34,14 +35,16 @@ public class ImageUploadServiceImpl implements ImageUploadService {
         }
     }
 
-    private void validateFile(MultipartFile file) {
+    private String validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BaseException("文件不能为空");
         }
         if (file.getSize() > MAX_IMAGE_SIZE) {
             throw new BaseException("图片大小不能超过 2MB");
         }
-        if (!isSupportedContentType(file.getContentType())) {
+        try {
+            return extensionFor(file.getBytes());
+        } catch (IOException e) {
             throw new BaseException("仅支持 PNG、JPEG 和 WebP 图片");
         }
     }
@@ -52,19 +55,47 @@ public class ImageUploadServiceImpl implements ImageUploadService {
         }
     }
 
-    private boolean isSupportedContentType(String contentType) {
-        return "image/png".equals(contentType)
-                || "image/jpeg".equals(contentType)
-                || "image/webp".equals(contentType);
-    }
-
-    private String extensionFor(String contentType) {
-        if ("image/png".equals(contentType)) {
+    private String extensionFor(byte[] bytes) {
+        if (isPng(bytes)) {
             return ".png";
         }
-        if ("image/jpeg".equals(contentType)) {
+        if (isJpeg(bytes)) {
             return ".jpg";
         }
-        return ".webp";
+        if (isWebp(bytes)) {
+            return ".webp";
+        }
+        throw new BaseException("仅支持 PNG、JPEG 和 WebP 图片");
+    }
+
+    private boolean isPng(byte[] bytes) {
+        return bytes.length >= 8
+                && bytes[0] == (byte) 0x89
+                && bytes[1] == 'P'
+                && bytes[2] == 'N'
+                && bytes[3] == 'G'
+                && bytes[4] == '\r'
+                && bytes[5] == '\n'
+                && bytes[6] == 0x1a
+                && bytes[7] == '\n';
+    }
+
+    private boolean isJpeg(byte[] bytes) {
+        return bytes.length >= 4
+                && bytes[0] == (byte) 0xff
+                && bytes[1] == (byte) 0xd8
+                && bytes[2] == (byte) 0xff;
+    }
+
+    private boolean isWebp(byte[] bytes) {
+        return bytes.length >= 12
+                && bytes[0] == 'R'
+                && bytes[1] == 'I'
+                && bytes[2] == 'F'
+                && bytes[3] == 'F'
+                && bytes[8] == 'W'
+                && bytes[9] == 'E'
+                && bytes[10] == 'B'
+                && bytes[11] == 'P';
     }
 }

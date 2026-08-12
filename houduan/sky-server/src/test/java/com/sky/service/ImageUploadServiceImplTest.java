@@ -69,21 +69,24 @@ class ImageUploadServiceImplTest {
 
     @Test
     void uploadsPngUsingGeneratedNameUnderSuppliedDirectory() {
-        MockMultipartFile file = new MockMultipartFile("file", "../../avatar.png", "image/png", new byte[]{1});
+        MockMultipartFile file = new MockMultipartFile("file", "../../avatar.png", "image/png",
+                new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'});
         when(aliOssUtil.upload(any(byte[].class), any(String.class))).thenReturn("https://oss/avatar.png");
 
         String result = service.uploadImage(file, "user-avatar");
 
         assertEquals("https://oss/avatar.png", result);
         ArgumentCaptor<String> objectName = ArgumentCaptor.forClass(String.class);
-        verify(aliOssUtil).upload(eq(new byte[]{1}), objectName.capture());
+        verify(aliOssUtil).upload(eq(new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}), objectName.capture());
         assertTrue(objectName.getValue().matches("user-avatar/[0-9a-f-]+\\.png"));
     }
 
     @Test
     void uploadsJpegAndWebpWithContentTypeExtension() {
-        MockMultipartFile jpeg = new MockMultipartFile("file", "avatar.bin", "image/jpeg", new byte[]{1});
-        MockMultipartFile webp = new MockMultipartFile("file", "avatar.bin", "image/webp", new byte[]{2});
+        MockMultipartFile jpeg = new MockMultipartFile("file", "avatar.bin", "image/jpeg",
+                new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, 0, 0, 0, 0, 0});
+        MockMultipartFile webp = new MockMultipartFile("file", "avatar.bin", "image/webp",
+                new byte[]{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'});
         when(aliOssUtil.upload(any(byte[].class), any(String.class))).thenReturn("https://oss/image");
 
         service.uploadImage(jpeg, "user-avatar");
@@ -97,12 +100,25 @@ class ImageUploadServiceImplTest {
 
     @Test
     void mapsOssFailureToUploadFailedMessage() {
-        MockMultipartFile file = new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1});
+        MockMultipartFile file = new MockMultipartFile("file", "avatar.png", "image/png",
+                new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'});
         when(aliOssUtil.upload(any(byte[].class), any(String.class))).thenThrow(new RuntimeException("OSS unavailable"));
 
         BaseException error = assertThrows(BaseException.class,
                 () -> service.uploadImage(file, "user-avatar"));
 
         assertEquals(MessageConstant.UPLOAD_FAILED, error.getMessage());
+    }
+
+    @Test
+    void rejectsTextDisguisedAsPngBeforeCallingOss() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "avatar.png", "image/png", "not an image".getBytes(StandardCharsets.UTF_8));
+
+        BaseException error = assertThrows(BaseException.class,
+                () -> service.uploadImage(file, "user-avatar"));
+
+        assertEquals("仅支持 PNG、JPEG 和 WebP 图片", error.getMessage());
+        verifyNoInteractions(aliOssUtil);
     }
 }
