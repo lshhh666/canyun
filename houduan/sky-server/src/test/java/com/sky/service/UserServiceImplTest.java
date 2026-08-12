@@ -1,10 +1,12 @@
 package com.sky.service;
 
 import com.sky.context.BaseContext;
+import com.sky.constant.MessageConstant;
 import com.sky.dto.UserLoginDTO;
 import com.sky.dto.UserProfileDTO;
 import com.sky.entity.User;
 import com.sky.exception.BaseException;
+import com.sky.exception.UserNotLoginException;
 import com.sky.mapper.UserMapper;
 import com.sky.properties.JwtProperties;
 import com.sky.properties.WeChatProperties;
@@ -85,6 +87,16 @@ class UserServiceImplTest {
     }
 
     @Test
+    void getProfileRejectsMissingAuthenticatedUser() {
+        BaseContext.setCurrentId(7L);
+        when(userMapper.getById(7L)).thenReturn(null);
+
+        UserNotLoginException exception = assertThrows(UserNotLoginException.class, () -> service.getProfile());
+
+        assertEquals(MessageConstant.USER_NOT_LOGIN, exception.getMessage());
+    }
+
+    @Test
     void updateProfileUsesAuthenticatedUserAndNormalizesName() {
         BaseContext.setCurrentId(7L);
         UserProfileVO result = service.updateProfile(
@@ -107,10 +119,16 @@ class UserServiceImplTest {
                 () -> service.updateProfile(UserProfileDTO.builder().name("123456789012345678901234567890123").avatar("https://img/a.png").build()));
         BaseException invalidAvatar = assertThrows(BaseException.class,
                 () -> service.updateProfile(UserProfileDTO.builder().name("小餐").avatar("ftp://img/a.png").build()));
+        BaseException schemeOnlyAvatar = assertThrows(BaseException.class,
+                () -> service.updateProfile(UserProfileDTO.builder().name("小餐").avatar("https://").build()));
+        BaseException hostlessAvatar = assertThrows(BaseException.class,
+                () -> service.updateProfile(UserProfileDTO.builder().name("小餐").avatar("http:///avatar.png").build()));
 
         assertEquals("昵称不能为空", blankName.getMessage());
         assertEquals("昵称不能超过32个字符", longName.getMessage());
         assertEquals("头像地址无效", invalidAvatar.getMessage());
+        assertEquals("头像地址无效", schemeOnlyAvatar.getMessage());
+        assertEquals("头像地址无效", hostlessAvatar.getMessage());
     }
 
     private static class TestableUserService extends UserServiceimpl {

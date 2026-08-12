@@ -10,6 +10,7 @@ import com.sky.dto.UserProfileDTO;
 import com.sky.entity.User;
 import com.sky.exception.BaseException;
 import com.sky.exception.LoginFailedException;
+import com.sky.exception.UserNotLoginException;
 import com.sky.mapper.UserMapper;
 import com.sky.properties.JwtProperties;
 import com.sky.properties.WeChatProperties;
@@ -21,6 +22,8 @@ import com.sky.vo.UserProfileVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -86,6 +89,9 @@ public class UserServiceimpl implements UserService {
     }
 
     private UserProfileVO toProfile(User user) {
+        if (user == null) {
+            throw new UserNotLoginException(MessageConstant.USER_NOT_LOGIN);
+        }
         String name = trimToNull(user.getName());
         String avatar = trimToNull(user.getAvatar());
         return UserProfileVO.builder()
@@ -103,8 +109,21 @@ public class UserServiceimpl implements UserService {
         if (name.length() > 32) {
             throw new BaseException("昵称不能超过32个字符");
         }
-        if (avatar == null || !(avatar.startsWith("http://") || avatar.startsWith("https://"))) {
+        if (!isHttpAvatarUrl(avatar)) {
             throw new BaseException("头像地址无效");
+        }
+    }
+
+    private boolean isHttpAvatarUrl(String avatar) {
+        if (avatar == null) {
+            return false;
+        }
+        try {
+            URI uri = new URI(avatar);
+            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null && !uri.getHost().isEmpty();
+        } catch (URISyntaxException e) {
+            return false;
         }
     }
 

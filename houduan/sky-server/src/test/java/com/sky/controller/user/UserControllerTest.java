@@ -5,6 +5,7 @@ import com.sky.service.UserService;
 import com.sky.vo.UserProfileVO;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -13,6 +14,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -48,11 +50,15 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"小餐\",\"avatar\":\"https://img/a.png\"}"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(7))
                 .andExpect(jsonPath("$.data.name").value("小餐"))
                 .andExpect(jsonPath("$.data.avatar").value("https://img/a.png"))
                 .andExpect(jsonPath("$.data.profileCompleted").value(true));
 
-        verify(userService).updateProfile(any(UserProfileDTO.class));
+        ArgumentCaptor<UserProfileDTO> captured = ArgumentCaptor.forClass(UserProfileDTO.class);
+        verify(userService).updateProfile(captured.capture());
+        assertEquals("小餐", captured.getValue().getName());
+        assertEquals("https://img/a.png", captured.getValue().getAvatar());
     }
 
     private MockMvc mockMvc(UserService userService) {
