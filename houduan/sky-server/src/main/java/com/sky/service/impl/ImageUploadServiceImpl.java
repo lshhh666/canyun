@@ -10,9 +10,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.util.Iterator;
 import java.util.UUID;
 
 @Service
@@ -20,6 +22,8 @@ import java.util.UUID;
 public class ImageUploadServiceImpl implements ImageUploadService {
 
     private static final long MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+    private static final int MAX_IMAGE_DIMENSION = 4096;
+    private static final long MAX_IMAGE_PIXELS = 16_777_216L;
 
     @Autowired
     private AliOssUtil aliOssUtil;
@@ -56,6 +60,11 @@ public class ImageUploadServiceImpl implements ImageUploadService {
             return format.extension;
         } catch (IOException e) {
             throw unsupportedImage();
+        } catch (RuntimeException e) {
+            if (e instanceof BaseException) {
+                throw e;
+            }
+            throw unsupportedImage();
         }
     }
 
@@ -72,131 +81,40 @@ public class ImageUploadServiceImpl implements ImageUploadService {
     }
 
     private ImageFormat imageFormatFor(byte[] bytes) throws IOException {
-        if (isPng(bytes)) {
-            return validateDecodedImage(bytes, ImageFormat.PNG);
-        }
-        if (isJpeg(bytes)) {
-            return validateDecodedImage(bytes, ImageFormat.JPEG);
-        }
-        if (isWebp(bytes)) {
-            if (hasValidWebpImageChunk(bytes)) {
-                return ImageFormat.WEBP;
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            if (input == null) {
+                throw unsupportedImage();
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) {
+                throw unsupportedImage();
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input, true, true);
+                ImageFormat format = ImageFormat.fromReaderFormat(reader.getFormatName());
+                if (!reader.getImageTypes(0).hasNext()) {
+                    throw unsupportedImage();
+                }
+                validateDimensions(reader.getWidth(0), reader.getHeight(0));
+                if (format == ImageFormat.WEBP) {
+                    reader.readAsRenderedImage(0, null);
+                }
+                return format;
+            } finally {
+                reader.dispose();
             }
         }
-        throw unsupportedImage();
     }
 
-    private ImageFormat validateDecodedImage(byte[] bytes, ImageFormat format) throws IOException {
-        BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
-        if (image == null || image.getWidth() <= 0 || image.getHeight() <= 0) {
+    private void validateDimensions(int width, int height) {
+        if (width <= 0 || height <= 0) {
             throw unsupportedImage();
         }
-        return format;
-    }
-
-    private boolean isPng(byte[] bytes) {
-        return bytes.length >= 8
-                && bytes[0] == (byte) 0x89
-                && bytes[1] == 'P'
-                && bytes[2] == 'N'
-                && bytes[3] == 'G'
-                && bytes[4] == '\r'
-                && bytes[5] == '\n'
-                && bytes[6] == 0x1a
-                && bytes[7] == '\n';
-    }
-
-    private boolean isJpeg(byte[] bytes) {
-        return bytes.length >= 4
-                && bytes[0] == (byte) 0xff
-                && bytes[1] == (byte) 0xd8
-                && bytes[2] == (byte) 0xff;
-    }
-
-    private boolean isWebp(byte[] bytes) {
-        return bytes.length >= 12
-                && bytes[0] == 'R'
-                && bytes[1] == 'I'
-                && bytes[2] == 'F'
-                && bytes[3] == 'F'
-                && bytes[8] == 'W'
-                && bytes[9] == 'E'
-                && bytes[10] == 'B'
-                && bytes[11] == 'P';
-    }
-
-    private boolean hasValidWebpImageChunk(byte[] bytes) {
-        if (bytes.length < 20 || unsignedLittleEndianInt(bytes, 4) != bytes.length - 8) {
-            return false;
+        if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION
+                || (long) width * height > MAX_IMAGE_PIXELS) {
+            throw new BaseException("图片尺寸过大");
         }
-        int position = 12;
-        while (position + 8 <= bytes.length) {
-            int chunkSize = unsignedLittleEndianInt(bytes, position + 4);
-            long chunkEnd = (long) position + 8 + chunkSize;
-            if (chunkEnd > bytes.length) {
-                return false;
-            }
-            if (isChunk(bytes, position, 'V', 'P', '8', ' ') && hasValidVp8Dimensions(bytes, position + 8, chunkSize)) {
-                return true;
-            }
-            if (isChunk(bytes, position, 'V', 'P', '8', 'L') && hasValidVp8lDimensions(bytes, position + 8, chunkSize)) {
-                return true;
-            }
-            if (isChunk(bytes, position, 'V', 'P', '8', 'X') && hasValidVp8xDimensions(bytes, position + 8, chunkSize)) {
-                return true;
-            }
-            position = (int) (chunkEnd + (chunkSize & 1));
-        }
-        return position == bytes.length;
-    }
-
-    private boolean hasValidVp8Dimensions(byte[] bytes, int dataOffset, int chunkSize) {
-        if (chunkSize < 10 || dataOffset + 10 > bytes.length
-                || bytes[dataOffset + 3] != (byte) 0x9d
-                || bytes[dataOffset + 4] != 0x01
-                || bytes[dataOffset + 5] != 0x2a) {
-            return false;
-        }
-        return unsignedLittleEndianShort(bytes, dataOffset + 6) > 0
-                && unsignedLittleEndianShort(bytes, dataOffset + 8) > 0;
-    }
-
-    private boolean hasValidVp8lDimensions(byte[] bytes, int dataOffset, int chunkSize) {
-        if (chunkSize < 5 || dataOffset + 5 > bytes.length || bytes[dataOffset] != 0x2f) {
-            return false;
-        }
-        int width = 1 + ((bytes[dataOffset + 1] & 0xff) | ((bytes[dataOffset + 2] & 0x3f) << 8));
-        int height = 1 + (((bytes[dataOffset + 2] & 0xc0) >> 6)
-                | ((bytes[dataOffset + 3] & 0xff) << 2)
-                | ((bytes[dataOffset + 4] & 0x0f) << 10));
-        return width > 0 && height > 0;
-    }
-
-    private boolean hasValidVp8xDimensions(byte[] bytes, int dataOffset, int chunkSize) {
-        if (chunkSize < 10 || dataOffset + 10 > bytes.length) {
-            return false;
-        }
-        int width = 1 + unsigned24LittleEndian(bytes, dataOffset + 4);
-        int height = 1 + unsigned24LittleEndian(bytes, dataOffset + 7);
-        return width > 0 && height > 0;
-    }
-
-    private boolean isChunk(byte[] bytes, int offset, char first, char second, char third, char fourth) {
-        return bytes[offset] == first && bytes[offset + 1] == second
-                && bytes[offset + 2] == third && bytes[offset + 3] == fourth;
-    }
-
-    private int unsignedLittleEndianInt(byte[] bytes, int offset) {
-        return (bytes[offset] & 0xff) | ((bytes[offset + 1] & 0xff) << 8)
-                | ((bytes[offset + 2] & 0xff) << 16) | ((bytes[offset + 3] & 0xff) << 24);
-    }
-
-    private int unsignedLittleEndianShort(byte[] bytes, int offset) {
-        return ((bytes[offset] & 0xff) | ((bytes[offset + 1] & 0x3f) << 8));
-    }
-
-    private int unsigned24LittleEndian(byte[] bytes, int offset) {
-        return (bytes[offset] & 0xff) | ((bytes[offset + 1] & 0xff) << 8) | ((bytes[offset + 2] & 0xff) << 16);
     }
 
     private BaseException unsupportedImage() {
@@ -214,6 +132,19 @@ public class ImageUploadServiceImpl implements ImageUploadService {
         ImageFormat(String contentType, String extension) {
             this.contentType = contentType;
             this.extension = extension;
+        }
+
+        private static ImageFormat fromReaderFormat(String formatName) {
+            if ("png".equalsIgnoreCase(formatName)) {
+                return PNG;
+            }
+            if ("jpeg".equalsIgnoreCase(formatName) || "jpg".equalsIgnoreCase(formatName)) {
+                return JPEG;
+            }
+            if ("webp".equalsIgnoreCase(formatName)) {
+                return WEBP;
+            }
+            throw new BaseException("仅支持 PNG、JPEG 和 WebP 图片");
         }
     }
 }

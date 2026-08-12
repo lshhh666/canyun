@@ -17,6 +17,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -161,18 +162,66 @@ class ImageUploadServiceImplTest {
         verifyNoInteractions(aliOssUtil);
     }
 
+    @Test
+    void rejectsVp8xContainerWithoutDecodableImageBeforeCallingOss() {
+        MockMultipartFile file = new MockMultipartFile("file", "avatar.webp", "image/webp", pseudoVp8xWebpBytes());
+
+        BaseException error = assertThrows(BaseException.class,
+                () -> service.uploadImage(file, "user-avatar"));
+
+        assertEquals("仅支持 PNG、JPEG 和 WebP 图片", error.getMessage());
+        verifyNoInteractions(aliOssUtil);
+    }
+
+    @Test
+    void rejectsFakeVp8PayloadBeforeCallingOss() {
+        MockMultipartFile file = new MockMultipartFile("file", "avatar.webp", "image/webp", fakeVp8WebpBytes());
+
+        BaseException error = assertThrows(BaseException.class,
+                () -> service.uploadImage(file, "user-avatar"));
+
+        assertEquals("仅支持 PNG、JPEG 和 WebP 图片", error.getMessage());
+        verifyNoInteractions(aliOssUtil);
+    }
+
+    @Test
+    void rejectsImageWiderThanMaximumBeforeCallingOss() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "large.png", "image/png", imageBytes("png", 4097, 1));
+
+        BaseException error = assertThrows(BaseException.class,
+                () -> service.uploadImage(file, "user-avatar"));
+
+        assertEquals("图片尺寸过大", error.getMessage());
+        verifyNoInteractions(aliOssUtil);
+    }
+
     private static byte[] imageBytes(String format) throws IOException {
-        BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        return imageBytes(format, 1, 1);
+    }
+
+    private static byte[] imageBytes(String format, int width, int height) throws IOException {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         assertTrue(ImageIO.write(image, format, output));
         return output.toByteArray();
     }
 
     private static byte[] validWebpBytes() {
+        return Base64.getDecoder().decode("UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoBAAEAAQAcJaACdLoB+AAETAAA/vW4f/6aR40jxpHxcP/ugT90CfugT/3NoAAA");
+    }
+
+    private static byte[] pseudoVp8xWebpBytes() {
         return new byte[]{
                 'R', 'I', 'F', 'F', 22, 0, 0, 0, 'W', 'E', 'B', 'P',
                 'V', 'P', '8', 'X', 10, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
+    }
+
+    private static byte[] fakeVp8WebpBytes() {
+        return new byte[]{
+                'R', 'I', 'F', 'F', 14, 0, 0, 0, 'W', 'E', 'B', 'P',
+                'V', 'P', '8', ' ', 2, 0, 0, 0, 1, 2
         };
     }
 }
