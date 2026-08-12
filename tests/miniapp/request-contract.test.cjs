@@ -21,6 +21,12 @@ function loadRequest() {
       },
       removeStorageSync: key => removedStorageKeys.push(key)
     },
+    clearSession: targetStore => {
+      targetStore.commit('setToken', '')
+      targetStore.commit('setBaseUserInfo', '')
+      context.uni.removeStorageSync('cloudmeal.token')
+      context.uni.removeStorageSync('cloudmeal.profile')
+    },
     module: { exports: {} }
   }
 
@@ -112,15 +118,29 @@ test('HTTP and business 401 responses clear login state', async () => {
     await expectRejected(promise, error => {
       assert.strictEqual(error.raw, response)
     })
-    assert.deepEqual(harness.commits, [['setToken', '']])
-    assert.deepEqual(harness.removedStorageKeys, ['token'])
+    assert.deepEqual(harness.commits, [['setToken', ''], ['setBaseUserInfo', '']])
+    assert.deepEqual(harness.removedStorageKeys, ['cloudmeal.token', 'cloudmeal.profile'])
   }
+})
+
+test('HTTP 401 wins over a misleading success payload', async () => {
+  const harness = loadRequest()
+  const promise = harness.request({ url: '/protected' })
+  const response = { statusCode: 401, data: { code: 1, data: { secret: true } } }
+  harness.getOptions().success(response)
+
+  await expectRejected(promise, error => {
+    assert.equal(error.code, 401)
+    assert.strictEqual(error.raw, response)
+  })
+  assert.deepEqual(harness.removedStorageKeys, ['cloudmeal.token', 'cloudmeal.profile'])
 })
 
 test('core backend paths and methods remain unchanged', () => {
   const api = read('xiaochengxu-source/pages/api/api.js')
   const pairs = [
     ["'/user/user/login'", 'POST'],
+    ["'/user/user/profile'", 'PUT'],
     ["'/user/category/list'", 'GET'],
     ["'/user/dish/list'", 'GET'],
     ["'/user/setmeal/list'", 'GET'],
@@ -143,4 +163,10 @@ test('core backend paths and methods remain unchanged', () => {
     const pattern = new RegExp(`url:\\s*${escapedUrl}[\\s\\S]{0,120}?method:\\s*'${method}'`)
     assert.match(api, pattern, `missing URL/method pair: ${url} ${method}`)
   })
+})
+
+test('profile API wrappers preserve the exact GET-default and PUT contracts', () => {
+  const api = read('xiaochengxu-source/pages/api/api.js')
+  assert.match(api, /getUserProfile\s*=\s*\(\)\s*=>\s*request\(\{\s*url:\s*'\/user\/user\/profile'\s*\}\)/)
+  assert.match(api, /updateUserProfile\s*=\s*params\s*=>\s*request\(\{[\s\S]{0,120}?method:\s*'PUT'[\s\S]{0,80}?params/)
 })

@@ -97,6 +97,14 @@ export const userLogin = (params) => {
 	})
 }
 
+export const getUserProfile = () => request({ url: '/user/user/profile' })
+
+export const updateUserProfile = params => request({
+	url: '/user/user/profile',
+	method: 'PUT',
+	params
+})
+
 // 菜品和套餐的分类
 export const getCategoryList = (params) => {
 	return request({

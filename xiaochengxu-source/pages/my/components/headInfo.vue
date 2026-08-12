@@ -1,5 +1,5 @@
 <template>
-  <view class="account-head">
+  <view class="account-head" @click="editProfile">
     <image class="account-head__avatar" :src="psersonUrl" mode="aspectFill" />
     <view class="account-head__copy">
       <text class="account-head__eyebrow">个人中心</text>
@@ -19,6 +19,11 @@ export default {
     nickName: {
       type: String,
       default: '微信用户'
+    }
+  },
+  methods: {
+    editProfile() {
+      this.$emit('edit-profile')
     }
   }
 }

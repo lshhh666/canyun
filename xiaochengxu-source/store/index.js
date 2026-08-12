@@ -17,6 +17,8 @@ const store = new Vuex.Store({
 		shopStatus: {}, //店铺状态
 		orderData: {},
 		token: '',
+		profileCompleted: null,
+		profilePromptSkipped: false,
 		arrivals: '',
 		remarkData: '',//备注
 		addressData: {}, //地址选择
@@ -60,6 +62,12 @@ const store = new Vuex.Store({
 		},
 		setToken(state, provider) {
 			state.token = provider
+		},
+		setProfileCompleted(state, provider) {
+			state.profileCompleted = provider
+		},
+		setProfilePromptSkipped(state, provider) {
+			state.profilePromptSkipped = provider
 		},
 		setArrivalTime(state, provider) {
 			state.arrivals = provider

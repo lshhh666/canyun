@@ -1,5 +1,6 @@
 import store from './../store'
 import { baseUrl } from './env'
+import { clearSession } from './session.js'
 
 export function request({ url = '', params = {}, method = 'GET' }) {
   const header = {
@@ -16,13 +17,18 @@ export function request({ url = '', params = {}, method = 'GET' }) {
       method,
       success: res => {
         const data = res.data || {}
+        if (res.statusCode === 401 || data.code === 401) {
+          clearSession(store)
+          reject({
+            code: 401,
+            message: data.msg || '请求失败，请稍后重试',
+            raw: res
+          })
+          return
+        }
         if (data.code === 200 || data.code === 1) {
           resolve(data)
           return
-        }
-        if (res.statusCode === 401 || data.code === 401) {
-          store.commit('setToken', '')
-          uni.removeStorageSync('token')
         }
         reject({
           code: data.code ?? res.statusCode,

@@ -154,6 +154,16 @@
       <view class="loading-card">菜单加载中…</view>
     </view>
 
+    <profile-editor
+      v-if="profileEditorVisible || shouldPromptProfileEditor"
+      :profile="$store.state.baseUserInfo || {}"
+      :allow-skip="true"
+      :saving="profileSaving"
+      @save="saveProfile"
+      @skip="skipProfileEditor"
+      @close="skipProfileEditor"
+    />
+
     <phone ref="phone" :phoneData="phoneData" @closePopup="closePopup"></phone>
   </view>
 </template>

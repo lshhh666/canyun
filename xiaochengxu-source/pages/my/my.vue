@@ -3,7 +3,11 @@
     <cloudmeal-header title="我的餐云" />
 
     <scroll-view class="account-scroll" scroll-y @scrolltolower="lower">
-      <head-info :psersonUrl="psersonUrl" :nickName="nickName" />
+      <head-info
+        :psersonUrl="psersonUrl"
+        :nickName="nickName"
+        @edit-profile="openProfileEditor"
+      />
 
       <view class="account-actions">
         <view class="account-action" @click="goAddress">
@@ -44,17 +48,28 @@
     </scroll-view>
 
     <app-tabbar active="account" />
+
+    <profile-editor
+      v-if="profileEditorVisible"
+      :profile="$store.state.baseUserInfo || {}"
+      :allow-skip="false"
+      :saving="profileSaving"
+      @save="saveProfile"
+      @close="closeProfileEditor"
+    />
   </view>
 </template>
 
 <script>
-import { getOrderPage, repetitionOrder, delShoppingCart } from '../api/api.js'
+import { getOrderPage, repetitionOrder, delShoppingCart, updateUserProfile } from '../api/api.js'
 import { mapMutations } from 'vuex'
 import HeadInfo from './components/headInfo.vue'
 import OrderList from './components/orderList.vue'
 import CloudmealHeader from '@/components/cloudmeal-header/cloudmeal-header.vue'
 import AppTabbar from '@/components/app-tabbar/app-tabbar.vue'
 import { getErrorMessage } from '@/utils/error-message.js'
+import { persistSession } from '@/utils/session.js'
+import { uploadAvatar } from '@/utils/upload.js'
 
 const DEFAULT_AVATAR = '/static/brand/cloudmeal-logo.png'
 const DEFAULT_NICKNAME = '微信用户'
@@ -74,7 +89,9 @@ export default {
       },
       failedPage: null,
       loadingText: '',
-      loading: false
+      loading: false,
+      profileEditorVisible: false,
+      profileSaving: false
     }
   },
   onLoad() {
@@ -89,7 +106,41 @@ export default {
     this.getList()
   },
   methods: {
-    ...mapMutations(['setAddressBackUrl']),
+    ...mapMutations(['setAddressBackUrl', 'setBaseUserInfo']),
+    openProfileEditor() {
+      this.profileEditorVisible = true
+    },
+    closeProfileEditor() {
+      if (!this.profileSaving) this.profileEditorVisible = false
+    },
+    async saveProfile({ name, tempAvatarPath, currentAvatar }) {
+      if (this.profileSaving) return false
+      this.profileSaving = true
+      try {
+        let avatar = currentAvatar
+        if (tempAvatarPath) {
+          const uploadResult = await uploadAvatar(tempAvatarPath)
+          avatar = uploadResult && uploadResult.data
+            ? uploadResult.data.url || uploadResult.data
+            : ''
+        }
+        const response = await updateUserProfile({ name, avatar })
+        const profileData = response.data || { name, avatar, profileCompleted: true }
+        persistSession(this.$store, profileData)
+        this.nickName = profileData.name || name
+        this.psersonUrl = profileData.avatar || avatar || DEFAULT_AVATAR
+        this.profileEditorVisible = false
+        return true
+      } catch (error) {
+        uni.showToast({
+          title: getErrorMessage(error, '资料保存失败，请重试'),
+          icon: 'none'
+        })
+        return false
+      } finally {
+        this.profileSaving = false
+      }
+    },
     async getList(page = this.pageInfo.page) {
       if (this.loading) return false
       this.loading = true

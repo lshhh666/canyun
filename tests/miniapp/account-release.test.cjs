@@ -42,6 +42,7 @@ function accountHarness(state = {}, overrides = {}) {
     OrderList: {},
     CloudmealHeader: {},
     AppTabbar: {},
+    ProfileEditor: {},
     DEFAULT_AVATAR: '/static/brand/cloudmeal-logo.png',
     DEFAULT_NICKNAME: '微信用户',
     getErrorMessage: (error, fallback) => (error && error.message) || fallback,
@@ -50,6 +51,9 @@ function accountHarness(state = {}, overrides = {}) {
     getOrderPage: overrides.getOrderPage || (async () => ({ code: 1, data: { records: [], total: 0 } })),
     repetitionOrder: overrides.repetitionOrder || (async () => ({ code: 1 })),
     delShoppingCart: overrides.delShoppingCart || (async () => ({ code: 1 })),
+    uploadAvatar: overrides.uploadAvatar || (async path => ({ code: 1, data: { url: path } })),
+    updateUserProfile: overrides.updateUserProfile || (async params => ({ code: 1, data: params })),
+    persistSession: overrides.persistSession || (() => {}),
     getCurrentPages: overrides.getCurrentPages || (() => [
       { route: 'pages/index/index' },
       { route: 'pages/my/my' }

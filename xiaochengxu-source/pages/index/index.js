@@ -8,6 +8,7 @@ import dishDetail from "./components/dishDetail.vue" //菜品详情
 import {
 	// 点餐页相关接口
 	userLogin,
+	updateUserProfile,
 	getCategoryList,
 	dishListByCategoryId,
 	// 查询套餐列表的接口
@@ -30,6 +31,8 @@ import {
 import { mapState, mapMutations } from "vuex"
 import { baseUrl } from "../../utils/env"
 import { getErrorMessage } from "../../utils/error-message"
+import { persistSession } from "../../utils/session.js"
+import { uploadAvatar } from "../../utils/upload.js"
 export default {
 	data() {
 		return {
@@ -86,6 +89,8 @@ export default {
 			isUnloaded: false,
 			elRectRetryLimit: 50,
 			elRectRetryTasks: [],
+			profileEditorVisible: false,
+			profileSaving: false,
 		}
 	},
 	//   组件
@@ -100,6 +105,11 @@ export default {
 	},
 	//   计算属性
 	computed: {
+		shouldPromptProfileEditor: function () {
+			return Boolean(
+				this.token() && this.profileCompleted() === false && !this.profilePromptSkipped()
+			)
+		},
 		shopStatusText: function () {
 			if (this.shopStatus === null) return "状态加载中"
 			return this.shopStatus === 1 ? "营业中" : "休息中"
@@ -182,6 +192,7 @@ export default {
 		})
 	},
 	onShow() {
+		this.syncProfileEditorVisibility()
 		if (this.token()) {
 			this.init()
 		}
@@ -196,6 +207,8 @@ export default {
 			"setStoreInfo",
 			"setBaseUserInfo", //设置用户基本信息
 			"setToken", //设置token
+			"setProfileCompleted",
+			"setProfilePromptSkipped",
 			"setDeliveryFee", //设置配送费
 		]),
 		// 从vuex信息
@@ -205,23 +218,85 @@ export default {
 			"orderListData",
 			"baseUserInfo", //用户信息
 			"token", //token
+			"profileCompleted",
+			"profilePromptSkipped",
 			"deliveryFee", //配送费
 		]),
 		loginSync() {
 			return new Promise((resolve, reject) => {
 				uni.login({
+					provider: "weixin",
 					success: (loginRes) => {
-						if (loginRes.errMsg === "login:ok") {
+						if (loginRes && loginRes.errMsg === "login:ok" && loginRes.code) {
 							resolve(loginRes.code)
+							return
 						}
+						reject({ code: 'LOGIN_FAILED', message: '微信登录失败，请重试', raw: loginRes })
 					},
+					fail: error => reject({ code: 'LOGIN_FAILED', message: '微信登录失败，请重试', raw: error })
 				})
 			})
+		},
+		requestLocationWithoutBlockingLogin() {
+			try {
+				uni.getLocation({
+					type: 'gcj02',
+					isHighAccuracy: true,
+					success() {},
+					fail() {}
+				})
+			} catch (error) {}
+		},
+		async loginAndInitialize() {
+			const code = await this.loginSync()
+			const loginResult = await userLogin({ code })
+			const data = loginResult.data || {}
+			persistSession(this.$store, data)
+			this.setProfilePromptSkipped(false)
+			this.profileEditorVisible = !data.profileCompleted
+			this.setDeliveryFee(data.deliveryFee)
+			this.setShopInfo({
+				shopName: data.shopName,
+				shopAddress: data.shopAddress,
+				shopId: data.shopId
+			})
+			this.requestLocationWithoutBlockingLogin()
+			await this.init()
+			return loginResult
+		},
+		syncProfileEditorVisibility() {
+			this.profileEditorVisible = this.shouldPromptProfileEditor
+		},
+		skipProfileEditor() {
+			this.setProfilePromptSkipped(true)
+			this.profileEditorVisible = false
+		},
+		async saveProfile({ name, tempAvatarPath, currentAvatar }) {
+			if (this.profileSaving) return false
+			this.profileSaving = true
+			try {
+				let avatar = currentAvatar
+				if (tempAvatarPath) {
+					const uploadResult = await uploadAvatar(tempAvatarPath)
+					avatar = uploadResult && uploadResult.data
+						? uploadResult.data.url || uploadResult.data
+						: ''
+				}
+				const response = await updateUserProfile({ name, avatar })
+				persistSession(this.$store, response.data || { name, avatar, profileCompleted: true })
+				this.setProfilePromptSkipped(false)
+				this.profileEditorVisible = false
+				return true
+			} catch (error) {
+				uni.showToast({ title: getErrorMessage(error, '资料保存失败，请重试'), icon: 'none' })
+				return false
+			} finally {
+				this.profileSaving = false
+			}
 		},
 		// 获取用户信息
 		getData() {
 			let res = wx.getMenuButtonBoundingClientRect()
-			let _this = this
 			// 获取店铺状态
 			this.getShopInfo()
 			this.selectHeight = res.height
@@ -230,68 +305,13 @@ export default {
 					title: "温馨提示",
 					content: "亲，授权微信登录后才能点餐！",
 					showCancel: false,
-					success(res) {
+					success: async res => {
 						if (res.confirm) {
-							let jsCode = ""
-							uni.login({
-								provider: "weixin",
-								success: (loginRes) => {
-									if (loginRes.errMsg === "login:ok") {
-										jsCode = loginRes.code
-									}
-								},
-							})
-							// 授权
-							uni.getUserProfile({
-								desc: "登录",
-								success: function (userInfo) {
-									_this.setBaseUserInfo(userInfo.userInfo)
-									const params = {
-										code: jsCode,
-										// 传递地理位置信息
-									}
-									// 获取定位信息
-									uni.getLocation({
-										type: 'gcj02', isHighAccuracy: true
-									}).then(([err, result]) => {
-										if (err) {
-											uni.showToast({
-												title: "获取地理位置失败",
-												icon: "none"
-											})
-										} else {
-											if (process.env.NODE_ENV === '"development"') {
-												params.location = `116.481488,39.990464`//	先写死在北京
-											} else {
-												params.location = `${result.longitude},${result.latitude}`
-											}
-
-											userLogin(params)
-												.then((success) => {
-													if (success.code === 1) {
-														_this.setToken(success.data.token)
-														// 保存配送费
-														_this.setDeliveryFee(success.data.deliveryFee)
-														// 保存商铺信息
-														_this.setShopInfo({
-															shopName: success.data.shopName,
-															shopAddress: success.data.shopAddress,
-															shopId: success.data.shopId,
-														})
-														_this.init()
-													}
-												})
-												.catch((err) => { })
-
-
-
-										}
-
-									})
-
-								},
-								fail: function (err) { },
-							})
+							try {
+								await this.loginAndInitialize()
+							} catch (error) {
+								uni.showToast({ title: getErrorMessage(error, '微信登录失败，请重试'), icon: 'none' })
+							}
 						}
 					},
 				})

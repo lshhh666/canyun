@@ -1,6 +1,10 @@
 <script>
+import { restoreSession } from './utils/session.js'
+
 export default {
-  onLaunch() {},
+  async onLaunch() {
+    await restoreSession(this.$store)
+  },
   onShow() {},
   onHide() {}
 }
