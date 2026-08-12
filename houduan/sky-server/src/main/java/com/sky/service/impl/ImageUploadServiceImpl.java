@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.io.ByteArrayInputStream;
 import java.util.Iterator;
@@ -97,13 +98,25 @@ public class ImageUploadServiceImpl implements ImageUploadService {
                     throw unsupportedImage();
                 }
                 validateDimensions(reader.getWidth(0), reader.getHeight(0));
-                if (format == ImageFormat.WEBP) {
-                    reader.readAsRenderedImage(0, null);
-                }
+                validateDecodedImage(reader);
                 return format;
             } finally {
                 reader.dispose();
             }
+        }
+    }
+
+    private void validateDecodedImage(ImageReader reader) throws IOException {
+        boolean[] warned = {false};
+        reader.addIIOReadWarningListener((source, warning) -> warned[0] = true);
+        RenderedImage image = reader.readAsRenderedImage(0, null);
+        if (image == null) {
+            throw unsupportedImage();
+        }
+        validateDimensions(image.getWidth(), image.getHeight());
+        image.getData();
+        if (warned[0]) {
+            throw unsupportedImage();
         }
     }
 
