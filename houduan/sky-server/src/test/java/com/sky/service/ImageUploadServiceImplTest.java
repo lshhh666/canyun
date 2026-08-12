@@ -12,6 +12,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,25 +72,26 @@ class ImageUploadServiceImplTest {
     }
 
     @Test
-    void uploadsPngUsingGeneratedNameUnderSuppliedDirectory() {
+    void uploadsPngUsingGeneratedNameUnderSuppliedDirectory() throws IOException {
+        byte[] png = imageBytes("png");
         MockMultipartFile file = new MockMultipartFile("file", "../../avatar.png", "image/png",
-                new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'});
+                png);
         when(aliOssUtil.upload(any(byte[].class), any(String.class))).thenReturn("https://oss/avatar.png");
 
         String result = service.uploadImage(file, "user-avatar");
 
         assertEquals("https://oss/avatar.png", result);
         ArgumentCaptor<String> objectName = ArgumentCaptor.forClass(String.class);
-        verify(aliOssUtil).upload(eq(new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}), objectName.capture());
+        verify(aliOssUtil).upload(eq(png), objectName.capture());
         assertTrue(objectName.getValue().matches("user-avatar/[0-9a-f-]+\\.png"));
     }
 
     @Test
-    void uploadsJpegAndWebpWithContentTypeExtension() {
+    void uploadsJpegAndWebpWithVerifiedExtensions() throws IOException {
         MockMultipartFile jpeg = new MockMultipartFile("file", "avatar.bin", "image/jpeg",
-                new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, 0, 0, 0, 0, 0});
+                imageBytes("jpeg"));
         MockMultipartFile webp = new MockMultipartFile("file", "avatar.bin", "image/webp",
-                new byte[]{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'});
+                validWebpBytes());
         when(aliOssUtil.upload(any(byte[].class), any(String.class))).thenReturn("https://oss/image");
 
         service.uploadImage(jpeg, "user-avatar");
@@ -99,9 +104,9 @@ class ImageUploadServiceImplTest {
     }
 
     @Test
-    void mapsOssFailureToUploadFailedMessage() {
+    void mapsOssFailureToUploadFailedMessage() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "avatar.png", "image/png",
-                new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'});
+                imageBytes("png"));
         when(aliOssUtil.upload(any(byte[].class), any(String.class))).thenThrow(new RuntimeException("OSS unavailable"));
 
         BaseException error = assertThrows(BaseException.class,
@@ -120,5 +125,54 @@ class ImageUploadServiceImplTest {
 
         assertEquals("仅支持 PNG、JPEG 和 WebP 图片", error.getMessage());
         verifyNoInteractions(aliOssUtil);
+    }
+
+    @Test
+    void rejectsPngMagicWithGarbagePayloadBeforeCallingOss() {
+        MockMultipartFile file = new MockMultipartFile("file", "avatar.png", "image/png",
+                new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 1, 2, 3});
+
+        BaseException error = assertThrows(BaseException.class,
+                () -> service.uploadImage(file, "user-avatar"));
+
+        assertEquals("仅支持 PNG、JPEG 和 WebP 图片", error.getMessage());
+        verifyNoInteractions(aliOssUtil);
+    }
+
+    @Test
+    void rejectsValidPngWithNonWhitelistedMimeBeforeCallingOss() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "avatar.png", "text/plain", imageBytes("png"));
+
+        BaseException error = assertThrows(BaseException.class,
+                () -> service.uploadImage(file, "user-avatar"));
+
+        assertEquals("仅支持 PNG、JPEG 和 WebP 图片", error.getMessage());
+        verifyNoInteractions(aliOssUtil);
+    }
+
+    @Test
+    void rejectsMimeThatDoesNotMatchValidatedImageFormatBeforeCallingOss() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "avatar.png", "image/jpeg", imageBytes("png"));
+
+        BaseException error = assertThrows(BaseException.class,
+                () -> service.uploadImage(file, "user-avatar"));
+
+        assertEquals("仅支持 PNG、JPEG 和 WebP 图片", error.getMessage());
+        verifyNoInteractions(aliOssUtil);
+    }
+
+    private static byte[] imageBytes(String format) throws IOException {
+        BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        assertTrue(ImageIO.write(image, format, output));
+        return output.toByteArray();
+    }
+
+    private static byte[] validWebpBytes() {
+        return new byte[]{
+                'R', 'I', 'F', 'F', 22, 0, 0, 0, 'W', 'E', 'B', 'P',
+                'V', 'P', '8', 'X', 10, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
     }
 }
