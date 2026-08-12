@@ -4,8 +4,11 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.sky.constant.JwtClaimsConstant;
 import com.sky.constant.MessageConstant;
+import com.sky.context.BaseContext;
 import com.sky.dto.UserLoginDTO;
+import com.sky.dto.UserProfileDTO;
 import com.sky.entity.User;
+import com.sky.exception.BaseException;
 import com.sky.exception.LoginFailedException;
 import com.sky.mapper.UserMapper;
 import com.sky.properties.JwtProperties;
@@ -14,6 +17,7 @@ import com.sky.service.UserService;
 import com.sky.utils.HttpClientUtil;
 import com.sky.utils.JwtUtil;
 import com.sky.vo.UserLoginVO;
+import com.sky.vo.UserProfileVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -52,14 +56,67 @@ public class UserServiceimpl implements UserService {
         claims.put(JwtClaimsConstant.USER_ID,user.getId());
         String token= JwtUtil.createJWT(jwtProperties.getUserSecretKey(),jwtProperties.getUserTtl(),claims);
 
+       UserProfileVO profile = toProfile(user);
        return UserLoginVO.builder()
                .id(user.getId())
                .openid(user.getOpenid())
                .token(token)
+               .name(profile.getName())
+               .avatar(profile.getAvatar())
+               .profileCompleted(profile.getProfileCompleted())
                .build();
     }
 
-    private String getString(UserLoginDTO userLoginDTO) {
+    @Override
+    public UserProfileVO getProfile() {
+        Long userId = BaseContext.getCurrentId();
+        return toProfile(userMapper.getById(userId));
+    }
+
+    @Override
+    public UserProfileVO updateProfile(UserProfileDTO userProfileDTO) {
+        String name = trimToNull(userProfileDTO.getName());
+        String avatar = trimToNull(userProfileDTO.getAvatar());
+        validateProfile(name, avatar);
+
+        Long userId = BaseContext.getCurrentId();
+        User user = User.builder().id(userId).name(name).avatar(avatar).build();
+        userMapper.updateProfile(user);
+        return toProfile(user);
+    }
+
+    private UserProfileVO toProfile(User user) {
+        String name = trimToNull(user.getName());
+        String avatar = trimToNull(user.getAvatar());
+        return UserProfileVO.builder()
+                .id(user.getId())
+                .name(name)
+                .avatar(avatar)
+                .profileCompleted(name != null && avatar != null)
+                .build();
+    }
+
+    private void validateProfile(String name, String avatar) {
+        if (name == null) {
+            throw new BaseException("昵称不能为空");
+        }
+        if (name.length() > 32) {
+            throw new BaseException("昵称不能超过32个字符");
+        }
+        if (avatar == null || !(avatar.startsWith("http://") || avatar.startsWith("https://"))) {
+            throw new BaseException("头像地址无效");
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    protected String getString(UserLoginDTO userLoginDTO) {
         // 1. 拼接微信接口地址
 
         Map<String, String> paramMap = new HashMap<>();

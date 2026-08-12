@@ -1,4 +1,4 @@
-package com.sky.vo;
+package com.sky.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,13 +11,8 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserLoginVO implements Serializable {
+public class UserProfileDTO implements Serializable {
 
-    private Long id;
-    private String openid;
-    private String token;
     private String name;
     private String avatar;
-    private Boolean profileCompleted;
-
 }
