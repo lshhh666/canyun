@@ -130,6 +130,13 @@ test('account user identity uses real Vuex values with nickname and logo fallbac
   real.definition.onLoad.call(real.instance)
   assert.equal(real.instance.nickName, '小云')
   assert.equal(real.instance.psersonUrl, 'https://example.test/avatar.png')
+
+  real.instance.$store.state.baseUserInfo = {
+    avatarUrl: 'https://example.test/updated.png',
+    nickName: '实时更新'
+  }
+  assert.equal(real.instance.nickName, '实时更新')
+  assert.equal(real.instance.psersonUrl, 'https://example.test/updated.png')
 })
 
 test('account routes address, order history and order detail to their real pages', () => {

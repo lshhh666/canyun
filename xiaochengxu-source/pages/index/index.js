@@ -32,6 +32,7 @@ import { mapState, mapMutations } from "vuex"
 import { baseUrl } from "../../utils/env"
 import { getErrorMessage } from "../../utils/error-message"
 import { persistSession } from "../../utils/session.js"
+import { waitForSessionReady } from "../../utils/session.js"
 import { uploadAvatar } from "../../utils/upload.js"
 export default {
 	data() {
@@ -91,6 +92,8 @@ export default {
 			elRectRetryTasks: [],
 			profileEditorVisible: false,
 			profileSaving: false,
+			loginPromptPending: false,
+			menuInitializationPromise: null,
 		}
 	},
 	//   组件
@@ -160,7 +163,7 @@ export default {
 	onReady() {
 		this.getMenuItemTop()
 	},
-	onLoad(options) {
+	async onLoad(options) {
 		this.isUnloaded = false
 		this.networkStatusHandler = (res) => {
 			if (!this.isUnloaded && res.isConnected === false) {
@@ -172,7 +175,7 @@ export default {
 		uni.onNetworkStatusChange(this.networkStatusHandler)
 		if (options) {
 			if (!options.status && !options.formOrder) {
-				this.getData()
+				await this.getData()
 			}
 		}
 	},
@@ -191,10 +194,13 @@ export default {
 			task.resolve(false)
 		})
 	},
-	onShow() {
+	async onShow() {
+		await waitForSessionReady()
 		this.syncProfileEditorVisibility()
 		if (this.token()) {
-			this.init()
+			await this.initializeMenuOnce()
+		} else {
+			await this.getData()
 		}
 	},
 	methods: {
@@ -247,6 +253,18 @@ export default {
 				})
 			} catch (error) {}
 		},
+		async initializeMenuOnce() {
+			if (this.menuInitializationPromise) return this.menuInitializationPromise
+			const initialization = Promise.resolve().then(() => this.init())
+			this.menuInitializationPromise = initialization
+			try {
+				return await initialization
+			} finally {
+				if (this.menuInitializationPromise === initialization) {
+					this.menuInitializationPromise = null
+				}
+			}
+		},
 		async loginAndInitialize() {
 			const code = await this.loginSync()
 			const loginResult = await userLogin({ code })
@@ -261,7 +279,7 @@ export default {
 				shopId: data.shopId
 			})
 			this.requestLocationWithoutBlockingLogin()
-			await this.init()
+			await this.initializeMenuOnce()
 			return loginResult
 		},
 		syncProfileEditorVisibility() {
@@ -295,27 +313,40 @@ export default {
 			}
 		},
 		// 获取用户信息
-		getData() {
+		async getData() {
+			await waitForSessionReady()
 			let res = wx.getMenuButtonBoundingClientRect()
 			// 获取店铺状态
 			this.getShopInfo()
 			this.selectHeight = res.height
 			if (this.token() === "") {
+				if (this.loginPromptPending) return false
+				this.loginPromptPending = true
+				let handled = false
 				uni.showModal({
 					title: "温馨提示",
 					content: "亲，授权微信登录后才能点餐！",
 					showCancel: false,
 					success: async res => {
+						handled = true
 						if (res.confirm) {
 							try {
 								await this.loginAndInitialize()
 							} catch (error) {
 								uni.showToast({ title: getErrorMessage(error, '微信登录失败，请重试'), icon: 'none' })
+							} finally {
+								this.loginPromptPending = false
 							}
+						} else {
+							this.loginPromptPending = false
 						}
 					},
+					complete: () => {
+						if (!handled) this.loginPromptPending = false
+					}
 				})
 			}
+			return true
 		},
 
 		async init() {

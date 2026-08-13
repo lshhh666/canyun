@@ -13,6 +13,16 @@ function exportedModule(relativePath, exportNames, context = {}) {
   return sandbox.module.exports
 }
 
+function deferred() {
+  let resolve
+  let reject
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
 function componentOptions(relativePath, context = {}) {
   const source = read(relativePath)
   const script = relativePath.endsWith('.vue')
@@ -138,7 +148,7 @@ function indexHarness(overrides = {}) {
       })
     },
     showToast() {},
-    showModal() {},
+    showModal: overrides.showModal || (() => {}),
     onNetworkStatusChange() {},
     offNetworkStatusChange() {},
     getMenuButtonBoundingClientRect: () => ({ top: 0, height: 0 })
@@ -146,6 +156,7 @@ function indexHarness(overrides = {}) {
   const definition = componentOptions('xiaochengxu-source/pages/index/index.js', {
     Phone: {}, CloudmealHeader: {}, AppTabbar: {}, StatePanel: {}, popMask: {}, popCart: {},
     dishDetail: {}, ProfileEditor: {}, baseUrl: 'http://example.test', getErrorMessage: () => 'error',
+    waitForSessionReady: overrides.waitForSessionReady || (async () => null),
     userLogin: overrides.userLogin || (async ({ code }) => {
       events.push(`api.login:${code}`)
       return {
@@ -220,6 +231,114 @@ test('session persistence uses exact keys and normalizes backend profile fields'
   assert.equal(harness.storage.profilePromptSkipped, undefined)
 })
 
+test('session persistence rolls Vuex and both storage keys back after any write or commit failure', () => {
+  for (const failure of ['token-storage', 'profile-storage', 'commit']) {
+    const oldProfile = { nickName: undefined, avatarUrl: 'old.png' }
+    const oldStoredProfile = { nickName: undefined, avatarUrl: 'stored-old.png' }
+    const storage = {
+      'cloudmeal.token': 'old-token',
+      'cloudmeal.profile': oldStoredProfile
+    }
+    const state = {
+      token: 'old-token',
+      baseUserInfo: oldProfile,
+      profileCompleted: false,
+      profilePromptSkipped: true
+    }
+    let failed = false
+    const store = {
+      state,
+      commit(name, payload) {
+        const keys = {
+          setToken: 'token',
+          setBaseUserInfo: 'baseUserInfo',
+          setProfileCompleted: 'profileCompleted',
+          setProfilePromptSkipped: 'profilePromptSkipped'
+        }
+        if (keys[name]) state[keys[name]] = payload
+        if (failure === 'commit' && name === 'setBaseUserInfo' && !failed) {
+          failed = true
+          throw new Error('commit failed')
+        }
+      }
+    }
+    const session = exportedModule(
+      'xiaochengxu-source/utils/session.js',
+      ['persistSession'],
+      {
+        getUserProfile: async () => ({ code: 1 }),
+        uni: {
+          getStorageSync: key => storage[key],
+          getStorageInfoSync: () => ({ keys: Object.keys(storage) }),
+          setStorageSync(key, value) {
+            storage[key] = value
+            if (failure === 'token-storage' && key === 'cloudmeal.token' && !failed) {
+              failed = true
+              throw new Error('token storage failed')
+            }
+            if (failure === 'profile-storage' && key === 'cloudmeal.profile' && !failed) {
+              failed = true
+              throw new Error('profile storage failed')
+            }
+          },
+          removeStorageSync: key => { delete storage[key] }
+        }
+      }
+    )
+
+    assert.throws(() => session.persistSession(store, {
+      token: 'new-token', name: '新用户', avatar: 'new.png', profileCompleted: true
+    }))
+    assert.equal(state.token, 'old-token')
+    assert.strictEqual(state.baseUserInfo, oldProfile)
+    assert.equal(state.profileCompleted, false)
+    assert.equal(state.profilePromptSkipped, true)
+    assert.equal(storage['cloudmeal.token'], 'old-token')
+    assert.strictEqual(storage['cloudmeal.profile'], oldStoredProfile)
+    assert.equal(Object.hasOwn(oldProfile, 'nickName'), true)
+    assert.equal(oldProfile.nickName, undefined)
+  }
+})
+
+test('clearSession attempts every mutation and storage removal without throwing', () => {
+  const expected = [
+    'commit:setToken',
+    'commit:setBaseUserInfo',
+    'commit:setProfileCompleted',
+    'commit:setProfilePromptSkipped',
+    'remove:cloudmeal.token',
+    'remove:cloudmeal.profile'
+  ]
+
+  expected.forEach(failingOperation => {
+    const operations = []
+    const store = {
+      commit(name) {
+        const operation = `commit:${name}`
+        operations.push(operation)
+        if (operation === failingOperation) throw new Error(operation)
+      }
+    }
+    const { clearSession } = exportedModule(
+      'xiaochengxu-source/utils/session.js',
+      ['clearSession'],
+      {
+        getUserProfile: async () => ({ code: 1 }),
+        uni: {
+          removeStorageSync(key) {
+            const operation = `remove:${key}`
+            operations.push(operation)
+            if (operation === failingOperation) throw new Error(operation)
+          }
+        }
+      }
+    )
+
+    assert.doesNotThrow(() => clearSession(store))
+    assert.deepEqual(operations, expected)
+  })
+})
+
 test('session restore commits cache first and replaces it with a verified profile', async () => {
   const events = []
   const harness = sessionHarness({
@@ -264,10 +383,10 @@ test('session restore clears token and profile together when verification return
   assert.deepEqual(harness.removed, ['cloudmeal.token', 'cloudmeal.profile'])
 })
 
-test('App launch awaits the shared session restore helper', async () => {
+test('App launch starts the shared session restore helper', async () => {
   const events = []
   const definition = componentOptions('xiaochengxu-source/App.vue', {
-    restoreSession: async store => {
+    startSessionRestore: async store => {
       events.push(['restore', store])
       await Promise.resolve()
       events.push(['restored', store])
@@ -463,6 +582,149 @@ test('uploadAvatar returns the backend URL payload and clears the full session o
     return true
   })
   assert.strictEqual(clearedStore, store)
+})
+
+test('uploadAvatar recognizes HTTP 401 before parsing empty, HTML, or invalid JSON bodies', async () => {
+  for (const body of ['', '<html>expired</html>', '{not-json']) {
+    let options
+    let cleared = 0
+    const store = { state: { token: 'expired-token' } }
+    const { uploadAvatar } = exportedModule('xiaochengxu-source/utils/upload.js', ['uploadAvatar'], {
+      baseUrl: 'http://example.test',
+      store,
+      clearSession(value) {
+        assert.strictEqual(value, store)
+        cleared += 1
+      },
+      uni: { uploadFile(value) { options = value } }
+    })
+    const promise = uploadAvatar('temp/avatar.jpg')
+    const response = { statusCode: 401, data: body }
+    options.success(response)
+
+    await assert.rejects(promise, error => {
+      assert.equal(error.code, 401)
+      assert.strictEqual(error.raw, response)
+      return true
+    })
+    assert.equal(cleared, 1)
+  }
+})
+
+test('uploadAvatar still rejects the original 401 when cleanup unexpectedly throws', async () => {
+  let options
+  const { uploadAvatar } = exportedModule('xiaochengxu-source/utils/upload.js', ['uploadAvatar'], {
+    baseUrl: 'http://example.test',
+    store: { state: { token: 'expired-token' } },
+    clearSession() { throw new Error('cleanup failed') },
+    uni: { uploadFile(value) { options = value } }
+  })
+  const promise = uploadAvatar('temp/avatar.jpg')
+  const response = { statusCode: 401, data: '' }
+
+  assert.doesNotThrow(() => options.success(response))
+  await assert.rejects(promise, error => {
+    assert.equal(error.code, 401)
+    assert.strictEqual(error.raw, response)
+    return true
+  })
+})
+
+test('index lifecycle waits for one boot restore before init or a single login prompt', async () => {
+  const verification = deferred()
+  const storage = {
+    'cloudmeal.token': 'expired-token',
+    'cloudmeal.profile': { nickName: '缓存用户', avatarUrl: 'cached.png' }
+  }
+  const events = []
+  const session = exportedModule(
+    'xiaochengxu-source/utils/session.js',
+    ['startSessionRestore', 'waitForSessionReady'],
+    {
+      getUserProfile: async () => {
+        events.push('profile:start')
+        return verification.promise
+      },
+      uni: {
+        getStorageSync: key => storage[key],
+        setStorageSync: (key, value) => { storage[key] = value },
+        removeStorageSync: key => {
+          events.push(`remove:${key}`)
+          delete storage[key]
+        }
+      }
+    }
+  )
+  const page = indexHarness({
+    state: { token: '', baseUserInfo: '', profileCompleted: null },
+    waitForSessionReady: session.waitForSessionReady,
+    showModal() { events.push('modal') },
+    init: async () => { events.push('init') }
+  })
+  page.instance.getShopInfo = async () => {}
+  const app = componentOptions('xiaochengxu-source/App.vue', {
+    startSessionRestore: session.startSessionRestore
+  })
+
+  const launchPromise = app.onLaunch.call({ $store: page.instance.$store })
+  const loadPromise = page.definition.onLoad.call(page.instance, {})
+  const showPromise = page.definition.onShow.call(page.instance)
+  const duplicateDataPromise = page.instance.getData()
+
+  await Promise.resolve()
+  assert.equal(page.state.token, 'expired-token')
+  assert.equal(events.filter(event => event === 'profile:start').length, 1)
+  assert.equal(events.includes('init'), false)
+  assert.equal(events.includes('modal'), false)
+
+  verification.reject({ code: 401, message: 'expired' })
+  await Promise.all([launchPromise, loadPromise, showPromise, duplicateDataPromise])
+
+  assert.equal(page.state.token, '')
+  assert.equal(events.includes('init'), false)
+  assert.equal(events.filter(event => event === 'modal').length, 1)
+})
+
+test('concurrent authenticated onShow hooks share one menu initialization', async () => {
+  const initialization = deferred()
+  let initCalls = 0
+  const page = indexHarness({
+    state: { token: 'valid-token' },
+    init: async () => {
+      initCalls += 1
+      return initialization.promise
+    }
+  })
+
+  const firstShow = page.definition.onShow.call(page.instance)
+  const secondShow = page.definition.onShow.call(page.instance)
+  await new Promise(resolve => setImmediate(resolve))
+
+  assert.equal(initCalls, 1)
+  initialization.resolve(true)
+  await Promise.all([firstShow, secondShow])
+})
+
+test('onShow shares the menu initialization already started by login', async () => {
+  const initializationStarted = deferred()
+  const initialization = deferred()
+  let initCalls = 0
+  const page = indexHarness({
+    init: async () => {
+      initCalls += 1
+      initializationStarted.resolve()
+      return initialization.promise
+    }
+  })
+
+  const login = page.instance.loginAndInitialize()
+  await initializationStarted.promise
+  const show = page.definition.onShow.call(page.instance)
+  await new Promise(resolve => setImmediate(resolve))
+
+  assert.equal(initCalls, 1)
+  initialization.resolve(true)
+  await Promise.all([login, show])
 })
 
 test('uploadAvatar rejects business and transport failures with request-compatible shapes', async () => {

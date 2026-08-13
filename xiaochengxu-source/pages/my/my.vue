@@ -78,8 +78,6 @@ export default {
   components: { HeadInfo, OrderList, CloudmealHeader, AppTabbar },
   data() {
     return {
-      psersonUrl: DEFAULT_AVATAR,
-      nickName: DEFAULT_NICKNAME,
       phoneNumber: '',
       recentOrdersList: [],
       pageInfo: {
@@ -94,14 +92,22 @@ export default {
       profileSaving: false
     }
   },
+  computed: {
+    currentProfile() {
+      return this.$store.state.baseUserInfo || {}
+    },
+    psersonUrl() {
+      return this.currentProfile.avatarUrl || DEFAULT_AVATAR
+    },
+    nickName() {
+      return this.currentProfile.nickName || DEFAULT_NICKNAME
+    }
+  },
   onLoad() {
-    const baseUserInfo = this.$store.state.baseUserInfo || {}
     const shopPhone = this.$store.state.shopPhone
     const rawPhone = shopPhone && typeof shopPhone === 'object'
       ? shopPhone.phone
       : shopPhone
-    this.psersonUrl = baseUserInfo.avatarUrl || DEFAULT_AVATAR
-    this.nickName = baseUserInfo.nickName || DEFAULT_NICKNAME
     this.phoneNumber = rawPhone ? String(rawPhone).trim() : ''
     this.getList()
   },
@@ -127,8 +133,6 @@ export default {
         const response = await updateUserProfile({ name, avatar })
         const profileData = response.data || { name, avatar, profileCompleted: true }
         persistSession(this.$store, profileData)
-        this.nickName = profileData.name || name
-        this.psersonUrl = profileData.avatar || avatar || DEFAULT_AVATAR
         this.profileEditorVisible = false
         return true
       } catch (error) {

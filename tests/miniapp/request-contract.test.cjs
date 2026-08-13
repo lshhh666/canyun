@@ -2,7 +2,7 @@ const test = require('node:test')
 const vm = require('node:vm')
 const { assert, read, expectAll, expectNone } = require('./helpers.cjs')
 
-function loadRequest() {
+function loadRequest(overrides = {}) {
   const source = read('xiaochengxu-source/utils/request.js')
     .replace(/^import .*$/gm, '')
     .replace('export function request', 'function request')
@@ -21,12 +21,12 @@ function loadRequest() {
       },
       removeStorageSync: key => removedStorageKeys.push(key)
     },
-    clearSession: targetStore => {
+    clearSession: overrides.clearSession || (targetStore => {
       targetStore.commit('setToken', '')
       targetStore.commit('setBaseUserInfo', '')
       context.uni.removeStorageSync('cloudmeal.token')
       context.uni.removeStorageSync('cloudmeal.profile')
-    },
+    }),
     module: { exports: {} }
   }
 
@@ -134,6 +134,20 @@ test('HTTP 401 wins over a misleading success payload', async () => {
     assert.strictEqual(error.raw, response)
   })
   assert.deepEqual(harness.removedStorageKeys, ['cloudmeal.token', 'cloudmeal.profile'])
+})
+
+test('request still rejects the original 401 when cleanup unexpectedly throws', async () => {
+  const cleanupError = new Error('cleanup failed')
+  const harness = loadRequest({ clearSession() { throw cleanupError } })
+  const promise = harness.request({ url: '/protected' })
+  const response = { statusCode: 401, data: { code: 401, msg: 'expired' } }
+
+  assert.doesNotThrow(() => harness.getOptions().success(response))
+  await expectRejected(promise, error => {
+    assert.equal(error.code, 401)
+    assert.equal(error.message, 'expired')
+    assert.strictEqual(error.raw, response)
+  })
 })
 
 test('core backend paths and methods remain unchanged', () => {

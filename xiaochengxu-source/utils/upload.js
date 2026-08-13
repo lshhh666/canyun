@@ -17,6 +17,19 @@ export function uploadAvatar(filePath) {
       name: 'file',
       header: { authentication: store.state.token },
       success: res => {
+        if (res.statusCode === 401) {
+          let message = REQUEST_MESSAGE
+          try {
+            const body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+            if (body && body.msg) message = body.msg
+          } catch (error) {}
+          try {
+            clearSession(store)
+          } catch (error) {}
+          reject(rejectShape(401, message, res))
+          return
+        }
+
         let data
         try {
           data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
@@ -26,8 +39,10 @@ export function uploadAvatar(filePath) {
         }
 
         data = data || {}
-        if (res.statusCode === 401 || Number(data.code) === 401) {
-          clearSession(store)
+        if (Number(data.code) === 401) {
+          try {
+            clearSession(store)
+          } catch (error) {}
           reject(rejectShape(401, data.msg || REQUEST_MESSAGE, res))
           return
         }

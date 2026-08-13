@@ -1,9 +1,9 @@
 <script>
-import { restoreSession } from './utils/session.js'
+import { startSessionRestore } from './utils/session.js'
 
 export default {
   async onLaunch() {
-    await restoreSession(this.$store)
+    await startSessionRestore(this.$store)
   },
   onShow() {},
   onHide() {}

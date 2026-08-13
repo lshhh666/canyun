@@ -18,7 +18,9 @@ export function request({ url = '', params = {}, method = 'GET' }) {
       success: res => {
         const data = res.data || {}
         if (res.statusCode === 401 || data.code === 401) {
-          clearSession(store)
+          try {
+            clearSession(store)
+          } catch (error) {}
           reject({
             code: 401,
             message: data.msg || '请求失败，请稍后重试',
