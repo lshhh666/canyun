@@ -25,7 +25,9 @@ public class OrdersSubmitDTO implements Serializable {
     //餐具数量状态  1按餐量提供  0选择具体数量
     private Integer tablewareStatus;
     //打包费
+    // Legacy client value. The server recalculates and ignores this field.
     private Integer packAmount;
     //总金额
+    // Legacy client value. The server recalculates and ignores this field.
     private BigDecimal amount;
 }
