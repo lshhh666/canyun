@@ -86,7 +86,15 @@ public class OrderServiceImpl implements OrderService {
         }
         //设置order的值
         Orders orders = new Orders();
-        BeanUtils.copyProperties(ordersSubmitDTO,orders);
+        // Only copy fields the client is allowed to choose. Quote fields are server-owned,
+        // and copying a missing Integer into an entity primitive causes an unboxing NPE.
+        orders.setAddressBookId(ordersSubmitDTO.getAddressBookId());
+        orders.setPayMethod(ordersSubmitDTO.getPayMethod());
+        orders.setRemark(ordersSubmitDTO.getRemark());
+        orders.setDeliveryStatus(ordersSubmitDTO.getDeliveryStatus());
+        orders.setTablewareNumber(ordersSubmitDTO.getTablewareNumber() == null
+                ? 0 : ordersSubmitDTO.getTablewareNumber());
+        orders.setTablewareStatus(ordersSubmitDTO.getTablewareStatus());
         orders.setAmount(quote.getTotalAmount());
         orders.setPackAmount(quote.getPackAmount().intValueExact());
         orders.setEstimatedDeliveryTime(quote.getEstimatedDeliveryTime());

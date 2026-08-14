@@ -80,7 +80,8 @@ class OrderServiceImplSubmitTest {
         dto.setAddressBookId(12L);
         dto.setPayMethod(1);
         dto.setAmount(new BigDecimal("0.01"));
-        dto.setPackAmount(999);
+        // Current miniapp omits server-owned quote fields such as packAmount.
+        dto.setPackAmount(null);
         dto.setTablewareNumber(0);
         dto.setTablewareStatus(0);
         dto.setDeliveryStatus(1);
