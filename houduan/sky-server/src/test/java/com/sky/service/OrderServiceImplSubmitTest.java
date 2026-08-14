@@ -84,7 +84,7 @@ class OrderServiceImplSubmitTest {
         dto.setTablewareNumber(0);
         dto.setTablewareStatus(0);
         dto.setDeliveryStatus(1);
-        dto.setEstimatedDeliveryTime(LocalDateTime.of(2030, 1, 1, 0, 0));
+        dto.setEstimatedDeliveryTime("2030-01-01 00:00:00");
 
         OrderSubmitVO result = service.orderSubmit(dto);
 

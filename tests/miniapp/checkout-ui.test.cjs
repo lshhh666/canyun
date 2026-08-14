@@ -115,6 +115,16 @@ test('checkout renders address, dishes, remark, fees and submit in business orde
   expectNone(page, ['<app-tabbar', '#ffc200', '去支付</view>\n          <view v-else'])
 })
 
+test('checkout delivery row keeps labels horizontal and uses the full card width', () => {
+  const address = read('xiaochengxu-source/pages/order/components/address.vue')
+  const styles = read('xiaochengxu-source/pages/order/style.scss')
+
+  expectAll(address, ['class="bottomTime"', 'class="time_name_disabled"', '{{ arrivalTime }}送达'])
+  assert.match(styles, /\.bottomTime\s*\{[\s\S]*?flex:\s*0 0 100%/)
+  assert.match(styles, /\.bottomTime\s*\{[\s\S]*?width:\s*100%/)
+  assert.match(styles, /\.time_name_disabled\s*\{[\s\S]*?white-space:\s*nowrap/)
+})
+
 test('checkout ignores duplicate submits and restores the guard after a failure', async () => {
   const request = deferred()
   let submitCalls = 0

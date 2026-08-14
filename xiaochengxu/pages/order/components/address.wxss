@@ -69,8 +69,7 @@
   flex-wrap: wrap;
 }
 .address_name.data-v-04873fd5,
-.address_name_disabled.data-v-04873fd5,
-.bottomTime.data-v-04873fd5 {
+.address_name_disabled.data-v-04873fd5 {
   min-width: 0;
   flex: 1;
 }
@@ -145,12 +144,20 @@
 .bottomTime.data-v-04873fd5 {
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  flex: 0 0 100%;
 }
 .time_name_disabled.data-v-04873fd5 {
   flex: 1;
   color: #12263f;
   font-size: 27rpx;
   font-weight: 500;
+  white-space: nowrap;
+}
+.bottomTime .address_image.data-v-04873fd5 {
+  flex: none;
+  white-space: nowrap;
 }
 .order-type.data-v-04873fd5 {
   margin-top: 18rpx;

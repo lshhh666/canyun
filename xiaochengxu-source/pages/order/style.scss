@@ -52,8 +52,7 @@
 }
 
 .address_name,
-.address_name_disabled,
-.bottomTime {
+.address_name_disabled {
   min-width: 0;
   flex: 1;
 }
@@ -138,6 +137,9 @@
 .bottomTime {
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  flex: 0 0 100%;
 }
 
 .time_name_disabled {
@@ -145,6 +147,12 @@
   color: $cm-text;
   font-size: 27rpx;
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.bottomTime .address_image {
+  flex: none;
+  white-space: nowrap;
 }
 
 .order-type {
