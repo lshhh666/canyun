@@ -109,8 +109,8 @@ test('checkout renders address, dishes, remark, fees and submit in business orde
     return index
   }, -1)
   expectAll(page, [
-    '<cloudmeal-header', 'show-back', ':disabled="isHandlePy"',
-    ':loading="isHandlePy"', '￥{{ orderDishPrice.toFixed(2) }}'
+    '<cloudmeal-header', 'show-back', ':disabled="isHandlePy || previewState !== \'ready\'"',
+    ':loading="isHandlePy"', 'totalAmount.toFixed(2)', 'packFeeAmount.toFixed(2)'
   ])
   expectNone(page, ['<app-tabbar', '#ffc200', '去支付</view>\n          <view v-else'])
 })
@@ -136,16 +136,17 @@ test('checkout ignores duplicate submits and restores the guard after a failure'
     }
   })
   Object.assign(order.instance, {
-    address: '测试地址', addressBookId: 9, arrivalTime: '10:00',
-    orderDishNumber: 2, orderDishPrice: 28, remark: '少辣', status: 0, num: 0
+    address: '测试地址', addressBookId: 9, arrivalTime: '10:00', deliveryMode: 'scheduled',
+    orderDishNumber: 2, orderDishPrice: 28, remark: '少辣', status: 0, num: 0,
+    previewState: 'ready', previewData: { estimatedDeliveryTime: '2026-08-11 10:00:00' }
   })
 
   const first = order.instance.payOrderHandle()
   const second = order.instance.payOrderHandle()
   assert.equal(submitCalls, 1)
   assert.equal(order.instance.isHandlePy, true)
-  assert.equal(submittedParams.amount, 28)
-  assert.equal(submittedParams.deliveryFee, 3)
+  assert.equal('amount' in submittedParams, false)
+  assert.equal('deliveryFee' in submittedParams, false)
   assert.equal(submittedParams.addressBookId, 9)
 
   request.reject(new Error('下单服务不可用'))
@@ -171,8 +172,9 @@ test('checkout unlocks and reports synchronous payload construction failures', a
     }
   })
   Object.assign(order.instance, {
-    address: '测试地址', arrivalTime: '10:00', orderDishNumber: 2,
-    orderDishPrice: 28, status: 0, num: 0
+    address: '测试地址', arrivalTime: '10:00', deliveryMode: 'scheduled', orderDishNumber: 2,
+    orderDishPrice: 28, status: 0, num: 0,
+    previewState: 'ready', previewData: { estimatedDeliveryTime: '2026-08-11 10:00:00' }
   })
 
   assert.equal(await order.instance.payOrderHandle(), null)
@@ -199,14 +201,17 @@ test('checkout success keeps the existing payload and navigates to payment', asy
     }
   })
   Object.assign(order.instance, {
-    address: '测试地址', addressBookId: 9, arrivalTime: '10:00',
-    orderDishNumber: 2, orderDishPrice: 28, remark: '少辣', status: 0, num: 0
+    address: '测试地址', addressBookId: 9, arrivalTime: '10:00', deliveryMode: 'scheduled',
+    orderDishNumber: 2, orderDishPrice: 28, remark: '少辣', status: 0, num: 0,
+    previewState: 'ready', previewData: { estimatedDeliveryTime: '2026-08-11 10:00:00' }
   })
 
   const result = await order.instance.payOrderHandle()
   assert.equal(result.code, 1)
-  assert.equal(submittedParams.amount, 28)
-  assert.equal(submittedParams.deliveryFee, 3)
+  assert.equal('amount' in submittedParams, false)
+  assert.equal('packAmount' in submittedParams, false)
+  assert.equal('deliveryFee' in submittedParams, false)
+  assert.equal('shopId' in submittedParams, false)
   assert.equal(order.instance.isHandlePy, false)
   assert.deepEqual(order.calls.mutations.slice(-2), [
     ['setOrderData', { id: 88 }],
@@ -215,7 +220,7 @@ test('checkout success keeps the existing payload and navigates to payment', asy
   assert.equal(order.calls.navigations.at(-1).url, '/pages/pay/index?orderId=88')
 })
 
-test('checkout normalizes a string delivery fee for display, total and payload', async () => {
+test('checkout renders and submits only the authoritative preview', async () => {
   let submittedParams
   const order = harness('xiaochengxu-source/pages/order/index.js', {
     state: {
@@ -235,24 +240,85 @@ test('checkout normalizes a string delivery fee for display, total and payload',
   })
 
   assert.match(read('xiaochengxu-source/pages/order/index.vue'), /deliveryFeeAmount\.toFixed\(2\)/)
-  assert.equal(order.instance.deliveryFeeAmount, 3)
-  order.instance.computOrderInfo()
-  assert.equal(order.instance.orderDishPrice, 25)
-  assert.equal(typeof order.instance.orderDishPrice, 'number')
-
   Object.assign(order.instance, {
-    address: '娴嬭瘯鍦板潃', addressBookId: 9, arrivalTime: '10:00',
-    remark: '', status: 0, num: 0
+    address: '测试地址', addressBookId: 9, arrivalTime: '10:00', deliveryMode: 'scheduled',
+    remark: '', status: 0, num: 0, previewState: 'ready',
+    previewData: {
+      goodsAmount: '20.00', packAmount: '2.00', deliveryFee: '3.00',
+      totalAmount: '25.00', estimatedDeliveryTime: '2026-08-11 10:00:00'
+    }
   })
+  assert.equal(order.instance.dishAmount, 20)
+  assert.equal(order.instance.packFeeAmount, 2)
+  assert.equal(order.instance.deliveryFeeAmount, 3)
+  assert.equal(order.instance.totalAmount, 25)
   await order.instance.payOrderHandle()
 
-  assert.equal(submittedParams.amount, 25)
-  assert.equal(submittedParams.deliveryFee, 3)
+  assert.equal('amount' in submittedParams, false)
+  assert.equal('deliveryFee' in submittedParams, false)
 
   const invalid = harness('xiaochengxu-source/pages/order/index.js', {
     state: { orderListData: [], deliveryFee: 'not-a-number' }
   })
+  invalid.instance.previewData = { deliveryFee: 'not-a-number', totalAmount: null }
   assert.equal(invalid.instance.deliveryFeeAmount, 0)
+  assert.equal(invalid.instance.totalAmount, 0)
+})
+
+test('checkout keeps immediate delivery mode and submits the server ETA', async () => {
+  let submittedParams
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: { orderListData: [], remarkData: '', addressData: {}, deliveryFee: 3 },
+    apis: {
+      submitOrderSubmit: async params => {
+        submittedParams = params
+        return { code: 1, data: { id: 92 } }
+      }
+    }
+  })
+  Object.assign(order.instance, {
+    address: '测试地址', addressBookId: 12, previewState: 'ready',
+    previewData: { estimatedDeliveryTime: '2026-08-11 10:00' }
+  })
+
+  order.instance.setTime('立即派送')
+  await order.instance.payOrderHandle()
+
+  assert.equal(order.instance.deliveryMode, 'immediate')
+  assert.equal(submittedParams.deliveryStatus, 1)
+  assert.equal(submittedParams.estimatedDeliveryTime, '2026-08-11 10:00:00')
+})
+
+test('checkout preview waits for an address and keeps failures retryable', async () => {
+  const calls = []
+  let fail = true
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: { orderListData: [], remarkData: '', addressData: {}, deliveryFee: 3 },
+    apis: {
+      previewOrder: async params => {
+        calls.push(params)
+        if (fail) throw new Error('报价服务不可用')
+        return { code: 1, data: {
+          goodsAmount: 20, packAmount: 2, deliveryFee: 3, totalAmount: 25,
+          estimatedDeliveryTime: '2026-08-11 10:00:00'
+        } }
+      }
+    }
+  })
+
+  order.instance.getDateDate = () => {}
+
+  assert.equal(await order.instance.loadPreview(), null)
+  assert.equal(calls.length, 0)
+  order.instance.addressBookId = 12
+  assert.equal(await order.instance.loadPreview(), null)
+  assert.equal(order.instance.previewState, 'error')
+
+  fail = false
+  await order.instance.loadPreview()
+  assert.equal(calls.at(-1).addressBookId, 12)
+  assert.equal(order.instance.previewState, 'ready')
+  assert.equal(order.instance.totalAmount, 25)
 })
 
 test('checkout only routes to add-address after a successful empty-list load', async () => {

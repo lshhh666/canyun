@@ -269,6 +269,23 @@
   color: $cm-text;
 }
 
+.preview-state {
+  margin-top: 22rpx;
+  color: $cm-text-secondary;
+  font-size: 24rpx;
+}
+
+.preview-state--error {
+  display: flex;
+  justify-content: space-between;
+  color: #c44747;
+}
+
+.preview-retry {
+  color: $cm-primary;
+  font-weight: 600;
+}
+
 .checkout-submit {
   position: fixed;
   z-index: 20;

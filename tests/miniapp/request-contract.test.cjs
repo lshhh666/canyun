@@ -163,13 +163,15 @@ test('core backend paths and methods remain unchanged', () => {
     ["'/user/shoppingCart/sub'", 'POST'],
     ["'/user/shoppingCart/clean'", 'DELETE'],
     ["'/user/order/submit'", 'POST'],
+    ["'/user/order/preview'", 'POST'],
     ["'/user/order/historyOrders'", 'GET'],
     ["'/user/addressBook/list'", 'GET'],
     ["'/user/addressBook/default'", 'PUT'],
     ["'/user/addressBook/default'", 'GET'],
     ['`/user/order/orderDetail/${params}`', 'GET'],
     ['`/user/order/repetition/${params}`', 'POST'],
-    ['`/user/shop/status`', 'GET']
+    ['`/user/shop/status`', 'GET'],
+    ["'/user/shop/info'", 'GET']
   ]
 
   pairs.forEach(([url, method]) => {
@@ -177,6 +179,7 @@ test('core backend paths and methods remain unchanged', () => {
     const pattern = new RegExp(`url:\\s*${escapedUrl}[\\s\\S]{0,120}?method:\\s*'${method}'`)
     assert.match(api, pattern, `missing URL/method pair: ${url} ${method}`)
   })
+  expectNone(api, ['/user/order/getEstimatedDeliveryTime', '/user/shop/getMerchantInfo'])
 })
 
 test('profile API wrappers preserve the exact GET-default and PUT contracts', () => {

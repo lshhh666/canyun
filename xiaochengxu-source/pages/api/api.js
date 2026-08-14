@@ -311,12 +311,10 @@ export const getShopStatus = (params) => {
 	})
 }
 // 获取店铺信息
-export const getMerchantInfo = (params) => {
-	return request({
-		url: `/user/shop/getMerchantInfo`,
-		method: 'GET'
-	})
-}
+export const getShopInfo = () => request({
+	url: '/user/shop/info',
+	method: 'GET'
+})
 // 历史订单
 export const getOrderPage = (params) => {
 	return request({
@@ -360,12 +358,11 @@ export const repetitionOrder = (params) =>
 
 
 // 获取用户送餐期望时间
-export const getEstimatedDeliveryTime = (params) =>
-	request({
-		url: `/user/order/getEstimatedDeliveryTime`,
-		method: 'get',
-		params
-	})
+export const previewOrder = params => request({
+	url: '/user/order/preview',
+	method: 'POST',
+	params
+})
 // 查询用户订单支付状态列表信息
 export const queryOrdersCheckStatus = (params) =>
 	request({

@@ -26,7 +26,7 @@ import {
 	// 获取店铺信息
 	getShopStatus,
 	// 获取店铺联系方式
-	getMerchantInfo,
+	getShopInfo,
 } from "../api/api.js"
 import { mapState, mapMutations } from "vuex"
 import { baseUrl } from "../../utils/env"
@@ -528,11 +528,14 @@ export default {
 		},
 		// 获取店铺电话
 		async getMerchantInfo() {
-			await getMerchantInfo()
+			await getShopInfo()
 				.then((res) => {
 					this.phoneData = res.data.phone
-					console.log(res);
-					this.setShopPhone(res.data)
+					this.shopStatus = res.data.status
+					this.setShopStatus(res.data.status)
+					this.setShopInfo(res.data)
+					this.setShopPhone(res.data.phone || '')
+					this.setDeliveryFee(res.data.deliveryFee)
 				})
 				.catch((err) => { })
 		},

@@ -3,7 +3,7 @@ import {
 	submitOrderSubmit,
 	// 查询默认地址
 	getAddressBookDefault,
-	queryAddressBookList, getEstimatedDeliveryTime
+	queryAddressBookList, previewOrder
 } from '../api/api.js'
 import {
 	mapState,
@@ -15,7 +15,6 @@ import {
 import {
 	getLableVal,
 	dateFormat,
-	presentFormat,
 	getWeekDate
 
 } from '../../utils/index.js'
@@ -40,6 +39,7 @@ export default {
 			remark: '',//备注
 			arrivalTime: '',// 用户选择的送达时间
 			orderTime: '',// 服务端返回的送达时间
+			deliveryMode: 'immediate',
 			addressBookId: '',
 			addressLabel: '',
 			tagLabel: '',
@@ -87,17 +87,25 @@ export default {
 			scrollTop: 0,
 			addressList: [],
 			addressLoadState: 'loading',
+			previewState: 'idle',
+			previewData: null,
+			previewRequestId: 0,
 			isHandlePy: false
 		}
 	},
 	computed: {
 		// 商品金额（提交总额仍沿用 orderDishPrice）
 		dishAmount: function () {
-			return this.orderListDataes.reduce((total, item) => total + item.number * item.amount, 0)
+			return this.previewNumber('goodsAmount')
+		},
+		packFeeAmount: function () {
+			return this.previewNumber('packAmount')
 		},
 		deliveryFeeAmount: function () {
-			const amount = Number(this.deliveryFee())
-			return Number.isFinite(amount) ? amount : 0
+			return this.previewNumber('deliveryFee')
+		},
+		totalAmount: function () {
+			return this.previewNumber('totalAmount')
 		},
 		// 菜品数据
 		orderListDataes: function () {
@@ -169,8 +177,7 @@ export default {
 			await this.getAddressBookDefault()
 		}
 
-		const deliveryTimeResult = await this.getEstimatedDeliveryTime()
-		if (deliveryTimeResult) this.getDateDate()
+		await this.loadPreview()
 		this.setArrivalTime(this.arrivalTime)
 		this.setGender(this.gender)
 	},
@@ -192,14 +199,40 @@ export default {
 			const res = uni.getSystemInfoSync()
 			this.platform = res.platform
 		},
+		previewNumber(field) {
+			const amount = Number(this.previewData && this.previewData[field])
+			return Number.isFinite(amount) ? amount : 0
+		},
+		immediateDeliveryTime() {
+			const value = String(this.previewData && this.previewData.estimatedDeliveryTime || '').replace('T', ' ')
+			if (!value) throw new Error('预计送达时间无效，请重试')
+			return value.length === 16 ? `${value}:00` : value
+		},
 		// 获取用户送餐期望时间
-		async getEstimatedDeliveryTime() {
+		async loadPreview() {
+			if (!this.addressBookId) {
+				this.previewRequestId += 1
+				this.previewState = 'idle'
+				this.previewData = null
+				return null
+			}
+			const requestId = ++this.previewRequestId
+			this.previewState = 'loading'
 			try {
-				const result = await getEstimatedDeliveryTime({ shopId: this.shopInfo().shopId, customerAddress: this.address })
-				this.arrivalTime = dayjs(result.data).format('HH:mm')
-				this.orderTime = result.data
+				const result = await previewOrder({ addressBookId: this.addressBookId })
+				if (requestId !== this.previewRequestId) return null
+				this.previewData = result.data || null
+				this.previewState = this.previewData ? 'ready' : 'error'
+				this.orderTime = this.previewData && this.previewData.estimatedDeliveryTime
+				this.arrivalTime = this.orderTime ? dayjs(this.orderTime).format('HH:mm') : ''
+				this.deliveryMode = 'immediate'
+				if (this.orderTime) this.getDateDate()
+				this.setArrivalTime(this.arrivalTime)
 				return result
 			} catch (error) {
+				if (requestId !== this.previewRequestId) return null
+				this.previewState = 'error'
+				this.previewData = null
 				uni.showToast({
 					title: getErrorMessage(error, '送达时间获取失败，请重试'),
 					icon: 'none'
@@ -302,15 +335,10 @@ export default {
 		// 订单里和总订单价格计算
 		computOrderInfo() {
 			let oriData = this.orderListDataes
-			this.orderDishNumber = this.orderDishPrice = 0
-			this.orderDishPrice = 0
+			this.orderDishNumber = 0
 			oriData.map((n, i) => {
-				// this.orderDishPrice += n.number * n.price
-				this.orderDishPrice += n.number * n.amount
 				this.orderDishNumber += n.number
-				console.log(n);
 			})
-			this.orderDishPrice = this.orderDishPrice + this.deliveryFeeAmount + this.orderDishNumber
 		},
 		// 返回上一级
 		goBack() {
@@ -329,22 +357,21 @@ export default {
 				})
 				return false
 			}
+			if (this.previewState !== 'ready' || !this.previewData) {
+				uni.showToast({ title: '订单金额尚未准备好，请重试', icon: 'none' })
+				return false
+			}
 			this.isHandlePy = true
 			try {
 				const params = {
 					payMethod: 1,
 					addressBookId: this.addressBookId,
 					remark: this.remark,
-					estimatedDeliveryTime: this.arrivalTime === '立即派送' ? presentFormat() : dateFormat(this.isTomorrow,
+					estimatedDeliveryTime: this.deliveryMode === 'immediate' ? this.immediateDeliveryTime() : dateFormat(this.isTomorrow,
 						this.arrivalTime),
-					deliveryStatus: this.arrivalTime === '立即派送' ? 1 : 0,
-					remark: this.remark,
+					deliveryStatus: this.deliveryMode === 'immediate' ? 1 : 0,
 					tablewareStatus: this.status,
-					tablewareNumber: this.num,
-					packAmount: this.orderDishNumber,
-					amount: this.orderDishPrice,
-					shopId: this.shopInfo().shopId,
-					deliveryFee: this.deliveryFeeAmount
+					tablewareNumber: this.num
 				}
 				const res = await submitOrderSubmit(params)
 				if (res.code === 1) {
@@ -475,8 +502,10 @@ export default {
 		// 设置时间
 		setTime(val) {
 			if (val === '立即派送') {
+				this.deliveryMode = 'immediate'
 				this.arrivalTime = dayjs(this.orderTime).format('HH:mm')
 			} else {
+				this.deliveryMode = 'scheduled'
 				this.arrivalTime = val
 			}
 
