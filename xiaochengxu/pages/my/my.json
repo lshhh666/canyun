@@ -7,6 +7,7 @@
     "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
     "uni-icons": "/components/uni-icons/uni-icons",
     "app-tabbar": "/components/app-tabbar/app-tabbar",
+    "profile-editor": "/components/profile-editor/profile-editor",
     "head-info": "/pages/my/components/headInfo",
     "order-list": "/pages/my/components/orderList"
   }

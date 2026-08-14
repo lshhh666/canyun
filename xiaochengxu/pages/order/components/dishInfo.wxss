@@ -257,6 +257,20 @@
 .fee-row text.data-v-cc9ab452:last-child {
   color: #12263f;
 }
+.preview-state.data-v-cc9ab452 {
+  margin-top: 22rpx;
+  color: #60758d;
+  font-size: 24rpx;
+}
+.preview-state--error.data-v-cc9ab452 {
+  display: flex;
+  justify-content: space-between;
+  color: #c44747;
+}
+.preview-retry.data-v-cc9ab452 {
+  color: #147ee8;
+  font-weight: 600;
+}
 .checkout-submit.data-v-cc9ab452 {
   position: fixed;
   z-index: 20;

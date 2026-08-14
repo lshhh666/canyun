@@ -257,6 +257,20 @@
 .fee-row text.data-v-2983afba:last-child {
   color: #12263f;
 }
+.preview-state.data-v-2983afba {
+  margin-top: 22rpx;
+  color: #60758d;
+  font-size: 24rpx;
+}
+.preview-state--error.data-v-2983afba {
+  display: flex;
+  justify-content: space-between;
+  color: #c44747;
+}
+.preview-retry.data-v-2983afba {
+  color: #147ee8;
+  font-weight: 600;
+}
 .checkout-submit.data-v-2983afba {
   position: fixed;
   z-index: 20;

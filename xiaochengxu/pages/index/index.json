@@ -5,6 +5,7 @@
     "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
     "state-panel": "/components/state-panel/state-panel",
     "app-tabbar": "/components/app-tabbar/app-tabbar",
+    "profile-editor": "/components/profile-editor/profile-editor",
     "phone": "/components/uni-phone/index",
     "pop-mask": "/pages/index/components/popMask",
     "pop-cart": "/pages/index/components/popCart",
