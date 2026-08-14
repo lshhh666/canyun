@@ -2,6 +2,7 @@ package com.sky.controller.user;
 
 import com.sky.result.Result;
 import com.sky.service.ShopService;
+import com.sky.vo.ShopInfoVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -22,5 +23,11 @@ public class ShopController {
       Integer status=shopService.getShopStatus();
       log.info("店铺状态{}",status ==1 ? "营业中"  :  "打样" );
       return Result.success(status);
+    }
+
+    @ApiOperation("查询公开门店信息")
+    @GetMapping("/info")
+    public Result<ShopInfoVO> getShopInfo() {
+        return Result.success(shopService.getShopInfo());
     }
 }

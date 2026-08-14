@@ -1,14 +1,18 @@
 package com.sky.service;
 
 import com.sky.dto.OrdersPageQueryDTO;
+import com.sky.dto.OrderPreviewDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
 import com.sky.result.PageResult;
 import com.sky.vo.OrderPaymentVO;
+import com.sky.vo.OrderPreviewVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
 
 public interface OrderService {
+    OrderPreviewVO preview(OrderPreviewDTO orderPreviewDTO);
+
     OrderSubmitVO orderSubmit(OrdersSubmitDTO ordersSubmitDTO);
 
     OrderPaymentVO orderpayment(OrdersPaymentDTO ordersPaymentDTO);

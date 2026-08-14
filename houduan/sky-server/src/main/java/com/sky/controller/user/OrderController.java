@@ -1,12 +1,14 @@
 package com.sky.controller.user;
 
 import com.sky.dto.OrdersPageQueryDTO;
+import com.sky.dto.OrderPreviewDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.OrderService;
 import com.sky.vo.OrderPaymentVO;
+import com.sky.vo.OrderPreviewVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
 import io.swagger.annotations.Api;
@@ -22,6 +24,12 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
     @Autowired
     private OrderService orderService;
+
+    @PostMapping("/preview")
+    @ApiOperation("订单预览")
+    public Result<OrderPreviewVO> preview(@RequestBody OrderPreviewDTO dto) {
+        return Result.success(orderService.preview(dto));
+    }
 
     @PostMapping("/submit")
     @ApiOperation("用户下单")

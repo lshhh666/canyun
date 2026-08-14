@@ -46,3 +46,11 @@ sky:
   wechat:
     appid: ${sky.wechat.appid}
     secret: ${sky.wechat.secret}
+  shop:
+    id: 1
+    name: ${SHOP_NAME:餐云智慧餐饮}
+    phone: ${SHOP_PHONE:}
+    delivery-fee: 6.00
+    pack-fee-per-item: 1.00
+    estimated-delivery-minutes: 30
+    max-delivery-distance-meters: 5000
