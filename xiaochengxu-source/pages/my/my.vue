@@ -51,7 +51,7 @@
 
     <profile-editor
       v-if="profileEditorVisible"
-      :profile="$store.state.baseUserInfo || {}"
+      :profile="$store.state.baseUserInfo"
       :allow-skip="false"
       :saving="profileSaving"
       @save="saveProfile"

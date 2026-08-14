@@ -156,7 +156,7 @@
 
     <profile-editor
       v-if="profileEditorVisible || shouldPromptProfileEditor"
-      :profile="$store.state.baseUserInfo || {}"
+      :profile="$store.state.baseUserInfo"
       :allow-skip="true"
       :saving="profileSaving"
       @save="saveProfile"

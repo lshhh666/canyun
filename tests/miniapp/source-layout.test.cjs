@@ -24,3 +24,17 @@ test('source project keeps the active WeChat AppID', () => {
   const config = JSON.parse(read('xiaochengxu-source/project.config.json'))
   assert.equal(config.appid, 'wx718a307127ebbc96')
 })
+
+test('profile bindings compile to WeChat-compatible WXML expressions', () => {
+  const sourceTemplates = [
+    read('xiaochengxu-source/pages/index/index.vue'),
+    read('xiaochengxu-source/pages/my/my.vue')
+  ]
+  const generatedTemplates = [
+    read('xiaochengxu/pages/index/index.wxml'),
+    read('xiaochengxu/pages/my/my.wxml')
+  ]
+
+  sourceTemplates.forEach(source => assert.doesNotMatch(source, /:profile="\$store\.state\.baseUserInfo\s*\|\|/))
+  generatedTemplates.forEach(source => assert.doesNotMatch(source, /\|\|\{\}/))
+})
