@@ -106,13 +106,7 @@ export default {
           throw new Error((res && res.msg) || '支付发起失败，请重试')
         }
 
-        const paymentResult = await uni.requestPayment({
-          ...res.data,
-          package: res.data.packageStr,
-        })
-        const paymentError = Array.isArray(paymentResult) ? paymentResult[0] : null
-        if (paymentError) throw new Error('支付失败，请重试')
-
+        // Demo payment: the backend has already confirmed and updated the order.
         clearTimeout(this.times)
         await uni.showToast({ title: '支付成功', icon: 'success' })
         uni.redirectTo({ url: `/pages/success/index?orderId=${this.orderId}` })

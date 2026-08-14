@@ -360,7 +360,7 @@ test('detail opened from My returns to the My stack entry', () => {
   assert.equal(detail.calls.relaunches.length, 0)
 })
 
-test('payment ignores duplicate taps and routes only after payment succeeds', async () => {
+test('demo payment ignores duplicate taps and routes after backend confirmation', async () => {
   const request = deferred()
   let paymentCalls = 0
   let requestPaymentCalls = 0
@@ -377,18 +377,18 @@ test('payment ignores duplicate taps and routes only after payment succeeds', as
   await first
   await second
 
-  assert.equal(requestPaymentCalls, 1)
+  assert.equal(requestPaymentCalls, 0)
   assert.equal(pay.calls.toasts.at(-1).title, '支付成功')
   assert.equal(pay.calls.redirects.at(-1).url, '/pages/success/index?orderId=66')
   assert.equal(pay.instance.isPaying, false)
 })
 
-test('payment failure stays retryable and never enters the success page', async () => {
+test('backend payment failure stays retryable and never enters the success page', async () => {
   let paymentCalls = 0
   const pay = payHarness({
     paymentOrder: async () => {
       paymentCalls += 1
-      return { code: 1, data: { timeStamp: '1', packageStr: 'prepay_id=1' } }
+      throw new Error('支付失败，请重试')
     },
     requestPayment: async () => [{ errMsg: 'requestPayment:fail cancel' }]
   })
@@ -423,7 +423,9 @@ test('success page reLaunches to the two primary destinations', () => {
 test('detail and payment are focused CloudMeal task pages', () => {
   const detail = read('xiaochengxu-source/pages/details/index.vue')
   const pay = read('xiaochengxu-source/pages/pay/index.vue')
+  const compiledPay = read('xiaochengxu/pages/pay/index.js')
   expectAll(detail, ['<cloudmeal-header', 'show-back', '订单详情', '联系商家', '<delivery-info', '<order-info'])
   expectAll(pay, ['<cloudmeal-header', 'show-back', '支付订单', '确认支付', ':disabled="isPaying"'])
   expectNone(detail + pay, ['<app-tabbar', '<uni-nav-bar', '#ffc200', '#FFC200', 'linear-gradient'])
+  expectNone(pay + compiledPay, ['uni.requestPayment'])
 })

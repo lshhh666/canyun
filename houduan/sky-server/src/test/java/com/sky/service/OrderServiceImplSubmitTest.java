@@ -2,6 +2,7 @@ package com.sky.service;
 
 import com.sky.context.BaseContext;
 import com.sky.dto.OrdersSubmitDTO;
+import com.sky.dto.OrdersPaymentDTO;
 import com.sky.entity.AddressBook;
 import com.sky.entity.OrderDetail;
 import com.sky.entity.Orders;
@@ -14,6 +15,8 @@ import com.sky.mapper.ShoppingCartMapper;
 import com.sky.service.impl.OrderServiceImpl;
 import com.sky.vo.OrderPreviewVO;
 import com.sky.vo.OrderSubmitVO;
+import com.sky.vo.OrderPaymentVO;
+import com.sky.websocket.WebSocketServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,7 @@ class OrderServiceImplSubmitTest {
     private ShoppingCartMapper cartMapper;
     private AddressBookMapper addressMapper;
     private OrderPricingService pricingService;
+    private WebSocketServer webSocketServer;
     private OrderServiceImpl service;
 
     @BeforeEach
@@ -50,12 +54,14 @@ class OrderServiceImplSubmitTest {
         cartMapper = Mockito.mock(ShoppingCartMapper.class);
         addressMapper = Mockito.mock(AddressBookMapper.class);
         pricingService = Mockito.mock(OrderPricingService.class);
+        webSocketServer = Mockito.mock(WebSocketServer.class);
         service = new OrderServiceImpl();
         ReflectionTestUtils.setField(service, "orderMapper", orderMapper);
         ReflectionTestUtils.setField(service, "orderdetailMapper", detailMapper);
         ReflectionTestUtils.setField(service, "shoppingCartMapper", cartMapper);
         ReflectionTestUtils.setField(service, "addressBookMapper", addressMapper);
         ReflectionTestUtils.setField(service, "orderPricingService", pricingService);
+        ReflectionTestUtils.setField(service, "webSocketServer", webSocketServer);
     }
 
     @AfterEach
@@ -113,5 +119,23 @@ class OrderServiceImplSubmitTest {
         verify(orderMapper, never()).add(any(Orders.class));
         verify(detailMapper, never()).add(any(OrderDetail.class));
         verify(cartMapper, never()).deleteShoppingCart(any(Long.class));
+    }
+
+    @Test
+    void repeatedDemoPaymentReturnsSuccessWithoutUpdatingAgain() {
+        LocalDateTime eta = LocalDateTime.of(2026, 8, 14, 20, 15);
+        Orders paidOrder = Orders.builder().id(15L).number("202608141943273346")
+                .status(Orders.TO_BE_CONFIRMED).payStatus(Orders.PAID)
+                .estimatedDeliveryTime(eta).build();
+        when(orderMapper.getByNumber("202608141943273346")).thenReturn(paidOrder);
+        OrdersPaymentDTO dto = new OrdersPaymentDTO();
+        dto.setOrderNumber("202608141943273346");
+        dto.setPayMethod(1);
+
+        OrderPaymentVO result = service.orderpayment(dto);
+
+        assertEquals(eta.toString(), result.getEstimatedDeliveryTime());
+        verify(orderMapper, never()).update(any(Orders.class));
+        verify(webSocketServer, never()).sendToAllClient(any(String.class));
     }
 }

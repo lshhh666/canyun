@@ -137,7 +137,16 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
         Integer status = order.getStatus();
-        if(!status.equals(Orders.PENDING_PAYMENT)){
+        // Demo payment is completed by this endpoint. Retrying the same confirmed
+        // payment must be idempotent because the client may lose the first response.
+        if (Orders.TO_BE_CONFIRMED.equals(status) && Orders.PAID.equals(order.getPayStatus())) {
+            return OrderPaymentVO.builder()
+                    .estimatedDeliveryTime(order.getEstimatedDeliveryTime() != null
+                            ? order.getEstimatedDeliveryTime().toString()
+                            : null)
+                    .build();
+        }
+        if(!Orders.PENDING_PAYMENT.equals(status)){
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }else{
             order.setStatus(Orders.TO_BE_CONFIRMED);

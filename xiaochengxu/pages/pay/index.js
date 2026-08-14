@@ -282,9 +282,7 @@ var _default = {
                 throw new Error(res && res.msg || '支付发起失败，请重试');
               case 15:
                 _context.next = 17;
-                return uni.requestPayment(_objectSpread(_objectSpread({}, res.data), {}, {
-                  package: res.data.packageStr
-                }));
+                return Promise.resolve();
               case 17:
                 paymentResult = _context.sent;
                 paymentError = Array.isArray(paymentResult) ? paymentResult[0] : null;
