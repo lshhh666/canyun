@@ -32,6 +32,7 @@ xiaochengxu-source/project.private.config.json
 
 # Visual brainstorming scratch data
 .superpowers/
+docs/superpowers/
 
 # Task-local compatibility runtimes
 .tools/
