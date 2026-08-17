@@ -16,13 +16,16 @@ spring:
     host: ${sky.redis.host}
     port: ${sky.redis.port}
     database: ${sky.redis.database}
-mybatis:
+mybatis-plus:
   #mapper配置文件
-  mapper-locations: classpath:mapper/*.xml
+  mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: com.sky.entity
   configuration:
     #开启驼峰命名
     map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
 
 logging:
   level:
