@@ -185,6 +185,8 @@ sky:
 
 不需要测试的第三方能力也应使用本地占位配置，不能把真实密钥提交到仓库。
 
+JWT 管理端和用户端使用不同的签名密钥。未设置时，应用会在每次启动时生成临时随机值，因此重启后旧令牌会失效；正式部署必须通过 `SKY_JWT_ADMIN_SECRET` 和 `SKY_JWT_USER_SECRET` 环境变量提供两个不同的高强度密钥。
+
 ### 4. 启动后端
 
 可以在 IDE 中运行：
@@ -223,6 +225,7 @@ npm run build
 
 - 直接调试当前编译结果：使用微信开发者工具打开 `xiaochengxu`。
 - 修改源码：使用 HBuilderX 打开 `xiaochengxu-source`，编译目标选择微信小程序。
+- 仓库中的微信 AppID 固定为公开测试值 `touristappid`；需要登录、真机调试或发布时，请在本地换成自己的 AppID，提交前不要把真实值加入版本控制。
 - 本地模拟器默认请求 `http://localhost:8080`，配置位于 `xiaochengxu-source/utils/env.js`。
 - 真机调试时需要将地址改为电脑的局域网地址，并配置微信开发者工具的合法域名策略。
 
@@ -242,7 +245,7 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-miniapp-output.ps1
 | --- | --- |
 | Java 后端 | 102 个测试通过 |
 | Vue 管理端 | 53 个测试通过 |
-| 微信小程序 | 114 个测试通过 |
+| 微信小程序 | 115 个测试通过 |
 
 后端测试：
 

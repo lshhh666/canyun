@@ -24,6 +24,7 @@ nginx-1.20.2/conf/*
 # Local secrets and private tool configuration
 houduan/sky-server/src/main/resources/application-dev.yml
 xiaochengxu/project.private.config.json
+resume/
 
 # Uni-app dependencies, generated output and private WeChat settings
 xiaochengxu-source/node_modules/

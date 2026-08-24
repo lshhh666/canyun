@@ -1,43 +1,19 @@
 ## 本地预览与发布前同步
 
 1. 启动餐云后端，确认 `http://localhost:8080` 可访问。
-2. 在 HBuilderX 导入 `D:\canyun\xiaochengxu-source`。
+2. 在 HBuilderX 导入仓库中的 `xiaochengxu-source` 目录。
 3. 选择“运行 → 运行到小程序模拟器 → 微信开发者工具”。
 4. 确认已生成 `xiaochengxu-source\unpackage\dist\dev\mp-weixin\app.json`。
-5. 在 PowerShell 执行 `powershell -ExecutionPolicy Bypass -File D:\canyun\scripts\sync-miniapp-output.ps1`。
-6. 用微信开发者工具打开 `D:\canyun\xiaochengxu`。
+5. 在仓库根目录执行 `powershell -ExecutionPolicy Bypass -File scripts/sync-miniapp-output.ps1`。
+6. 用微信开发者工具打开 `xiaochengxu` 目录。
 
 同步脚本会拒绝缺少构建产物或目标 `project.config.json` 的情况，并保留微信项目配置。真机调试不能使用 `localhost`：将 `utils/env.js` 的 `currentEnvironment` 改为 `lan` 并填写电脑局域网地址；发布前改为已在微信后台配置的 HTTPS 合法域名。
 
-<!-- ## 苍穹外卖 - 小程序  即（苍穹外卖）
-
-#### 技术：
-- uniapp + ws
-
-#### 主要功能：
-
-- 授权获取微信信息 -> 扫二维码进入小程序  ->  获取桌台信息 和当前桌台的状态 -> 用桌台ID和店铺id  获取菜品分类和菜单 -> 操作加减菜品 和菜品详情(加减菜为多人点餐，使用ws 推送购物车信息)   ->  下单付款å
-
-- 页面效果
-
-
-<img src="./design/action.gif" width= "24%" />
-<img src="./design/index.png" width= "24%" />
-<img src="./design/dish.png" width= "24%" />
-<img src="./design/detail.png" width= "24%" /> -->
-
-
-#### 苍穹外卖小程序流程说明
-#### 2022-8-24  把苍穹外卖改成苍穹外卖、换logo
+#### 餐云小程序配置说明
 ### 注册小程序AppID相关流程
 ---百度搜索[微信公众平台](https://mp.weixin.qq.com/),没有账号需要进行注册，进行扫码登录
-![](./image/账号.png)
 找到开发管理
-![](./image/kaifa.png)
-
-![](./image/guanli.png)
 **注意：** appid生成，项目开发过程中要使用，或者临时使用测试号（后边介绍）
-![](./image/appid.png)
 
 
 ##### uni-app介绍 [官方网页](https://uniapp.dcloud.io/resource)
@@ -68,31 +44,22 @@ HBuilderX是通用的前端开发工具，但为`uni-app`做了特别强化。
 
 + 选择uni-app,填写项目名称，项目创建的目录
 
-  ![](./images/create.jpg)
-
-
 ##### 运行项目
 
 ## ---新建项目
 
 在菜单栏中点击运行，运行到浏览器，选择浏览器即可运行
 
-在微信开发者工具里运行：进入hello-uniapp项目，点击工具栏的运行 -> 运行到小程序模拟器 -> 微信开发者工具，即可在微信开发者工具里面体验uni-app
+在 HBuilderX 中打开餐云小程序源码，点击工具栏的运行 -> 运行到小程序模拟器 -> 微信开发者工具，即可在微信开发者工具里面体验uni-app
 
-在微信开发者工具里运行：进入hello-uniapp项目，点击工具栏的运行 -> 运行到手机或模拟器 -> 选择调式的手机
+在 HBuilderX 中打开餐云小程序源码，点击工具栏的运行 -> 运行到手机或模拟器 -> 选择调试的手机
 
-![](./image/weixinyunxing.png)
 **注意：**
 
 + 如果是第一次使用，需要先配置小程序ide的相关路径，才能运行成功
 + 微信开发者工具在设置中安全设置，服务端口开启
-![](./image/duankouhao.png)
-
 ## ---导入项目
 在菜单栏中点击文件，选择导入，选择从本地目录导入
-![](./image/yunxing.png)
-
-![](./image/ceshihao.png)
 
 ##### 介绍项目目录和文件作用
 

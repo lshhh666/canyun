@@ -280,7 +280,6 @@ export default class extends Vue {
         this.ruleForm = res.data.data
         this.ruleForm.status = res.data.data.status == '1'
         ;(this.ruleForm as any).price = res.data.data.price
-        // this.imageUrl = `http://172.17.2.120:8080/common/download?name=${res.data.data.image}`
         this.imageUrl = res.data.data.image
         this.checkList = res.data.data.setmealDishes
         this.dishTable = res.data.data.setmealDishes.reverse()

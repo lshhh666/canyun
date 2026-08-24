@@ -23,7 +23,7 @@ test('shell exposes exactly three primary destinations', () => {
 test('manifest and pages are branded as CloudMeal', () => {
   const manifest = read('xiaochengxu-source/manifest.json')
   const pages = read('xiaochengxu-source/pages.json')
-  expectAll(manifest, ['餐云', 'wx718a307127ebbc96'])
+  expectAll(manifest, ['餐云', 'touristappid'])
   expectAll(pages, ['餐云', '#147EE8'])
   expectNone(manifest + pages, ['苍穹外卖', 'sky-take-out-user-mp', '#ffc200', '#FFC200'])
 })

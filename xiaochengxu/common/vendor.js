@@ -25065,7 +25065,6 @@ var DishInfo = function DishInfo() {
       // styleType: 'button',
       textTip: '',
       showConfirm: false,
-      phoneData: '15200000001',
       toDate: null,
       tomorrowStart: null,
       newDate: null,

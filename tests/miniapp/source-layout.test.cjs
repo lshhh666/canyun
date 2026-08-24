@@ -20,9 +20,14 @@ test('maintainable uni-app source keeps generated output out of version control'
   )
 })
 
-test('source project keeps the active WeChat AppID', () => {
-  const config = JSON.parse(read('xiaochengxu-source/project.config.json'))
-  assert.equal(config.appid, 'wx718a307127ebbc96')
+test('source and generated projects keep only the public WeChat test AppID', () => {
+  const sourceConfig = JSON.parse(read('xiaochengxu-source/project.config.json'))
+  const generatedConfig = JSON.parse(read('xiaochengxu/project.config.json'))
+
+  for (const config of [sourceConfig, generatedConfig]) {
+    assert.equal(config.appid, 'touristappid')
+    assert.equal(config.projectname, 'cloudmeal')
+  }
 })
 
 test('profile bindings compile to WeChat-compatible WXML expressions', () => {

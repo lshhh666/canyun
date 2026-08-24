@@ -87,9 +87,19 @@ test('account page contains only real destinations and CloudMeal shell', () => {
     '收货地址', '订单记录', '我的优惠券', '联系门店', '餐云 CloudMeal'
   ])
   expectNone(files, [
-    '18500557668', '积分', '会员等级',
+    '积分', '会员等级',
     '#ffc200', '#FFC200', 'linear-gradient', 'btn_waiter_sel.png'
   ])
+  assert.doesNotMatch(files, /1[3-9]\d{9}/)
+})
+
+test('order source and generated output contain no hardcoded mobile number', () => {
+  const files = [
+    'xiaochengxu-source/pages/order/index.js',
+    'xiaochengxu/common/vendor.js'
+  ].map(read).join('\n')
+
+  assert.doesNotMatch(files, /1[3-9]\d{9}/)
 })
 
 test('account phone action toasts without a number and calls only a real number', () => {

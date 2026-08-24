@@ -37,13 +37,13 @@ logging:
 
 sky:
   jwt:
-    # 设置jwt签名加密时使用的秘钥
-    admin-secret-key: itcast
+    # 未配置环境变量时每次启动生成临时密钥，正式部署必须提供稳定的高强度密钥
+    admin-secret-key: ${SKY_JWT_ADMIN_SECRET:${random.uuid}}
     # 设置jwt过期时间
     admin-ttl: 7200000
     # 设置前端传递过来的令牌名称
     admin-token-name: token
-    user-secret-key: itcast
+    user-secret-key: ${SKY_JWT_USER_SECRET:${random.uuid}}
     user-ttl: 7200000
     user-token-name: authentication
   wechat:

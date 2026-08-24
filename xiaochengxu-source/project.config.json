@@ -41,8 +41,8 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.24.2",
-  "appid": "wx718a307127ebbc96",
-  "projectname": "sky-take-out",
+  "appid": "touristappid",
+  "projectname": "cloudmeal",
   "condition": {},
   "editorSetting": {
     "tabIndent": "insertSpaces",
