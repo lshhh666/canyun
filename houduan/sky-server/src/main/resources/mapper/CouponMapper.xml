@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.CouponMapper">
+
+    <select id="pageQuery" resultType="com.sky.entity.Coupon">
+        select id, name, threshold_amount, discount_amount, total_stock, stock,
+               receive_start_time, receive_end_time, valid_start_time, valid_end_time,
+               status, create_time, update_time
+        from coupon
+        <where>
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+        </where>
+        order by create_time desc, id desc
+    </select>
+
+    <update id="updateDraft">
+        update coupon
+        set name = #{coupon.name},
+            threshold_amount = #{coupon.thresholdAmount},
+            discount_amount = #{coupon.discountAmount},
+            total_stock = #{coupon.totalStock},
+            stock = #{coupon.stock},
+            receive_start_time = #{coupon.receiveStartTime},
+            receive_end_time = #{coupon.receiveEndTime},
+            valid_start_time = #{coupon.validStartTime},
+            valid_end_time = #{coupon.validEndTime},
+            update_time = #{coupon.updateTime}
+        where id = #{id}
+          and status = 0
+    </update>
+</mapper>

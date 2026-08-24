@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.UserCouponMapper">
+
+    <update id="lockForOrder">
+        update user_coupon
+        <set>
+            status=1,order_id=#{orderId},locked_time = #{now}, update_time = #{now}
+        </set>
+        <where>
+          user_id=#{userId} and id = #{userCouponId} and status=0 and valid_start_time &lt;=#{now} and valid_end_time>#{now} and threshold_amount &lt;=#{goodsAmount}
+        </where>
+    </update>
+    <update id="markUsedByOrder">
+        update user_coupon
+        <set>
+            used_time=#{now},update_time=#{now},status=2
+        </set>
+        <where>
+            id=#{userCouponId} and order_id=#{orderId} and status=1
+        </where>
+    </update>
+    <update id="releaseByOrder">
+        update user_coupon
+        <set>
+            status =
+            case
+            when valid_end_time > #{now} then 0
+            else 3
+            end,update_time=#{now},locked_time=null,order_id=null
+        </set>
+        <where>
+            id=#{userCouponId} and order_id=#{orderId} and status=1
+        </where>
+    </update>
+</mapper>

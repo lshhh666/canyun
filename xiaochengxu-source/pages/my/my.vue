@@ -24,6 +24,13 @@
           <text class="account-action__label">订单记录</text>
           <uni-icons type="right" color="#91a0b2" size="18" />
         </view>
+        <view class="account-action" @click="goCoupon">
+          <view class="account-action__icon">
+            <uni-icons type="star" color="#147ee8" size="20" />
+          </view>
+          <text class="account-action__label">我的优惠券</text>
+          <uni-icons type="right" color="#91a0b2" size="18" />
+        </view>
         <view class="account-action" @click="handlePhone">
           <view class="account-action__icon">
             <uni-icons type="phone" color="#147ee8" size="20" />
@@ -186,6 +193,9 @@ export default {
     },
     goOrder() {
       uni.navigateTo({ url: '/pages/historyOrder/historyOrder' })
+    },
+    goCoupon() {
+      uni.navigateTo({ url: '/pages/coupon/index?tab=my' })
     },
     async oneOrderFun(id) {
       try {

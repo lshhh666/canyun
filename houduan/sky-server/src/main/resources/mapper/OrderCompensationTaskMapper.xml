@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.OrderCompensationTaskMapper">
+
+    <!--
+        首次失败时创建待处理任务；由 (order_id, task_type) 唯一索引识别重复记录。
+        普通超时扫描重复失败时只刷新最近失败信息，不能推迟补偿时间或重置任务状态。
+    -->
+    <insert id="insertOrUpdateFailure" parameterType="com.sky.entity.OrderCompensationTask">
+        INSERT INTO order_compensation_task
+        (order_id, user_coupon_id, task_type, status, retry_count,
+         next_retry_time, processing_time, first_failed_time, last_failed_time,
+         success_time, failed_reason, create_time, update_time)
+        VALUES
+        (#{orderId}, #{userCouponId}, #{taskType}, #{status}, #{retryCount},
+         #{nextRetryTime}, #{processingTime}, #{firstFailedTime}, #{lastFailedTime},
+         #{successTime}, #{failedReason}, #{createTime}, #{updateTime})
+        ON DUPLICATE KEY UPDATE
+            failed_reason = #{failedReason},
+            last_failed_time = #{lastFailedTime},
+            update_time = #{updateTime}
+    </insert>
+
+    <!--
+        通过状态和到期时间做条件更新，保证多个任务实例竞争时只有一个实例能够抢占成功。
+        状态：0-待处理，1-处理中。
+    -->
+    <update id="claimPendingTask">
+        UPDATE order_compensation_task
+        SET status = 1,
+            processing_time = #{now},
+            update_time = #{now}
+        WHERE id = #{id}
+          AND status = 0
+          AND next_retry_time &lt;= #{now}
+    </update>
+
+    <!--
+        只查询已经到期的待处理任务，并限制单批数量。
+        id作为第二排序条件，保证到期时间相同时结果顺序稳定。
+    -->
+    <select id="findDuePendingTasks" resultType="com.sky.entity.OrderCompensationTask">
+        SELECT *
+        FROM order_compensation_task
+        WHERE task_type = #{taskType}
+          AND status = 0
+          AND next_retry_time &lt;= #{now}
+        ORDER BY next_retry_time ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 只有当前仍由本线程持有的处理中任务才能被标记成功。 -->
+    <update id="markTaskSuccess">
+        UPDATE order_compensation_task
+        SET status = 2,
+            processing_time = NULL,
+            success_time = #{now},
+            update_time = #{now}
+        WHERE id = #{id}
+          AND status = 1
+          AND processing_time = #{processingTime}
+    </update>
+
+    <!--
+        retry_count记录实际自动补偿失败次数。
+        本次失败达到上限时转人工处理，否则回到待处理并等待下一次重试。
+    -->
+    <update id="markTaskRetryFailure">
+        UPDATE order_compensation_task
+        SET status = CASE
+                WHEN retry_count + 1 &gt;= #{maxRetryCount} THEN 3
+                ELSE 0
+            END,
+            next_retry_time = CASE
+                WHEN retry_count + 1 &gt;= #{maxRetryCount} THEN next_retry_time
+                ELSE #{nextRetryTime}
+            END,
+            processing_time = NULL,
+            last_failed_time = #{now},
+            failed_reason = #{failedReason},
+            retry_count = retry_count + 1,
+            update_time = #{now}
+        WHERE id = #{id}
+          AND status = 1
+          AND processing_time = #{processingTime}
+    </update>
+
+    <!--
+        处理中任务长时间没有结果，通常表示原执行实例宕机或卡死。
+        恢复时不增加业务重试次数，因为尚不能认定订单取消本身执行失败。
+    -->
+    <update id="recoverStaleProcessingTasks">
+        UPDATE order_compensation_task
+        SET status = 0,
+            next_retry_time = #{nextRetryTime},
+            processing_time = NULL,
+            update_time = #{now}
+        WHERE task_type = #{taskType}
+          AND status = 1
+          AND processing_time &lt;= #{staleBefore}
+        ORDER BY processing_time ASC, id ASC
+        LIMIT #{limit}
+    </update>
+
+</mapper>

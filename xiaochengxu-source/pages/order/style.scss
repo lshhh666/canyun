@@ -277,6 +277,32 @@
   color: $cm-text;
 }
 
+.coupon-select-row {
+  min-height: 64rpx;
+  align-items: center;
+}
+
+.coupon-select-row__value {
+  display: flex;
+  align-items: center;
+  color: $cm-text-secondary;
+}
+
+.coupon-select-row__discount,
+.fee-row--discount text:last-child {
+  color: $cm-danger;
+  font-weight: 600;
+}
+
+.coupon-select-row__arrow {
+  width: 12rpx;
+  height: 12rpx;
+  margin-left: 14rpx;
+  border-top: 3rpx solid $cm-text-muted;
+  border-right: 3rpx solid $cm-text-muted;
+  transform: rotate(45deg);
+}
+
 .preview-state {
   margin-top: 22rpx;
   color: $cm-text-secondary;
@@ -323,6 +349,13 @@
   color: $cm-text;
   font-size: 38rpx;
   font-weight: 700;
+}
+
+.checkout-total__original {
+  margin-left: 12rpx;
+  color: $cm-text-muted;
+  font-size: 23rpx;
+  text-decoration: line-through;
 }
 
 .checkout-submit__button {

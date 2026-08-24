@@ -1,3 +1,6 @@
+/*!********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[1]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/vue-loader/lib/loaders/stylePostLoader.js!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-22[0].rules[0].use[2]!./node_modules/postcss-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[3]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/sass-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[4]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-22[0].rules[0].use[5]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/vue-loader/lib/index.js??vue-loader-options!./node_modules/@dcloudio/webpack-uni-mp-loader/lib/style.js!../../xiaochengxu-source/App.vue?vue&type=style&index=0&lang=scss& ***!
+  \********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * 这里是uni-app内置的常用样式变量
@@ -31,6 +34,9 @@ page {
   font-size: 28rpx;
   line-height: 1.8;
 }
+/*!*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??clonedRuleSet-24[0].rules[0].use[1]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-24[0].rules[0].use[2]!./node_modules/postcss-loader/dist/cjs.js??clonedRuleSet-24[0].rules[0].use[3]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/sass-loader/dist/cjs.js??clonedRuleSet-24[0].rules[0].use[4]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-24[0].rules[0].use[5]!../../xiaochengxu-source/styles/common.scss ***!
+  \*********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * 这里是uni-app内置的常用样式变量
@@ -64,10 +70,12 @@ page {
   box-sizing: border-box;
   position: relative;
 }
+
 .main {
   width: 710rpx;
   margin: 0 auto;
 }
+
 .tag {
   width: 68rpx;
   height: 40rpx;
@@ -82,6 +90,7 @@ page {
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
 }
+
 .recent_orders {
   margin: 20rpx auto;
 }
@@ -168,6 +177,7 @@ page {
 .recent_orders .order_lists .numAndAum view:last-child text {
   padding: 0 10rpx;
 }
+
 .againBtn {
   padding-bottom: 20rpx;
   height: 72rpx;
@@ -196,6 +206,7 @@ page {
   background: #fff;
   border-color: #d94b4b;
 }
+
 .container .popup-content {
   height: auto;
   padding: 0 0 0rpx;
@@ -207,6 +218,7 @@ page {
 .container .uni-popup .popup-content {
   border-radius: 8rpx 8rpx 0 0;
 }
+
 .popup-content {
   align-items: center;
   justify-content: center;
@@ -214,6 +226,7 @@ page {
   height: 50px;
   background-color: #fff;
 }
+
 .popupBox .popupTitle {
   background: #fef6e9;
   padding: 24rpx 30rpx;
@@ -274,14 +287,15 @@ page {
   display: block;
 }
 .popupBox .popupSet view:last-child radio-group label radio {
-  -webkit-transform: scale(0.7);
-          transform: scale(0.7);
+  transform: scale(0.7);
 }
+
 .closePopup {
   background: #fff;
   padding: 40rpx;
   text-align: center;
 }
+
 .colseShop {
   position: fixed;
   left: 0;
@@ -304,6 +318,7 @@ page {
   font-size: 36rpx;
   font-weight: 600;
 }
+
 .phoneCon .popupBox {
   text-align: center;
   color: #333;
@@ -338,6 +353,7 @@ page {
   padding-top: 10rpx;
   padding-bottom: 10rpx;
 }
+
 .comPopupBox .popup-content {
   border-radius: 8rpx;
   width: 500rpx;
@@ -365,6 +381,7 @@ page {
 .comPopupBox .popup-content .btn > view:last-child {
   color: #f58c21;
 }
+
 .tag {
   width: 68rpx;
   height: 40rpx;
@@ -379,37 +396,37 @@ page {
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 400;
 }
+
 .tag2 {
   background: #fef8e7;
 }
+
 .tag3 {
   background: #e7fef8;
 }
+
 .payBox .wx-checkbox-input-checked,
 .payBox .wx-radio-input-checked,
 .payBox .wx-switch-input-checked {
   background-color: #147ee8 !important;
   border-color: #147ee8 !important;
   color: #fff !important;
-  -webkit-transform: scale(0.7);
-          transform: scale(0.7);
+  transform: scale(0.7);
 }
+
 radio .wx-radio-input.wx-radio-input-checked::before {
-  border-radius: 50%;
-  /* 圆角 */
-  width: 36rpx;
-  /* 选中后对勾大小，不要超过背景的尺寸 */
-  height: 36rpx;
-  /* 选中后对勾大小，不要超过背景的尺寸 */
+  border-radius: 50%; /* 圆角 */
+  width: 36rpx; /* 选中后对勾大小，不要超过背景的尺寸 */
+  height: 36rpx; /* 选中后对勾大小，不要超过背景的尺寸 */
   line-height: 36rpx;
   text-align: center;
-  font-size: 40rpx;
-  /* 对勾大小 30rpx */
+  font-size: 40rpx; /* 对勾大小 30rpx */
   font-weight: 600;
   color: #fff;
   border: 1rpx solid #147ee8;
   background: #147ee8;
 }
+
 .dish_dishFlavor {
   font-size: 20rpx;
   color: #666;

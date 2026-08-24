@@ -23,6 +23,7 @@ const store = new Vuex.Store({
 		remarkData: '',//备注
 		addressData: {}, //地址选择
 		deliveryFee: 0,// 配送费
+		selectedCoupon: null, // 确认订单页当前选择的用户优惠券
 		gender: 0 // 收货地址对应的 性别  0 先生  1 女士
 	},
 	mutations: {
@@ -83,6 +84,9 @@ const store = new Vuex.Store({
 		// 保存配送费
 		setDeliveryFee(state, deliveryFee) {
 			state.deliveryFee = deliveryFee
+		},
+		setSelectedCoupon(state, coupon) {
+			state.selectedCoupon = coupon || null
 		},
 		// 设置性别
 		setGender(state, gender) {

@@ -92,6 +92,15 @@
         "enablePullDownRefresh": false,
         "navigationBarBackgroundColor": "#147EE8"
       }
+    },
+    {
+      "path": "pages/coupon/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "优惠券",
+        "enablePullDownRefresh": false,
+        "navigationBarBackgroundColor": "#147EE8"
+      }
     }
   ],
   "globalStyle": {

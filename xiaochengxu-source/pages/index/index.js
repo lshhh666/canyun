@@ -216,6 +216,7 @@ export default {
 			"setProfileCompleted",
 			"setProfilePromptSkipped",
 			"setDeliveryFee", //设置配送费
+			"setSelectedCoupon", // 新的结算流程不沿用上一张券
 		]),
 		// 从vuex信息
 		...mapState([
@@ -566,6 +567,7 @@ export default {
 				return
 			}
 			if (this.orderListData().length === 0) return
+			this.setSelectedCoupon(null)
 			uni.navigateTo({
 				url: "/pages/order/index",
 			})

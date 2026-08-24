@@ -27,4 +27,6 @@ public class OrdersSubmitDTO implements Serializable {
     //总金额
     // Legacy client value. The server recalculates and ignores this field.
     private BigDecimal amount;
+    //用户优惠券记录 ID
+    private Long userCouponId;
 }

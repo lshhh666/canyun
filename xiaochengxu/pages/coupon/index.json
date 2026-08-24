@@ -1,0 +1,10 @@
+{
+  "navigationStyle": "custom",
+  "navigationBarTitleText": "优惠券",
+  "enablePullDownRefresh": false,
+  "navigationBarBackgroundColor": "#147EE8",
+  "usingComponents": {
+    "cloudmeal-header": "/components/cloudmeal-header/cloudmeal-header",
+    "state-panel": "/components/state-panel/state-panel"
+  }
+}

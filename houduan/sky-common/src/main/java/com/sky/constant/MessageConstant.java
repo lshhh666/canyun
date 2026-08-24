@@ -27,5 +27,7 @@ public class MessageConstant {
     public static final String ORDER_NOT_FOUND = "订单不存在";
     public static final String ADDRESS_OUT_OF_DELIVERY_RANGE = "超出配送范围，配送范围为5公里内";
     public static final String ORDER_TIME_OUT="订单超时，自动取消";
-
+    public static final String NO_COUPONS_AVAILABLE="没有可用的优惠券";
+    public static final String NO_PERMISSION="优惠券不属于该用户，无权使用";
+    public static final String NOT_AVAILABLE="优惠券不可用";
 }

@@ -9,17 +9,13 @@ import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrderPreviewDTO;
 import com.sky.dto.OrdersSubmitDTO;
-import com.sky.entity.AddressBook;
-import com.sky.entity.OrderDetail;
-import com.sky.entity.Orders;
-import com.sky.entity.ShoppingCart;
+import com.sky.entity.*;
+import com.sky.enums.UserCouponStatus;
 import com.sky.exception.AddressBookBusinessException;
+import com.sky.exception.CouponBusinessException;
 import com.sky.exception.OrderBusinessException;
 import com.sky.exception.ShoppingCartBusinessException;
-import com.sky.mapper.AddressBookMapper;
-import com.sky.mapper.OrderMapper;
-import com.sky.mapper.OrderdetailMapper;
-import com.sky.mapper.ShoppingCartMapper;
+import com.sky.mapper.*;
 import com.sky.result.PageResult;
 import com.sky.service.OrderService;
 import com.sky.service.OrderPricingService;
@@ -35,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -54,6 +51,8 @@ public class OrderServiceImpl implements OrderService {
     private WebSocketServer webSocketServer;
     @Autowired
     private OrderPricingService orderPricingService;
+    @Autowired
+    private UserCouponMapper  userCouponMapper;
 
     @Override
     public OrderPreviewVO preview(OrderPreviewDTO orderPreviewDTO) {
@@ -66,8 +65,17 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public OrderSubmitVO orderSubmit(OrdersSubmitDTO ordersSubmitDTO) {
+
+    //2. 计算订单原价、优惠金额和实付金额
+    //3. 插入订单，获得 orderId
+    //4. 原子锁券并检查返回值
         Long userId = BaseContext.getCurrentId();
         OrderPreviewVO quote = orderPricingService.preview(userId, ordersSubmitDTO.getAddressBookId());
+        if (quote == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        UserCoupon userCoupon = validateUserCoupon(ordersSubmitDTO.getUserCouponId(), BaseContext.getCurrentId(),quote.getGoodsAmount(), now);
         //查看购物车
         List<ShoppingCart> shoppingCartList = shoppingCartMapper.listShoppingCartByUserId(userId);
         if (shoppingCartList == null || shoppingCartList.isEmpty()) {
@@ -95,13 +103,26 @@ public class OrderServiceImpl implements OrderService {
         orders.setTablewareNumber(ordersSubmitDTO.getTablewareNumber() == null
                 ? 0 : ordersSubmitDTO.getTablewareNumber());
         orders.setTablewareStatus(ordersSubmitDTO.getTablewareStatus());
-        orders.setAmount(quote.getTotalAmount());
+        orders.setOriginalAmount(quote.getTotalAmount());
+        //实际收钱
+        if(userCoupon!=null){
+            BigDecimal actualDiscount =
+                    userCoupon.getDiscountAmount().min(quote.getTotalAmount());
+            orders.setDiscountAmount(actualDiscount);
+            orders.setAmount(quote.getTotalAmount().subtract(actualDiscount));
+        }else{
+            orders.setDiscountAmount(BigDecimal.ZERO);
+            orders.setAmount(quote.getTotalAmount());
+        }
+        if (userCoupon != null) {
+            orders.setUserCouponId(userCoupon.getId());
+        }
         orders.setPackAmount(quote.getPackAmount().intValueExact());
         orders.setEstimatedDeliveryTime(quote.getEstimatedDeliveryTime());
         orders.setNumber(orderNumber);
         orders.setUserId(userId);
         orders.setStatus(Orders.PENDING_PAYMENT);           // 待付款
-        orders.setOrderTime(LocalDateTime.now());           // 下单时间
+        orders.setOrderTime(now);           // 下单时间
         orders.setPayStatus(Orders.UN_PAID);                // 未支付
         orders.setAddress(addressBook.getProvinceName()     // 拼接完整地址
                 + addressBook.getCityName()
@@ -110,6 +131,12 @@ public class OrderServiceImpl implements OrderService {
         orders.setConsignee(addressBook.getConsignee());    // 收货人
         orders.setPhone(addressBook.getPhone());
         orderMapper.add(orders);
+        if(userCoupon!=null){
+            int i = userCouponMapper.lockForOrder(userCoupon.getId(), userId, orders.getId(), quote.getGoodsAmount(), now);
+            if(i==0){
+                throw  new CouponBusinessException("锁券失败");
+            }
+        }
         //设置Orderdetail
         for(ShoppingCart shoppingCart : shoppingCartList){
             OrderDetail  orderDetail = new OrderDetail();
@@ -129,13 +156,18 @@ public class OrderServiceImpl implements OrderService {
 
         return orderSubmitVO;
     }
-
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public OrderPaymentVO orderpayment(OrdersPaymentDTO ordersPaymentDTO) {
-        Orders  order= orderMapper.getByNumber(ordersPaymentDTO.getOrderNumber());
-        if(order==null){
+        Orders order = orderMapper.getByNumber(ordersPaymentDTO.getOrderNumber());
+        if (order == null) {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
+        Long userId = BaseContext.getCurrentId();
+        if (!Objects.equals(order.getUserId(), userId)) {
+            throw new OrderBusinessException(MessageConstant.NO_PERMISSION);
+        }
+
         Integer status = order.getStatus();
         // Demo payment is completed by this endpoint. Retrying the same confirmed
         // payment must be idempotent because the client may lose the first response.
@@ -146,15 +178,27 @@ public class OrderServiceImpl implements OrderService {
                             : null)
                     .build();
         }
-        if(!Orders.PENDING_PAYMENT.equals(status)){
+
+        if (!Orders.PENDING_PAYMENT.equals(status)
+                || !Orders.UN_PAID.equals(order.getPayStatus())) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
-        }else{
-            order.setStatus(Orders.TO_BE_CONFIRMED);
-            order.setCheckoutTime(LocalDateTime.now());
-            order.setPayMethod(ordersPaymentDTO.getPayMethod());
-            order.setPayStatus(Orders.PAID);
-            orderMapper.update(order);
         }
+
+        LocalDateTime now = LocalDateTime.now();
+        int paidRows = orderMapper.markPaidIfPending(
+                order.getId(), userId, ordersPaymentDTO.getPayMethod(), now);
+        if (paidRows != 1) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        if (order.getUserCouponId() != null) {
+            int usedRows = userCouponMapper.markUsedByOrder(
+                    order.getUserCouponId(), order.getId(), now);
+            if (usedRows != 1) {
+                throw new CouponBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+            }
+        }
+
         //通过websocket向客户端浏览器推送消息  type orderId content
         Map map=new HashMap();
         map.put("type",1);
@@ -209,6 +253,7 @@ public class OrderServiceImpl implements OrderService {
         return new PageResult(ordersPage.getTotal(), ordersPage.getResult());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void cancelByOrderId(Long orderId) {
         // 先查订单，判断状态
@@ -216,18 +261,39 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
-        // 只有待付款和待接单能取消
-        if (!order.getStatus().equals(Orders.PENDING_PAYMENT)
-                && !order.getStatus().equals(Orders.TO_BE_CONFIRMED)) {
+        if (!Objects.equals(order.getUserId(), BaseContext.getCurrentId())) {
+            throw new OrderBusinessException(MessageConstant.NO_PERMISSION);
+        }
+        // 当前项目没有退款链路，只允许用户取消待付款订单。
+        // 已支付待接单的订单必须等退款能力完成后再开放取消。
+        if (!Orders.PENDING_PAYMENT.equals(order.getStatus())) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
-        Orders orders = Orders.builder()
-                .id(orderId)
-                .status(Orders.CANCELLED)
-                .cancelTime(LocalDateTime.now())
-                .build();
+        LocalDateTime now = LocalDateTime.now();
+        int cancelledRows = orderMapper.cancelIfPending(orderId, now, null);
+        if (cancelledRows != 1) {
+            // 初次查询后支付可能已经抢先提交，条件更新失败时不能再释放优惠券。
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        releaseCouponIfLocked(order, now);
+    }
 
-        orderMapper.update(orders);
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void cancelTimeoutOrder(Long orderId) {
+        Orders order = orderMapper.getById(orderId);
+        // The scheduler may have read the order just before a payment completed.
+        // Re-check its current state inside this transaction before cancelling it.
+        if (order == null || !Orders.PENDING_PAYMENT.equals(order.getStatus())) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        int i = orderMapper.cancelIfPending(orderId, now, MessageConstant.ORDER_TIME_OUT);
+        if(i!=1){
+            return;
+        }else {
+            releaseCouponIfLocked(order, now);
+        }
     }
 
     @Override
@@ -272,4 +338,36 @@ public class OrderServiceImpl implements OrderService {
        return timestamp+random;
     }
 
+    //1. 查询并初步校验用户优惠券
+
+    private UserCoupon validateUserCoupon(Long userCouponId,Long userId,BigDecimal goodsAmount,LocalDateTime now){
+        if (userCouponId == null) {
+            return null;
+        }
+        UserCoupon userCoupon = userCouponMapper.selectById(userCouponId);
+        if (userCoupon == null) {
+            throw new CouponBusinessException(MessageConstant.NO_COUPONS_AVAILABLE);
+        }
+        if(!Objects.equals(userCoupon.getUserId(),userId)){
+            throw new CouponBusinessException(MessageConstant.NO_PERMISSION);
+        }
+        if(!(userCoupon.getStatus()== UserCouponStatus.AVAILABLE)||
+                userCoupon.getValidStartTime().isAfter(now)||
+                !userCoupon.getValidEndTime().isAfter(now)||
+                goodsAmount.compareTo(userCoupon.getThresholdAmount()) < 0){
+            throw new CouponBusinessException(MessageConstant.NOT_AVAILABLE);
+        }
+        return userCoupon;
+    }
+
+        private void releaseCouponIfLocked(Orders order,LocalDateTime now){
+        if(order.getUserCouponId()==null){
+            return ;
+        }
+        int i = userCouponMapper.releaseByOrder(order.getUserCouponId(), order.getId(), now);
+        if(i!=1){
+            throw new CouponBusinessException("优惠券释放失败");
+        }
+
+    }
 }

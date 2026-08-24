@@ -39,6 +39,12 @@ function mount(definition, { state = {}, mutations = [], refs = {} } = {}) {
 }
 
 function sharedContext(calls, state, apis = {}) {
+  const statusValues = { 0: 'AVAILABLE', 1: 'LOCKED', 2: 'USED', 3: 'EXPIRED' }
+  const timestamp = value => {
+    if (!value) return Number.NaN
+    const parsed = Date.parse(String(value).replace(/-/g, '/').replace('T', ' '))
+    return Number.isFinite(parsed) ? parsed : Number.NaN
+  }
   return {
     CloudmealHeader: {},
     AddressPop: {},
@@ -54,6 +60,18 @@ function sharedContext(calls, state, apis = {}) {
     presentFormat: () => '2026-08-11 09:00:00',
     getWeekDate: () => '周二',
     getErrorMessage: (error, fallback) => (error && error.message) || fallback,
+    getCouponEligibility(coupon, goodsAmount, now = Date.now()) {
+      const rawStatus = coupon && coupon.status
+      const status = typeof rawStatus === 'number' ? statusValues[rawStatus] : String(rawStatus || '').toUpperCase()
+      const threshold = Number(coupon && coupon.thresholdAmount)
+      const start = timestamp(coupon && coupon.validStartTime)
+      const end = timestamp(coupon && coupon.validEndTime)
+      return {
+        eligible: Boolean(coupon) && status === 'AVAILABLE' && Number.isFinite(threshold)
+          && threshold <= Number(goodsAmount) && Number.isFinite(start) && Number.isFinite(end)
+          && start < end && start <= now && now < end
+      }
+    },
     dayjs: () => ({
       format: () => '10:00',
       hour: () => 10,
@@ -71,6 +89,7 @@ function sharedContext(calls, state, apis = {}) {
         calls.mutations.push([name, payload])
         if (name === 'setAddress') state.address = payload
         if (name === 'setRemark') state.remark = payload
+        if (name === 'setSelectedCoupon') state.selectedCoupon = payload
       }]))
     },
     uni: {
@@ -223,11 +242,101 @@ test('checkout success keeps the existing payload and navigates to payment', asy
   assert.equal('deliveryFee' in submittedParams, false)
   assert.equal('shopId' in submittedParams, false)
   assert.equal(order.instance.isHandlePy, false)
-  assert.deepEqual(order.calls.mutations.slice(-2), [
+  assert.deepEqual(order.calls.mutations.slice(-3), [
     ['setOrderData', { id: 88 }],
-    ['setRemark', '']
+    ['setRemark', ''],
+    ['setSelectedCoupon', null]
   ])
   assert.equal(order.calls.navigations.at(-1).url, '/pages/pay/index?orderId=88')
+})
+
+test('checkout displays an eligible coupon and submits only its user-coupon id', async () => {
+  let submittedParams
+  const selectedCoupon = {
+    id: 101,
+    status: 'AVAILABLE',
+    thresholdAmount: '20.00',
+    discountAmount: '8.00',
+    validStartTime: '2020-01-01 00:00:00',
+    validEndTime: '2099-12-31 23:59:59'
+  }
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [], remarkData: '', addressData: {}, deliveryFee: 3,
+      selectedCoupon
+    },
+    apis: {
+      submitOrderSubmit: async params => {
+        submittedParams = params
+        return { code: 1, data: { id: 93 } }
+      }
+    }
+  })
+  Object.assign(order.instance, {
+    address: '测试地址', addressBookId: 12, previewState: 'ready',
+    arrivalTime: '10:00', deliveryMode: 'scheduled', status: 0, num: 0,
+    previewData: {
+      goodsAmount: '30.00', packAmount: '2.00', deliveryFee: '3.00',
+      totalAmount: '35.00', estimatedDeliveryTime: '2026-08-11 10:00:00'
+    }
+  })
+
+  assert.equal(order.instance.couponDiscount, 8)
+  assert.equal(order.instance.payableAmount, 27)
+  await order.instance.payOrderHandle()
+
+  assert.equal(submittedParams.userCouponId, 101)
+  assert.equal('discountAmount' in submittedParams, false)
+  assert.equal('amount' in submittedParams, false)
+  assert.deepEqual(order.calls.mutations.at(-1), ['setSelectedCoupon', null])
+})
+
+test('checkout clears a coupon that no longer meets the authoritative goods amount', () => {
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: {
+      orderListData: [], selectedCoupon: {
+        id: 102,
+        status: 'AVAILABLE',
+        thresholdAmount: '50.00',
+        discountAmount: '10.00',
+        validStartTime: '2020-01-01 00:00:00',
+        validEndTime: '2099-12-31 23:59:59'
+      }
+    }
+  })
+  order.instance.previewData = { goodsAmount: '30.00', totalAmount: '35.00' }
+
+  assert.equal(order.instance.validateSelectedCoupon(true), false)
+  assert.equal(order.state.selectedCoupon, null)
+  assert.equal(order.calls.toasts.at(-1).title, '已选优惠券当前不可用，请重新选择')
+})
+
+test('checkout rejects a coupon that becomes invalid immediately before submit', async () => {
+  let submitCalls = 0
+  const selectedCoupon = {
+    id: 103,
+    status: 'AVAILABLE',
+    thresholdAmount: '20.00',
+    discountAmount: '8.00',
+    validStartTime: '2020-01-01 00:00:00',
+    validEndTime: '2099-12-31 23:59:59'
+  }
+  const order = harness('xiaochengxu-source/pages/order/index.js', {
+    state: { orderListData: [], selectedCoupon },
+    apis: {
+      submitOrderSubmit: async () => { submitCalls += 1; return { code: 1, data: { id: 1 } } }
+    }
+  })
+  Object.assign(order.instance, {
+    address: '测试地址', addressBookId: 12, previewState: 'ready',
+    previewData: { goodsAmount: '30.00', totalAmount: '35.00' }
+  })
+  selectedCoupon.validEndTime = '2020-01-02 00:00:00'
+
+  assert.equal(await order.instance.payOrderHandle(), false)
+  assert.equal(submitCalls, 0)
+  assert.equal(order.state.selectedCoupon, null)
+  assert.equal(order.calls.toasts.at(-1).title, '已选优惠券当前不可用，请重新选择')
 })
 
 test('checkout renders and submits only the authoritative preview', async () => {

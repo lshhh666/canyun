@@ -60,6 +60,17 @@
           <text>配送费</text>
           <text>￥{{ deliveryFeeAmount.toFixed(2) }}</text>
         </view>
+        <view class="fee-row coupon-select-row" @tap="openCouponSelector">
+          <text>优惠券</text>
+          <view class="coupon-select-row__value">
+            <text :class="{ 'coupon-select-row__discount': selectedCouponData }">{{ couponDisplayText }}</text>
+            <text class="coupon-select-row__arrow"></text>
+          </view>
+        </view>
+        <view v-if="couponDiscount > 0" class="fee-row fee-row--discount">
+          <text>优惠金额</text>
+          <text>-￥{{ couponDiscount.toFixed(2) }}</text>
+        </view>
         <view v-if="previewState === 'loading'" class="preview-state">正在计算订单金额...</view>
         <view v-else-if="previewState === 'error'" class="preview-state preview-state--error">
           <text>订单金额获取失败</text>
@@ -71,7 +82,8 @@
     <view class="checkout-submit">
       <view class="checkout-total">
         <text class="checkout-total__label">合计</text>
-        <text class="checkout-total__amount">￥{{ totalAmount.toFixed(2) }}</text>
+        <text v-if="couponDiscount > 0" class="checkout-total__original">￥{{ totalAmount.toFixed(2) }}</text>
+        <text class="checkout-total__amount">￥{{ payableAmount.toFixed(2) }}</text>
       </view>
       <button
         class="checkout-submit__button"

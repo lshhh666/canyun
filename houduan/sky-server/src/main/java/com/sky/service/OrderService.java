@@ -22,6 +22,8 @@ public interface OrderService {
     PageResult historyOrders(OrdersPageQueryDTO ordersPageQueryDTO);
     //取消订单
     void cancelByOrderId(Long orderId);
+    //取消超时未支付订单
+    void cancelTimeoutOrder(Long orderId);
     //再来一单
     void repetition(Long orderId);
     //催单

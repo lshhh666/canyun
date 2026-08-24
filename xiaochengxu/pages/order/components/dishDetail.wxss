@@ -1,3 +1,6 @@
+/*!**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[1]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/vue-loader/lib/loaders/stylePostLoader.js!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-22[0].rules[0].use[2]!./node_modules/postcss-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[3]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/sass-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[4]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-22[0].rules[0].use[5]!../../xiaochengxu-source/pages/order/style.scss?vue&type=style&index=0&id=2983afba&lang=scss&scoped=true& ***!
+  \**********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * 这里是uni-app内置的常用样式变量
@@ -69,8 +72,7 @@
   flex-wrap: wrap;
 }
 .address_name.data-v-2983afba,
-.address_name_disabled.data-v-2983afba,
-.bottomTime.data-v-2983afba {
+.address_name_disabled.data-v-2983afba {
   min-width: 0;
   flex: 1;
 }
@@ -139,18 +141,25 @@
   margin-left: 12rpx;
   border-top: 3rpx solid #91a0b2;
   border-right: 3rpx solid #91a0b2;
-  -webkit-transform: rotate(45deg);
-          transform: rotate(45deg);
+  transform: rotate(45deg);
 }
 .bottomTime.data-v-2983afba {
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  flex: 0 0 100%;
 }
 .time_name_disabled.data-v-2983afba {
   flex: 1;
   color: #12263f;
   font-size: 27rpx;
   font-weight: 500;
+  white-space: nowrap;
+}
+.bottomTime .address_image.data-v-2983afba {
+  flex: none;
+  white-space: nowrap;
 }
 .order-type.data-v-2983afba {
   margin-top: 18rpx;
@@ -241,8 +250,7 @@
   margin-left: 14rpx;
   border-top: 3rpx solid #91a0b2;
   border-right: 3rpx solid #91a0b2;
-  -webkit-transform: rotate(45deg);
-          transform: rotate(45deg);
+  transform: rotate(45deg);
 }
 .fee-summary.data-v-2983afba {
   margin-bottom: 0;
@@ -256,6 +264,28 @@
 }
 .fee-row text.data-v-2983afba:last-child {
   color: #12263f;
+}
+.coupon-select-row.data-v-2983afba {
+  min-height: 64rpx;
+  align-items: center;
+}
+.coupon-select-row__value.data-v-2983afba {
+  display: flex;
+  align-items: center;
+  color: #60758d;
+}
+.coupon-select-row__discount.data-v-2983afba,
+.fee-row--discount text.data-v-2983afba:last-child {
+  color: #d94b4b;
+  font-weight: 600;
+}
+.coupon-select-row__arrow.data-v-2983afba {
+  width: 12rpx;
+  height: 12rpx;
+  margin-left: 14rpx;
+  border-top: 3rpx solid #91a0b2;
+  border-right: 3rpx solid #91a0b2;
+  transform: rotate(45deg);
 }
 .preview-state.data-v-2983afba {
   margin-top: 22rpx;
@@ -297,6 +327,12 @@
   color: #12263f;
   font-size: 38rpx;
   font-weight: 700;
+}
+.checkout-total__original.data-v-2983afba {
+  margin-left: 12rpx;
+  color: #91a0b2;
+  font-size: 23rpx;
+  text-decoration: line-through;
 }
 .checkout-submit__button.data-v-2983afba {
   width: 260rpx;

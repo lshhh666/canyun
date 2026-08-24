@@ -108,6 +108,15 @@ const router = new Router({
           }
         },
         {
+          path: "coupon",
+          component: () =>
+            import(/* webpackChunkName: "coupon" */ "@/views/coupon/index.vue"),
+          meta: {
+            title: "优惠券管理",
+            icon: "icon-combo"
+          }
+        },
+        {
           path: "employee",
           component: () =>
             import(/* webpackChunkName: "shopTable" */ "@/views/employee/index.vue"),

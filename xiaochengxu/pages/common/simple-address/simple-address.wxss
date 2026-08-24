@@ -1,3 +1,6 @@
+/*!************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[1]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/vue-loader/lib/loaders/stylePostLoader.js!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-22[0].rules[0].use[2]!./node_modules/postcss-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[3]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/sass-loader/dist/cjs.js??clonedRuleSet-22[0].rules[0].use[4]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/webpack-preprocess-loader/index.js??clonedRuleSet-22[0].rules[0].use[5]!./node_modules/@dcloudio/vue-cli-plugin-uni/packages/vue-loader/lib/index.js??vue-loader-options!./node_modules/@dcloudio/webpack-uni-mp-loader/lib/style.js!../../xiaochengxu-source/pages/common/simple-address/simple-address.nvue?vue&type=style&index=0&id=6d425f7a&lang=scss&scoped=true& ***!
+  \************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * 这里是uni-app内置的常用样式变量
@@ -54,12 +57,9 @@
   bottom: 0;
   left: 0;
   right: 0;
-  transition-property: -webkit-transform;
   transition-property: transform;
-  transition-property: transform, -webkit-transform;
   transition-duration: 0.3s;
-  -webkit-transform: translateY(460rpx);
-          transform: translateY(460rpx);
+  transform: translateY(460rpx);
   z-index: 99;
 }
 .simple-address-content.data-v-6d425f7a {
@@ -69,22 +69,17 @@
   bottom: 0;
   left: 0;
   right: 0;
-  -webkit-transform: translateY(500rpx);
-          transform: translateY(500rpx);
+  transform: translateY(500rpx);
 }
 .content-ani.data-v-6d425f7a {
-  transition-property: opacity, -webkit-transform;
   transition-property: transform, opacity;
-  transition-property: transform, opacity, -webkit-transform;
   transition-duration: 0.2s;
 }
 .simple-bottom-content.data-v-6d425f7a {
-  -webkit-transform: translateY(0);
-          transform: translateY(0);
+  transform: translateY(0);
 }
 .simple-center-content.data-v-6d425f7a {
-  -webkit-transform: scale(1);
-          transform: scale(1);
+  transform: scale(1);
   opacity: 1;
 }
 .simple-address__header.data-v-6d425f7a {
@@ -129,7 +124,7 @@
   left: 0;
   width: 100%;
   height: 408rpx;
-  background-color: white;
+  background-color: rgb(255, 255, 255);
 }
 .picker-item.data-v-6d425f7a {
   text-align: center;

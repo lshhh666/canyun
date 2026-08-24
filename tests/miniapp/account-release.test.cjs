@@ -84,10 +84,10 @@ test('account page contains only real destinations and CloudMeal shell', () => {
   ].map(read).join('\n')
   expectAll(files, [
     '<cloudmeal-header', '<app-tabbar active="account"',
-    '收货地址', '订单记录', '联系门店', '餐云 CloudMeal'
+    '收货地址', '订单记录', '我的优惠券', '联系门店', '餐云 CloudMeal'
   ])
   expectNone(files, [
-    '18500557668', '优惠券', '积分', '会员等级',
+    '18500557668', '积分', '会员等级',
     '#ffc200', '#FFC200', 'linear-gradient', 'btn_waiter_sel.png'
   ])
 })
@@ -139,10 +139,11 @@ test('account user identity uses real Vuex values with nickname and logo fallbac
   assert.equal(real.instance.psersonUrl, 'https://example.test/updated.png')
 })
 
-test('account routes address, order history and order detail to their real pages', () => {
+test('account routes address, coupons, order history and order detail to their real pages', () => {
   const harness = accountHarness()
   harness.instance.goAddress()
   harness.instance.goOrder()
+  harness.instance.goCoupon()
   harness.instance.goDetail(88)
 
   assert.deepEqual(harness.calls.mutations, [
@@ -154,6 +155,7 @@ test('account routes address, order history and order detail to their real pages
   ])
   assert.deepEqual(harness.calls.navigations.map(call => call.url), [
     '/pages/historyOrder/historyOrder',
+    '/pages/coupon/index?tab=my',
     '/pages/details/index?orderId=88'
   ])
 })

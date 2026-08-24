@@ -105,6 +105,24 @@ export const updateUserProfile = params => request({
 	params
 })
 
+// 查询当前可领取的优惠券
+export const getAvailableCoupons = () => request({
+	url: '/user/coupon/list',
+	method: 'GET'
+})
+
+// 领取优惠券
+export const receiveCoupon = couponId => request({
+	url: `/user/coupon/${couponId}/receive`,
+	method: 'POST'
+})
+
+// 查询当前登录用户的优惠券
+export const getMyCoupons = () => request({
+	url: '/user/coupon/my',
+	method: 'GET'
+})
+
 // 菜品和套餐的分类
 export const getCategoryList = (params) => {
 	return request({

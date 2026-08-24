@@ -25,6 +25,7 @@ import DishDetail from "./components/dishDetail.vue" //菜品详情
 import DishInfo from "./components/dishInfo.vue" //菜品信息
 import dayjs from "@/utils/lib/dayjs.min.js";
 import { getErrorMessage } from '../../utils/error-message'
+import { getCouponEligibility } from '../../utils/coupon.js'
 export default {
 	data() {
 		return {
@@ -106,6 +107,20 @@ export default {
 		},
 		totalAmount: function () {
 			return this.previewNumber('totalAmount')
+		},
+		selectedCouponData: function () {
+			return this.$store.state.selectedCoupon || null
+		},
+		couponDiscount: function () {
+			if (!this.selectedCouponData || !this.isSelectedCouponUsable()) return 0
+			return Math.min(Number(this.selectedCouponData.discountAmount) || 0, this.totalAmount)
+		},
+		payableAmount: function () {
+			return Math.max(0, this.totalAmount - this.couponDiscount)
+		},
+		couponDisplayText: function () {
+			if (!this.selectedCouponData) return '选择优惠券'
+			return `-${this.couponDiscount.toFixed(2)}元`
 		},
 		// 菜品数据
 		orderListDataes: function () {
@@ -190,7 +205,7 @@ export default {
 	},
 	methods: {
 		...mapState(['orderListData', 'remarkData', 'addressData', 'storeInfo', 'shopInfo', 'deliveryFee']),
-		...mapMutations(['setAddressBackUrl', 'setOrderData', 'setArrivalTime', 'setRemark', 'setGender']),
+		...mapMutations(['setAddressBackUrl', 'setOrderData', 'setArrivalTime', 'setRemark', 'setGender', 'setSelectedCoupon']),
 		init() {
 			this.computOrderInfo()
 
@@ -202,6 +217,26 @@ export default {
 		previewNumber(field) {
 			const amount = Number(this.previewData && this.previewData[field])
 			return Number.isFinite(amount) ? amount : 0
+		},
+		isSelectedCouponUsable() {
+			return getCouponEligibility(this.selectedCouponData, this.dishAmount).eligible
+		},
+		validateSelectedCoupon(showToast = false) {
+			if (!this.selectedCouponData || this.isSelectedCouponUsable()) return true
+			this.setSelectedCoupon(null)
+			if (showToast) {
+				uni.showToast({ title: '已选优惠券当前不可用，请重新选择', icon: 'none' })
+			}
+			return false
+		},
+		openCouponSelector() {
+			if (this.previewState !== 'ready') {
+				uni.showToast({ title: '订单金额计算中，请稍候', icon: 'none' })
+				return
+			}
+			uni.navigateTo({
+				url: `/pages/coupon/index?select=1&goodsAmount=${encodeURIComponent(this.dishAmount.toFixed(2))}`
+			})
 		},
 		immediateDeliveryTime() {
 			const value = String(this.previewData && this.previewData.estimatedDeliveryTime || '').replace('T', ' ')
@@ -228,6 +263,7 @@ export default {
 				this.deliveryMode = 'immediate'
 				if (this.orderTime) this.getDateDate()
 				this.setArrivalTime(this.arrivalTime)
+				this.validateSelectedCoupon(true)
 				return result
 			} catch (error) {
 				if (requestId !== this.previewRequestId) return null
@@ -361,6 +397,7 @@ export default {
 				uni.showToast({ title: '订单金额尚未准备好，请重试', icon: 'none' })
 				return false
 			}
+			if (!this.validateSelectedCoupon(true)) return false
 			this.isHandlePy = true
 			try {
 				const params = {
@@ -371,12 +408,14 @@ export default {
 						this.arrivalTime),
 					deliveryStatus: this.deliveryMode === 'immediate' ? 1 : 0,
 					tablewareStatus: this.status,
-					tablewareNumber: this.num
+					tablewareNumber: this.num,
+					userCouponId: this.selectedCouponData ? this.selectedCouponData.id : null
 				}
 				const res = await submitOrderSubmit(params)
 				if (res.code === 1) {
 					this.setOrderData(res.data)
 					this.setRemark('')
+					this.setSelectedCoupon(null)
 
 					uni.navigateTo({
 						url: '/pages/pay/index?orderId=' + res.data.id
