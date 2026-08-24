@@ -240,7 +240,7 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-miniapp-output.ps1
 
 | 范围 | 结果 |
 | --- | --- |
-| Java 后端 | 96 个测试通过 |
+| Java 后端 | 102 个测试通过 |
 | Vue 管理端 | 53 个测试通过 |
 | 微信小程序 | 114 个测试通过 |
 
@@ -265,7 +265,7 @@ $tests = Get-ChildItem -LiteralPath tests/miniapp -Filter *.test.cjs | ForEach-O
 node --test $tests
 ```
 
-优惠券相关测试覆盖：并发重复领取、库存原子扣减、服务端计价、锁券、核销、释放、支付与取消竞争、事务回滚、补偿任务抢占、有限重试、人工兜底和真实数据库端到端流程。
+优惠券和订单相关测试覆盖：并发重复领取、库存原子扣减、服务端计价、锁券、核销、释放、支付与取消竞争、事务回滚、补偿任务抢占、有限重试、人工兜底、用户订单归属校验和真实数据库端到端流程。
 
 ## 当前限制
 

@@ -216,11 +216,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderVO orderDetail(Long id) {
         OrderVO orderVO=new OrderVO();
-        //查订单
-        Orders orders=orderMapper.getById(id);
-        if(orders==null){
-            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
-        }
+        // 用户只能查看自己的订单，避免通过猜测订单 ID 获取他人收货信息
+        Orders orders = getCurrentUserOrder(id);
         //查订单详细
         List<OrderDetail> orderDetailList=orderdetailMapper.getByOrderId(id);
         //拼接OrderDishes
@@ -298,6 +295,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void repetition(Long orderId) {
+        // 先校验订单归属，再读取明细，避免复制其他用户的订单内容
+        getCurrentUserOrder(orderId);
         List<OrderDetail> orderDetails = orderdetailMapper.getByOrderId(orderId);
         List<ShoppingCart>shoppingCarts=new ArrayList<>();
         for (OrderDetail orderDetail : orderDetails) {
@@ -315,8 +314,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void reminder(Long id) {
-        Orders orders = orderMapper.getById(id);
-        if(orders==null||!(orders.getStatus().equals(Orders.TO_BE_CONFIRMED))){
+        // 催单属于用户操作，必须同时满足订单归属和订单状态要求
+        Orders orders = getCurrentUserOrder(id);
+        if(!Orders.TO_BE_CONFIRMED.equals(orders.getStatus())){
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
         Map map=new HashMap();
@@ -326,6 +326,20 @@ public class OrderServiceImpl implements OrderService {
         map.put("content","订单号:"+orders.getNumber()+"客户催单,已下单"+minutes+"分钟，仍未接单。");
 
         webSocketServer.sendToAllClient(JSON.toJSONString(map));
+    }
+
+    /**
+     * 查询当前登录用户拥有的订单。
+     *
+     * 对“订单不存在”和“订单不属于当前用户”使用相同异常，既阻止水平越权，
+     * 也避免向请求者泄露某个订单 ID 是否真实存在。
+     */
+    private Orders getCurrentUserOrder(Long orderId) {
+        Orders order = orderMapper.getById(orderId);
+        if (order == null || !Objects.equals(order.getUserId(), BaseContext.getCurrentId())) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        return order;
     }
 
     //生成订单号方法
