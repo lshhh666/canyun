@@ -33,6 +33,7 @@ public class ZhipuAiChatClient implements AiChatClient {
     private static final String CHAT_COMPLETIONS_PATH = "/chat/completions";
     private static final String SYSTEM_ROLE = "system";
     private static final String USER_ROLE = "user";
+    private static final String NORMAL_FINISH_REASON = "stop";
     private static final String FREE_MODEL = "glm-4.7-flash";
     private static final String UNKNOWN_PROVIDER_ERROR_CODE = "unknown";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -118,6 +119,10 @@ public class ZhipuAiChatClient implements AiChatClient {
         if (firstChoice == null || firstChoice.getMessage() == null
                 || !StringUtils.hasText(firstChoice.getMessage().getContent())) {
             throw invalidResponseException();
+        }
+        if (!NORMAL_FINISH_REASON.equals(firstChoice.getFinishReason())) {
+            log.warn("AI模型回答未正常结束，结束原因：{}", firstChoice.getFinishReason());
+            throw new AiServiceException(MessageConstant.AI_SERVICE_UNAVAILABLE);
         }
         return firstChoice.getMessage().getContent();
     }

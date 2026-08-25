@@ -17,7 +17,7 @@ class AiPropertiesTest {
                 .withProperty("sky.ai.api-key", "test-secret-key")
                 .withProperty("sky.ai.connect-timeout", "3000")
                 .withProperty("sky.ai.read-timeout", "60000")
-                .withProperty("sky.ai.max-tokens", "512");
+                .withProperty("sky.ai.max-tokens", "1024");
 
         AiProperties properties = Binder.get(environment)
                 .bind("sky.ai", Bindable.of(AiProperties.class))
@@ -28,7 +28,7 @@ class AiPropertiesTest {
         assertThat(properties.getApiKey()).isEqualTo("test-secret-key");
         assertThat(properties.getConnectTimeout()).isEqualTo(3000);
         assertThat(properties.getReadTimeout()).isEqualTo(60000);
-        assertThat(properties.getMaxTokens()).isEqualTo(512);
+        assertThat(properties.getMaxTokens()).isEqualTo(1024);
         assertThat(properties.toString()).doesNotContain("test-secret-key");
     }
 }

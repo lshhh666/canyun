@@ -43,7 +43,7 @@ class ZhipuAiChatClientTest {
         properties.setBaseUrl("https://example.com/v1/");
         properties.setModel("glm-4.7-flash");
         properties.setApiKey(TEST_API_KEY);
-        properties.setMaxTokens(512);
+        properties.setMaxTokens(1024);
         client = new ZhipuAiChatClient(restTemplate, properties);
     }
 
@@ -53,7 +53,7 @@ class ZhipuAiChatClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + TEST_API_KEY))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json("{\"model\":\"glm-4.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"你是餐云客服\"},{\"role\":\"user\",\"content\":\"你好\"}],\"stream\":false,\"max_tokens\":512}"))
+                .andExpect(content().json("{\"model\":\"glm-4.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"你是餐云客服\"},{\"role\":\"user\",\"content\":\"你好\"}],\"stream\":false,\"max_tokens\":1024}"))
                 .andRespond(withSuccess("{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"您好，请问需要什么帮助？\"},\"finish_reason\":\"stop\"}]}", MediaType.APPLICATION_JSON));
 
         String answer = client.chat(SYSTEM_PROMPT, "你好");
@@ -101,6 +101,17 @@ class ZhipuAiChatClientTest {
             logger.detachAppender(appender);
             appender.stop();
         }
+    }
+
+    @Test
+    void shouldRejectTruncatedAnswer() {
+        server.expect(once(), requestTo(CHAT_URL))
+                .andRespond(withSuccess("{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"这是一个没有说完的回答或\"},\"finish_reason\":\"length\"}]}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.chat(SYSTEM_PROMPT, "请介绍一下你自己"))
+                .isInstanceOf(AiServiceException.class)
+                .hasMessage(MessageConstant.AI_SERVICE_UNAVAILABLE);
+        server.verify();
     }
 
     @Test

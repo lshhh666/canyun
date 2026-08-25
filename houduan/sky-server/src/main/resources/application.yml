@@ -62,4 +62,4 @@ sky:
     model: glm-4.7-flash
     connect-timeout: 3000
     read-timeout: 60000
-    max-tokens: 512
+    max-tokens: 1024
