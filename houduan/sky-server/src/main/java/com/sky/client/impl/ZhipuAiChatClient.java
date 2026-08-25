@@ -1,5 +1,7 @@
 package com.sky.client.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sky.client.AiChatClient;
 import com.sky.client.model.ChatCompletionRequest;
 import com.sky.client.model.ChatCompletionResponse;
@@ -19,8 +21,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -28,8 +31,11 @@ import java.util.List;
 public class ZhipuAiChatClient implements AiChatClient {
 
     private static final String CHAT_COMPLETIONS_PATH = "/chat/completions";
+    private static final String SYSTEM_ROLE = "system";
     private static final String USER_ROLE = "user";
     private static final String FREE_MODEL = "glm-4.7-flash";
+    private static final String UNKNOWN_PROVIDER_ERROR_CODE = "unknown";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final RestTemplate restTemplate;
     private final AiProperties aiProperties;
@@ -41,8 +47,13 @@ public class ZhipuAiChatClient implements AiChatClient {
     }
 
     @Override
-    public String chat(String message) {
+    public String chat(String systemPrompt, String message) {
         validateConfiguration();
+
+        ChatMessage systemMessage = ChatMessage.builder()
+                .role(SYSTEM_ROLE)
+                .content(systemPrompt)
+                .build();
 
         ChatMessage userMessage = ChatMessage.builder()
                 .role(USER_ROLE)
@@ -50,7 +61,7 @@ public class ZhipuAiChatClient implements AiChatClient {
                 .build();
         ChatCompletionRequest request = ChatCompletionRequest.builder()
                 .model(aiProperties.getModel())
-                .messages(Collections.singletonList(userMessage))
+                .messages(Arrays.asList(systemMessage, userMessage))
                 .stream(false)
                 .maxTokens(aiProperties.getMaxTokens())
                 .build();
@@ -69,9 +80,29 @@ public class ZhipuAiChatClient implements AiChatClient {
             return extractAnswer(response.getBody());
         } catch (AiServiceException ex) {
             throw ex;
-        } catch (RestClientException ex) {
-            log.warn("调用AI模型服务失败，异常类型：{}", ex.getClass().getSimpleName());
+        } catch (HttpStatusCodeException ex) {
+            log.warn("调用AI模型服务失败，HTTP状态：{}，业务错误码：{}",
+                    ex.getRawStatusCode(), extractProviderErrorCode(ex.getResponseBodyAsString()));
             throw new AiServiceException(MessageConstant.AI_SERVICE_UNAVAILABLE, ex);
+        } catch (RestClientException ex) {
+            Throwable rootCause = ex.getMostSpecificCause();
+            log.warn("调用AI模型服务失败，异常类型：{}，根因类型：{}",
+                    ex.getClass().getSimpleName(), rootCause.getClass().getSimpleName());
+            throw new AiServiceException(MessageConstant.AI_SERVICE_UNAVAILABLE, ex);
+        }
+    }
+
+    private String extractProviderErrorCode(String responseBody) {
+        if (!StringUtils.hasText(responseBody)) {
+            return UNKNOWN_PROVIDER_ERROR_CODE;
+        }
+        try {
+            JsonNode errorCode = OBJECT_MAPPER.readTree(responseBody).path("error").path("code");
+            return errorCode.isValueNode() && StringUtils.hasText(errorCode.asText())
+                    ? errorCode.asText()
+                    : UNKNOWN_PROVIDER_ERROR_CODE;
+        } catch (Exception ex) {
+            return UNKNOWN_PROVIDER_ERROR_CODE;
         }
     }
 
