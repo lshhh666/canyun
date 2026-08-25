@@ -60,3 +60,6 @@ sky:
   ai:
     base-url: https://open.bigmodel.cn/api/paas/v4
     model: glm-4.7-flash
+    connect-timeout: 3000
+    read-timeout: 30000
+    max-tokens: 512

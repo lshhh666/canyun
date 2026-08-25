@@ -30,4 +30,5 @@ public class MessageConstant {
     public static final String NO_COUPONS_AVAILABLE="没有可用的优惠券";
     public static final String NO_PERMISSION="优惠券不属于该用户，无权使用";
     public static final String NOT_AVAILABLE="优惠券不可用";
+    public static final String AI_SERVICE_UNAVAILABLE="AI客服暂时繁忙，请稍后再试";
 }

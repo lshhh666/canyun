@@ -14,4 +14,7 @@ public class AiProperties {
     private String baseUrl;
     private String model;
     private String apiKey;
+    private int connectTimeout;
+    private int readTimeout;
+    private int maxTokens;
 }
