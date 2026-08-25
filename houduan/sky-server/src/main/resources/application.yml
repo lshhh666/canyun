@@ -57,3 +57,6 @@ sky:
     pack-fee-per-item: 1.00
     estimated-delivery-minutes: 30
     max-delivery-distance-meters: 5000
+  ai:
+    base-url: https://open.bigmodel.cn/api/paas/v4
+    model: glm-4.7-flash
