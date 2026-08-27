@@ -30,6 +30,11 @@ public class ChatCompletionRequest {
     private Boolean stream;
 
     /**
+     * 模型思考模式配置
+     */
+    private ChatThinking thinking;
+
+    /**
      * 模型单次回答允许生成的最大 Token 数量
      */
     @JsonProperty("max_tokens")

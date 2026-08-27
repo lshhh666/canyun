@@ -6,6 +6,7 @@ import com.sky.client.AiChatClient;
 import com.sky.client.model.ChatCompletionRequest;
 import com.sky.client.model.ChatCompletionResponse;
 import com.sky.client.model.ChatMessage;
+import com.sky.client.model.ChatThinking;
 import com.sky.client.model.Choice;
 import com.sky.constant.MessageConstant;
 import com.sky.exception.AiServiceException;
@@ -34,6 +35,7 @@ public class ZhipuAiChatClient implements AiChatClient {
     private static final String SYSTEM_ROLE = "system";
     private static final String USER_ROLE = "user";
     private static final String NORMAL_FINISH_REASON = "stop";
+    private static final String DISABLED_THINKING_TYPE = "disabled";
     private static final String FREE_MODEL = "glm-4.7-flash";
     private static final String UNKNOWN_PROVIDER_ERROR_CODE = "unknown";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -64,6 +66,9 @@ public class ZhipuAiChatClient implements AiChatClient {
                 .model(aiProperties.getModel())
                 .messages(Arrays.asList(systemMessage, userMessage))
                 .stream(false)
+                .thinking(ChatThinking.builder()
+                        .type(DISABLED_THINKING_TYPE)
+                        .build())
                 .maxTokens(aiProperties.getMaxTokens())
                 .build();
 

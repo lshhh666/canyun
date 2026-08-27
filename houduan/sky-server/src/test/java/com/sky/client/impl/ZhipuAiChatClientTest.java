@@ -53,7 +53,7 @@ class ZhipuAiChatClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + TEST_API_KEY))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json("{\"model\":\"glm-4.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"你是餐云客服\"},{\"role\":\"user\",\"content\":\"你好\"}],\"stream\":false,\"max_tokens\":1024}"))
+                .andExpect(content().json("{\"model\":\"glm-4.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"你是餐云客服\"},{\"role\":\"user\",\"content\":\"你好\"}],\"stream\":false,\"thinking\":{\"type\":\"disabled\"},\"max_tokens\":1024}"))
                 .andRespond(withSuccess("{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"您好，请问需要什么帮助？\"},\"finish_reason\":\"stop\"}]}", MediaType.APPLICATION_JSON));
 
         String answer = client.chat(SYSTEM_PROMPT, "你好");
