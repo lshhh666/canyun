@@ -97,7 +97,16 @@
       />
     </view>
 
-    <view class="ai-assistant-entry" aria-label="打开云小餐 AI 客服" @click="goAiChat">
+    <view
+      class="ai-assistant-entry"
+      :style="aiEntryStyle"
+      aria-label="可拖动，点击打开云小餐 AI 客服"
+      @touchstart="startAiEntryDrag"
+      @touchmove.stop.prevent="moveAiEntry"
+      @touchend="endAiEntryDrag"
+      @touchcancel="endAiEntryDrag"
+      @click="goAiChat"
+    >
       <image
         class="ai-assistant-entry__image"
         src="/static/ai/yunxiaocan-mascot.png"

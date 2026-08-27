@@ -120,6 +120,36 @@ test('ordering page keeps business handlers and uses CloudMeal shell', () => {
   expectNone(page, ['苍穹外卖', '月销量', '店铺已打烊', '本店已打样', 'logo_ruiji.png'])
 })
 
+test('AI assistant entry drags within the viewport and a drag does not open chat', () => {
+  const harness = loadOrderingController({
+    uni: {
+      getSystemInfoSync: () => ({
+        windowWidth: 375,
+        windowHeight: 667,
+        safeArea: { top: 20, bottom: 647 }
+      })
+    }
+  })
+
+  harness.instance.initializeAiEntryPosition()
+  harness.instance.startAiEntryDrag({ touches: [{ clientX: 340, clientY: 560 }] })
+  harness.instance.moveAiEntry({ touches: [{ clientX: -100, clientY: -100 }] })
+  assert.equal(harness.instance.aiEntryLeft, 0)
+  assert.equal(harness.instance.aiEntryTop, 28)
+
+  harness.instance.startAiEntryDrag({ touches: [{ clientX: 0, clientY: 28 }] })
+  harness.instance.moveAiEntry({ touches: [{ clientX: 999, clientY: 999 }] })
+  assert.equal(harness.instance.aiEntryLeft, 319)
+  assert.equal(harness.instance.aiEntryTop, 583)
+  harness.instance.endAiEntryDrag()
+  harness.instance.goAiChat()
+  assert.equal(harness.calls.navigations.length, 0)
+
+  harness.instance.aiEntryLastDragAt = 0
+  harness.instance.goAiChat()
+  assert.equal(harness.calls.navigations[0].url, '/pages/aiChat/index')
+})
+
 test('cart and dish overlays preserve their event contracts', () => {
   const files = ['dishDetail.vue', 'popMask.vue', 'popCart.vue']
     .map(name => read(`xiaochengxu-source/pages/index/components/${name}`))

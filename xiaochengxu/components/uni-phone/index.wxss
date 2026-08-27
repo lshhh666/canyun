@@ -295,6 +295,10 @@
   border: 3rpx solid #ffffff;
   border-radius: 56rpx;
   box-shadow: 0 10rpx 28rpx rgba(20, 126, 232, 0.24);
+  touch-action: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 .ai-assistant-entry__image.data-v-0b00c929 {
   width: 100%;

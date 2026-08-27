@@ -38,7 +38,15 @@ test('AI 客服页面已注册且首页提供云小餐入口', () => {
 
   assert.match(pages, /"path": "pages\/aiChat\/index"/)
   assert.match(home, /yunxiaocan-mascot\.png/)
+  assert.match(home, /@touchmove\.stop\.prevent="moveAiEntry"/)
   assert.match(homeScript, /uni\.navigateTo\(\{ url: '\/pages\/aiChat\/index' \}\)/)
+})
+
+test('首页客服入口可拖动、不会越界且拖动结束不误开聊天页', () => {
+  const source = read('xiaochengxu-source/pages/index/index.js')
+  assert.match(source, /initializeAiEntryPosition\(\)/)
+  assert.match(source, /Math\.min\(maximumLeft, Math\.max\(0,/)
+  assert.match(source, /Date\.now\(\) - this\.aiEntryLastDragAt < 300/)
 })
 
 test('AI 客服请求仅发送消息并由 JWT 请求封装提供身份', () => {

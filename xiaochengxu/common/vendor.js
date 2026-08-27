@@ -23831,7 +23831,20 @@ var dishDetail = function dishDetail() {
       profileEditorVisible: false,
       profileSaving: false,
       loginPromptPending: false,
-      menuInitializationPromise: null
+      menuInitializationPromise: null,
+      aiEntryLeft: null,
+      aiEntryTop: null,
+      aiEntrySize: 56,
+      aiEntryViewportWidth: 0,
+      aiEntryViewportHeight: 0,
+      aiEntrySafeTop: 8,
+      aiEntrySafeBottom: 0,
+      aiEntryDragStartX: 0,
+      aiEntryDragStartY: 0,
+      aiEntryStartLeft: 0,
+      aiEntryStartTop: 0,
+      aiEntryMoved: false,
+      aiEntryLastDragAt: 0
     };
   },
   //   组件
@@ -23865,6 +23878,10 @@ var dishDetail = function dishDetail() {
       var fee = Number(this.deliveryFee());
       return Number.isFinite(fee) && fee >= 0 ? fee.toFixed(2) : '0.00';
     },
+    aiEntryStyle: function aiEntryStyle() {
+      if (!Number.isFinite(this.aiEntryLeft) || !Number.isFinite(this.aiEntryTop)) return '';
+      return "left:".concat(this.aiEntryLeft, "px;top:").concat(this.aiEntryTop, "px;right:auto;bottom:auto;");
+    },
     // 计算购物车清单
     orderAndUserInfo: function orderAndUserInfo() {
       var orderData = [];
@@ -23891,6 +23908,7 @@ var dishDetail = function dishDetail() {
   },
   onReady: function onReady() {
     this.getMenuItemTop();
+    this.initializeAiEntryPosition();
   },
   onLoad: function onLoad(options) {
     var _this = this;
@@ -23968,9 +23986,49 @@ var dishDetail = function dishDetail() {
   },
   methods: _objectSpread(_objectSpread(_objectSpread({
     goAiChat: function goAiChat() {
+      if (Date.now() - this.aiEntryLastDragAt < 300) return;
       uni.navigateTo({
         url: '/pages/aiChat/index'
       });
+    },
+    initializeAiEntryPosition: function initializeAiEntryPosition() {
+      var info = uni.getSystemInfoSync();
+      var scale = info.windowWidth / 750;
+      var margin = 16 * scale;
+      var safeArea = info.safeArea || {};
+      this.aiEntrySize = 112 * scale;
+      this.aiEntryViewportWidth = info.windowWidth;
+      this.aiEntryViewportHeight = info.windowHeight;
+      this.aiEntrySafeTop = Number.isFinite(safeArea.top) ? safeArea.top + margin : margin;
+      this.aiEntrySafeBottom = Number.isFinite(safeArea.bottom) ? Math.min(safeArea.bottom - margin, info.windowHeight - margin) : info.windowHeight - margin;
+      this.aiEntryLeft = Math.max(margin, info.windowWidth - this.aiEntrySize - margin);
+      this.aiEntryTop = Math.max(this.aiEntrySafeTop, this.aiEntrySafeBottom - this.aiEntrySize - 108 * scale);
+    },
+    startAiEntryDrag: function startAiEntryDrag(event) {
+      var touch = event && event.touches && event.touches[0];
+      if (!touch) return;
+      if (!Number.isFinite(this.aiEntryLeft) || !Number.isFinite(this.aiEntryTop)) {
+        this.initializeAiEntryPosition();
+      }
+      this.aiEntryDragStartX = touch.clientX;
+      this.aiEntryDragStartY = touch.clientY;
+      this.aiEntryStartLeft = this.aiEntryLeft;
+      this.aiEntryStartTop = this.aiEntryTop;
+      this.aiEntryMoved = false;
+    },
+    moveAiEntry: function moveAiEntry(event) {
+      var touch = event && event.touches && event.touches[0];
+      if (!touch) return;
+      var deltaX = touch.clientX - this.aiEntryDragStartX;
+      var deltaY = touch.clientY - this.aiEntryDragStartY;
+      if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) this.aiEntryMoved = true;
+      var maximumLeft = Math.max(0, this.aiEntryViewportWidth - this.aiEntrySize);
+      var maximumTop = Math.max(this.aiEntrySafeTop, this.aiEntrySafeBottom - this.aiEntrySize);
+      this.aiEntryLeft = Math.min(maximumLeft, Math.max(0, this.aiEntryStartLeft + deltaX));
+      this.aiEntryTop = Math.min(maximumTop, Math.max(this.aiEntrySafeTop, this.aiEntryStartTop + deltaY));
+    },
+    endAiEntryDrag: function endAiEntryDrag() {
+      if (this.aiEntryMoved) this.aiEntryLastDragAt = Date.now();
     }
   }, (0,vuex__WEBPACK_IMPORTED_MODULE_1__.mapMutations)(["setShopInfo",
   //设置店铺信息
