@@ -97,6 +97,15 @@
       />
     </view>
 
+    <view class="ai-assistant-entry" aria-label="打开云小餐 AI 客服" @click="goAiChat">
+      <image
+        class="ai-assistant-entry__image"
+        src="/static/ai/yunxiaocan-mascot.png"
+        mode="aspectFit"
+      />
+      <text class="ai-assistant-entry__badge">AI</text>
+    </view>
+
     <view class="cart-bar" :class="{ disabled: orderListData().length === 0 || shopStatus !== 1 }">
       <view
         class="cart-summary"

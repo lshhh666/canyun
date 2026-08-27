@@ -11,7 +11,8 @@
     "pages/my/my",
     "pages/addOrEditAddress/addOrEditAddress",
     "pages/historyOrder/historyOrder",
-    "pages/coupon/index"
+    "pages/coupon/index",
+    "pages/aiChat/index"
   ],
   "subPackages": [],
   "window": {

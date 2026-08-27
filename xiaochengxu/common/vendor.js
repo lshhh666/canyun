@@ -8037,6 +8037,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   receiveCoupon: () => (/* binding */ receiveCoupon),
 /* harmony export */   reminderOrder: () => (/* binding */ reminderOrder),
 /* harmony export */   repetitionOrder: () => (/* binding */ repetitionOrder),
+/* harmony export */   sendAiChatMessage: () => (/* binding */ sendAiChatMessage),
 /* harmony export */   submitOrderSubmit: () => (/* binding */ submitOrderSubmit),
 /* harmony export */   updateUserProfile: () => (/* binding */ updateUserProfile),
 /* harmony export */   userLogin: () => (/* binding */ userLogin)
@@ -8450,6 +8451,17 @@ var queryOrdersCheckStatus = function queryOrdersCheckStatus(params) {
     url: "/user/order/queryOrdersCheckStatus",
     method: 'get',
     params: params
+  });
+};
+
+// 向 AI 客服发送当前用户的文本消息。用户身份由请求头中的 JWT 确定。
+var sendAiChatMessage = function sendAiChatMessage(message) {
+  return (0,_utils_request_js__WEBPACK_IMPORTED_MODULE_0__.request)({
+    url: '/user/ai/chat',
+    method: 'POST',
+    params: {
+      message: message
+    }
   });
 };
 
@@ -23954,7 +23966,13 @@ var dishDetail = function dishDetail() {
       }, _callee2);
     }))();
   },
-  methods: _objectSpread(_objectSpread(_objectSpread({}, (0,vuex__WEBPACK_IMPORTED_MODULE_1__.mapMutations)(["setShopInfo",
+  methods: _objectSpread(_objectSpread(_objectSpread({
+    goAiChat: function goAiChat() {
+      uni.navigateTo({
+        url: '/pages/aiChat/index'
+      });
+    }
+  }, (0,vuex__WEBPACK_IMPORTED_MODULE_1__.mapMutations)(["setShopInfo",
   //设置店铺信息
   "setShopPhone",
   //设置电话

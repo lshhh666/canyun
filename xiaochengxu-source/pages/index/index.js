@@ -204,6 +204,9 @@ export default {
 		}
 	},
 	methods: {
+		goAiChat() {
+			uni.navigateTo({ url: '/pages/aiChat/index' })
+		},
 		//   vuex储存信息
 		...mapMutations([
 			"setShopInfo", //设置店铺信息

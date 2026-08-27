@@ -388,3 +388,10 @@ export const queryOrdersCheckStatus = (params) =>
 		method: 'get',
 		params
 	})
+
+// 向 AI 客服发送当前用户的文本消息。用户身份由请求头中的 JWT 确定。
+export const sendAiChatMessage = message => request({
+	url: '/user/ai/chat',
+	method: 'POST',
+	params: { message }
+})
