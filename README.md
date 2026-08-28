@@ -116,7 +116,7 @@ canyun/
 │  ├─ sky-common/         公共配置、异常、工具和通用结果
 │  ├─ sky-pojo/           DTO、实体和 VO
 │  ├─ sky-server/         Controller、Service、Mapper、任务与测试
-│  └─ sql/coupon.sql      优惠券与补偿相关数据库迁移
+│  └─ sql/                优惠券、AI 客服等增量数据库迁移
 ├─ wangye/                Vue 管理端源码
 ├─ xiaochengxu-source/    可维护的 UniApp 小程序源码
 ├─ xiaochengxu/           微信开发者工具直接打开的编译结果
@@ -149,6 +149,7 @@ canyun/
 1. 先准备与当前实体类和 Mapper 结构匹配的基础业务库。
 2. 选择目标数据库。
 3. 执行 `houduan/sql/coupon.sql`，创建优惠券、用户优惠券、补偿任务表，并为订单补充金额快照字段。
+4. 执行 `houduan/sql/ai_customer_service.sql`，创建 AI 会话、消息与知识库表。
 
 脚本使用 `CREATE TABLE IF NOT EXISTS` 和 `information_schema` 判断，避免重复创建已经存在的字段和索引。正式执行前仍建议备份数据库。
 
