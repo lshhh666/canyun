@@ -35,6 +35,11 @@ xiaochengxu-source/project.private.config.json
 .superpowers/
 docs/superpowers/
 
+# Local review, render and source-map artifacts
+/.sourcemap/
+/outputs/
+/work/
+
 # Task-local compatibility runtimes
 .tools/
 
