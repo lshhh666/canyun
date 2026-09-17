@@ -34,7 +34,7 @@
 }
 .chat-scroll.data-v-ed63fdc8 {
   position: fixed;
-  top: calc(116rpx + 25px);
+  top: calc(180rpx + 25px);
   right: 0;
   bottom: calc(154rpx + env(safe-area-inset-bottom));
   left: 0;
@@ -77,6 +77,44 @@
   line-height: 34rpx;
   text-align: center;
 }
+.conversation-tools.data-v-ed63fdc8 {
+  position: fixed;
+  top: calc(116rpx + 25px);
+  right: 0;
+  left: 0;
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: 64rpx;
+  padding: 5rpx 24rpx 5rpx 36rpx;
+  background: rgba(244, 248, 252, 0.92);
+}
+.conversation-tools__hint.data-v-ed63fdc8 {
+  color: #9aa8b6;
+  font-size: 21rpx;
+}
+.conversation-tools__new.data-v-ed63fdc8 {
+  width: auto;
+  height: 54rpx;
+  margin: 0;
+  padding: 0 20rpx;
+  color: #147ee8;
+  background: #ffffff;
+  border: 1rpx solid #bddbfa;
+  border-radius: 27rpx;
+  font-size: 22rpx;
+  line-height: 52rpx;
+}
+.conversation-tools__new.data-v-ed63fdc8::after {
+  border: 0;
+}
+.conversation-tools__new[disabled].data-v-ed63fdc8 {
+  color: #9aabba;
+  background: #f3f6f9;
+  border-color: #dfe7ee;
+}
 .message-row.data-v-ed63fdc8 {
   display: flex;
   align-items: flex-start;
@@ -102,6 +140,36 @@
   font-size: 28rpx;
   line-height: 42rpx;
   word-break: break-all;
+}
+.message-content.data-v-ed63fdc8 {
+  display: flex;
+  max-width: 520rpx;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.message-row--user .message-content.data-v-ed63fdc8 {
+  align-items: flex-end;
+}
+.message-content .message-bubble.data-v-ed63fdc8 {
+  max-width: 100%;
+}
+.message-action.data-v-ed63fdc8 {
+  width: auto;
+  height: 62rpx;
+  margin: 12rpx 0 0;
+  padding: 0 28rpx;
+  color: #ffffff;
+  background: #e95b45;
+  border-radius: 31rpx;
+  font-size: 24rpx;
+  line-height: 62rpx;
+}
+.message-action.data-v-ed63fdc8::after {
+  border: 0;
+}
+.message-action[disabled].data-v-ed63fdc8 {
+  color: #9aabba;
+  background: #e6edf4;
 }
 .message-row--user .message-bubble.data-v-ed63fdc8 {
   color: #ffffff;

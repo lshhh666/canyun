@@ -7997,7 +7997,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   addShoppingCart: () => (/* binding */ addShoppingCart),
 /* harmony export */   cancelOrder: () => (/* binding */ cancelOrder),
 /* harmony export */   clearOrder: () => (/* binding */ clearOrder),
+/* harmony export */   closeAiChatSession: () => (/* binding */ closeAiChatSession),
 /* harmony export */   commonDownload: () => (/* binding */ commonDownload),
+/* harmony export */   confirmAiChatAction: () => (/* binding */ confirmAiChatAction),
 /* harmony export */   delAddressBook: () => (/* binding */ delAddressBook),
 /* harmony export */   delDish: () => (/* binding */ delDish),
 /* harmony export */   delShoppingCart: () => (/* binding */ delShoppingCart),
@@ -8014,6 +8016,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   getMyCoupons: () => (/* binding */ getMyCoupons),
 /* harmony export */   getOrderDetail: () => (/* binding */ getOrderDetail),
 /* harmony export */   getOrderPage: () => (/* binding */ getOrderPage),
+/* harmony export */   getRecentAiChatHistory: () => (/* binding */ getRecentAiChatHistory),
 /* harmony export */   getShopInfo: () => (/* binding */ getShopInfo),
 /* harmony export */   getShopStatus: () => (/* binding */ getShopStatus),
 /* harmony export */   getShoppingCartList: () => (/* binding */ getShoppingCartList),
@@ -8038,6 +8041,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   reminderOrder: () => (/* binding */ reminderOrder),
 /* harmony export */   repetitionOrder: () => (/* binding */ repetitionOrder),
 /* harmony export */   sendAiChatMessage: () => (/* binding */ sendAiChatMessage),
+/* harmony export */   submitAiChatFeedback: () => (/* binding */ submitAiChatFeedback),
 /* harmony export */   submitOrderSubmit: () => (/* binding */ submitOrderSubmit),
 /* harmony export */   updateUserProfile: () => (/* binding */ updateUserProfile),
 /* harmony export */   userLogin: () => (/* binding */ userLogin)
@@ -8454,13 +8458,50 @@ var queryOrdersCheckStatus = function queryOrdersCheckStatus(params) {
   });
 };
 
-// 向 AI 客服发送当前用户的文本消息。用户身份由请求头中的 JWT 确定。
-var sendAiChatMessage = function sendAiChatMessage(message) {
+// 向 AI 客服发送当前用户的文本消息。用户身份由请求头中的 JWT 确定，sessionId 仅用于续接对话。
+var sendAiChatMessage = function sendAiChatMessage(message, sessionId) {
   return (0,_utils_request_js__WEBPACK_IMPORTED_MODULE_0__.request)({
     url: '/user/ai/chat',
     method: 'POST',
     params: {
-      message: message
+      message: message,
+      sessionId: sessionId
+    }
+  });
+};
+
+// 只允许AI客服回答中由后端签发的确认按钮调用，不接收前端传入的订单ID。
+var confirmAiChatAction = function confirmAiChatAction(actionId) {
+  return (0,_utils_request_js__WEBPACK_IMPORTED_MODULE_0__.request)({
+    url: "/user/ai/actions/".concat(actionId, "/confirm"),
+    method: 'POST'
+  });
+};
+
+// 恢复当前JWT用户最近一次可继续的AI客服会话，不接收前端用户ID。
+var getRecentAiChatHistory = function getRecentAiChatHistory() {
+  return (0,_utils_request_js__WEBPACK_IMPORTED_MODULE_0__.request)({
+    url: '/user/ai/session/recent',
+    method: 'GET'
+  });
+};
+
+// 结束当前JWT用户自己的会话；下一条消息会创建新会话。
+var closeAiChatSession = function closeAiChatSession(sessionId) {
+  return (0,_utils_request_js__WEBPACK_IMPORTED_MODULE_0__.request)({
+    url: "/user/ai/session/".concat(sessionId, "/close"),
+    method: 'POST'
+  });
+};
+
+// 评价已结束的会话。用户身份仍由JWT确定，前端只提交会话和评价结果。
+var submitAiChatFeedback = function submitAiChatFeedback(sessionId, result) {
+  return (0,_utils_request_js__WEBPACK_IMPORTED_MODULE_0__.request)({
+    url: '/user/ai/session/feedback',
+    method: 'POST',
+    params: {
+      sessionId: sessionId,
+      result: result
     }
   });
 };

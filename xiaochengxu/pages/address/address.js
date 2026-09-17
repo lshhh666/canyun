@@ -142,11 +142,9 @@ var render = function () {
   var l0 = _vm.__map(_vm.addressList, function (item, index) {
     var $orig = _vm.__get_orig(item)
     var m0 = _vm.getLableVal(item.label)
-    var m1 = _vm.testValue ? String(item.id) : null
     return {
       $orig: $orig,
       m0: m0,
-      m1: m1,
     }
   })
   _vm.$mp.data = Object.assign(
@@ -261,7 +259,6 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 //
 //
 //
-//
 
 ;
 
@@ -277,10 +274,10 @@ var CloudmealHeader = function CloudmealHeader() {
   },
   data: function data() {
     return {
-      testValue: true,
       addressList: [],
       isActive: null,
-      isEmpty: false
+      isEmpty: false,
+      isSettingDefault: false
     };
   },
   onShow: function onShow() {
@@ -316,7 +313,6 @@ var CloudmealHeader = function CloudmealHeader() {
         return _regenerator().w(function (_context) {
           while (1) switch (_context.p = _context.n) {
             case 0:
-              _this.testValue = false;
               uni.showLoading({
                 title: '加载中',
                 mask: true
@@ -346,7 +342,6 @@ var CloudmealHeader = function CloudmealHeader() {
               return _context.a(2, null);
             case 4:
               _context.p = 4;
-              _this.testValue = true;
               uni.hideLoading();
               return _context.f(4);
             case 5:
@@ -381,29 +376,51 @@ var CloudmealHeader = function CloudmealHeader() {
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.p = _context2.n) {
             case 0:
+              if (!(_this2.isActive === index)) {
+                _context2.n = 1;
+                break;
+              }
+              return _context2.a(2, true);
+            case 1:
+              if (!_this2.isSettingDefault) {
+                _context2.n = 2;
+                break;
+              }
+              return _context2.a(2, false);
+            case 2:
               previousIndex = _this2.isActive;
+              _this2.isSettingDefault = true;
               _this2.isActive = index;
-              _context2.p = 1;
-              _context2.n = 2;
+              _context2.p = 3;
+              _context2.n = 4;
               return (0,_api_api_js__WEBPACK_IMPORTED_MODULE_0__.putAddressBookDefault)({
                 id: item.id
               });
-            case 2:
+            case 4:
               res = _context2.v;
-              if (res.code === 1) {
-                _this2.addressList.forEach(function (address, addressIndex) {
-                  address.isDefault = addressIndex === index ? 1 : 0;
-                });
-                item.isDefault = 1;
-                uni.showToast({
-                  title: '默认地址设置成功',
-                  duration: 2000,
-                  icon: 'none'
-                });
+              if (!(res.code === 1)) {
+                _context2.n = 5;
+                break;
               }
+              _this2.addressList.forEach(function (address, addressIndex) {
+                address.isDefault = addressIndex === index ? 1 : 0;
+              });
+              item.isDefault = 1;
+              uni.showToast({
+                title: '默认地址设置成功',
+                duration: 2000,
+                icon: 'none'
+              });
               return _context2.a(2, res);
-            case 3:
-              _context2.p = 3;
+            case 5:
+              _this2.isActive = previousIndex;
+              uni.showToast({
+                title: res.msg || '默认地址设置失败，请重试',
+                icon: 'none'
+              });
+              return _context2.a(2, res);
+            case 6:
+              _context2.p = 6;
               _t2 = _context2.v;
               _this2.isActive = previousIndex;
               uni.showToast({
@@ -411,8 +428,14 @@ var CloudmealHeader = function CloudmealHeader() {
                 icon: 'none'
               });
               return _context2.a(2, null);
+            case 7:
+              _context2.p = 7;
+              _this2.isSettingDefault = false;
+              return _context2.f(7);
+            case 8:
+              return _context2.a(2);
           }
-        }, _callee2, null, [[1, 3]]);
+        }, _callee2, null, [[3, 6, 7, 8]]);
       }))();
     }
   })

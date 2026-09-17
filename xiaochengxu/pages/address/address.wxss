@@ -103,8 +103,26 @@
   border-top: 1rpx solid #e2e8f0;
   font-size: 24rpx;
 }
-.default-radio.data-v-db675620 {
-  transform: scale(0.76);
+.default-check.data-v-db675620 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 12rpx;
+  border: 2rpx solid #e2e8f0;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.default-check--active.data-v-db675620 {
+  color: #fff;
+  background: #147ee8;
+  border-color: #147ee8;
+}
+.default-check__mark.data-v-db675620 {
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1;
 }
 .address-empty.data-v-db675620 {
   padding: 180rpx 40rpx 40rpx;
