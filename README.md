@@ -148,10 +148,9 @@ canyun/
 
 1. 先准备与当前实体类和 Mapper 结构匹配的基础业务库。
 2. 选择目标数据库。
-3. 执行 `houduan/sql/coupon.sql`，创建优惠券、用户优惠券、补偿任务表，并为订单补充金额快照字段。
-4. 执行 `houduan/sql/ai_customer_service.sql`，创建 AI 会话、消息与知识库表。
+3. 按 `houduan/sql/README.md` 的“全新安装”顺序执行脚本。当前 AI 完整结构与历史库升级使用不同路径，不要混合执行。
 
-脚本使用 `CREATE TABLE IF NOT EXISTS` 和 `information_schema` 判断，避免重复创建已经存在的字段和索引。正式执行前仍建议备份数据库。
+部分建表和兼容脚本会判断已有结构，历史增量脚本则只允许按顺序执行一次。正式执行前必须备份数据库。
 
 ### 3. 配置后端
 
