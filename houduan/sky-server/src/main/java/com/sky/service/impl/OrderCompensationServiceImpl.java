@@ -65,6 +65,7 @@ public class OrderCompensationServiceImpl implements OrderCompensationService {
      * 本方法不使用批量事务，每次订单取消仍由OrderService自己的事务独立提交。
      */
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void processDueTasks() {
         LocalDateTime scanTime = LocalDateTime.now().withNano(0);
         int recovered = orderCompensationTaskMapper.recoverStaleProcessingTasks(

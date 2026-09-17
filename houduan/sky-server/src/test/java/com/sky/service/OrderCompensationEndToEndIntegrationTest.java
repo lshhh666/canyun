@@ -14,9 +14,10 @@ import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserCouponMapper;
 import com.sky.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,10 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * 订单补偿完整业务链路测试：真实执行订单取消、优惠券释放和补偿任务完成。
- * 测试事务结束后自动回滚，不在开发数据库留下测试数据。
+ * 不使用测试级事务，确保订单事务、任务抢占和任务完成都经过真实提交边界。
  */
 @SpringBootTest(properties = "sky.websocket.enabled=false")
-@Transactional
 class OrderCompensationEndToEndIntegrationTest {
 
     @Autowired
@@ -51,6 +51,27 @@ class OrderCompensationEndToEndIntegrationTest {
 
     @Autowired
     private UserCouponMapper userCouponMapper;
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    private Long createdTaskId;
+    private Long createdOrderId;
+    private Long createdUserCouponId;
+    private Long createdCouponId;
+    private Long createdUserId;
+
+    @AfterEach
+    void cleanCommittedFixtures() {
+        deleteById("order_compensation_task", createdTaskId);
+        deleteById("orders", createdOrderId);
+        deleteById("user_coupon", createdUserCouponId);
+        deleteById("coupon", createdCouponId);
+        deleteById("user", createdUserId);
+    }
 
     @Test
     void shouldCancelOrderReleaseCouponAndCompleteCompensationTask() {
@@ -83,12 +104,41 @@ class OrderCompensationEndToEndIntegrationTest {
         assertNull(completedTask.getProcessingTime());
     }
 
+    @Test
+    void shouldRecoverWhenOrderCommitSucceedsBeforeTaskSuccessUpdate() {
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        Long userId = insertUser(now);
+        Long couponId = insertCoupon(now);
+        UserCoupon userCoupon = insertLockedCoupon(userId, couponId, now);
+        Orders order = insertTimeoutOrder(userId, userCoupon.getId(), now);
+        userCoupon.setOrderId(order.getId());
+        assertEquals(1, userCouponMapper.updateById(userCoupon));
+        OrderCompensationTask task = insertDueCompensationTask(
+                order.getId(), userCoupon.getId());
+
+        // 模拟工作线程已抢占任务并提交订单取消，随后在写任务成功状态前宕机。
+        jdbc.update("UPDATE order_compensation_task SET status=1, processing_time=? WHERE id=?",
+                LocalDateTime.of(2000, 1, 1, 0, 0), task.getId());
+        orderService.cancelTimeoutOrder(order.getId());
+
+        orderCompensationService.processDueTasks();
+
+        assertEquals(Orders.CANCELLED, orderMapper.getById(order.getId()).getStatus());
+        assertEquals(UserCouponStatus.AVAILABLE,
+                userCouponMapper.selectById(userCoupon.getId()).getStatus());
+        OrderCompensationTask recovered = orderCompensationTaskMapper.selectById(task.getId());
+        assertEquals(OrderCompensationConstant.STATUS_SUCCESS, recovered.getStatus());
+        assertNotNull(recovered.getSuccessTime());
+        assertNull(recovered.getProcessingTime());
+    }
+
     private Long insertUser(LocalDateTime now) {
         User user = User.builder()
                 .openid(UUID.randomUUID().toString().replace("-", ""))
                 .createTime(now)
                 .build();
         userMapper.insert(user);
+        createdUserId = user.getId();
         return user.getId();
     }
 
@@ -107,6 +157,7 @@ class OrderCompensationEndToEndIntegrationTest {
                 .setCreateTime(now)
                 .setUpdateTime(now);
         couponMapper.insert(coupon);
+        createdCouponId = coupon.getId();
         return coupon.getId();
     }
 
@@ -125,6 +176,7 @@ class OrderCompensationEndToEndIntegrationTest {
                 .setCreateTime(now.minusMinutes(30))
                 .setUpdateTime(now.minusMinutes(20));
         userCouponMapper.insert(userCoupon);
+        createdUserCouponId = userCoupon.getId();
         return userCoupon;
     }
 
@@ -148,10 +200,13 @@ class OrderCompensationEndToEndIntegrationTest {
                 .estimatedDeliveryTime(now.plusMinutes(30))
                 .deliveryStatus(1)
                 .packAmount(2)
+                .goodsAmount(new BigDecimal("50.00"))
+                .deliveryFee(new BigDecimal("6.00"))
                 .tablewareNumber(0)
                 .tablewareStatus(0)
                 .build();
         orderMapper.add(order);
+        createdOrderId = order.getId();
         return order;
     }
 
@@ -171,6 +226,13 @@ class OrderCompensationEndToEndIntegrationTest {
                 .updateTime(failureTime)
                 .build();
         orderCompensationTaskMapper.insert(task);
+        createdTaskId = task.getId();
         return task;
+    }
+
+    private void deleteById(String table, Long id) {
+        if (id != null) {
+            jdbc.update("DELETE FROM `" + table + "` WHERE id=?", id);
+        }
     }
 }

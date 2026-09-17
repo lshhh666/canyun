@@ -18,6 +18,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -83,8 +86,29 @@ public class DIshServiceImpl implements DishService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void statusUpdateDish(Dish dish) {
-        dishMapper.update(dish);
+        if (dish == null || dish.getId() == null || dish.getId() <= 0
+                || (!Integer.valueOf(0).equals(dish.getStatus())
+                && !Integer.valueOf(1).equals(dish.getStatus()))) {
+            throw new BaseException("菜品ID或状态无效");
+        }
+        Dish current = dishMapper.getByIdForUpdate(dish.getId());
+        if (current == null || current.getCategoryId() == null) {
+            throw new BaseException("菜品不存在或分类无效");
+        }
+        Dish update = new Dish();
+        update.setId(current.getId());
+        update.setStatus(dish.getStatus());
+        dishMapper.update(update);
+        String cacheKey = "dish_category_" + current.getCategoryId();
+        // 事务提交后才删除，避免修改尚未提交时读请求回填旧状态。
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redisTemplate.delete(cacheKey);
+            }
+        });
     }
 
     /**

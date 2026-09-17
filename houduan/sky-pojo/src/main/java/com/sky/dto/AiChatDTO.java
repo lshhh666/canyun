@@ -13,5 +13,9 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class AiChatDTO implements Serializable {
 
+    /** 会话ID，首次聊天时为空。 */
+    private Long sessionId;
+
+    /** 用户消息。 */
     private String message;
 }

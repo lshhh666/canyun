@@ -7,7 +7,6 @@ public class AiServiceException extends BaseException {
     }
 
     public AiServiceException(String message, Throwable cause) {
-        super(message);
-        initCause(cause);
+        super(message, cause);
     }
 }

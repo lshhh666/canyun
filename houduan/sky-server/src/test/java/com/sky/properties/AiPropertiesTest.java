@@ -14,9 +14,14 @@ class AiPropertiesTest {
         MockEnvironment environment = new MockEnvironment()
                 .withProperty("sky.ai.base-url", "https://example.com/v1")
                 .withProperty("sky.ai.model", "test-model")
+                .withProperty("sky.ai.embedding-model", "embedding-3")
+                .withProperty("sky.ai.embedding-dimensions", "256")
+                .withProperty("sky.ai.retrieval-top-k", "3")
+                .withProperty("sky.ai.retrieval-min-score", "0.70")
                 .withProperty("sky.ai.api-key", "test-secret-key")
                 .withProperty("sky.ai.connect-timeout", "3000")
                 .withProperty("sky.ai.read-timeout", "60000")
+                .withProperty("sky.ai.turn-timeout-seconds", "180")
                 .withProperty("sky.ai.max-tokens", "1024");
 
         AiProperties properties = Binder.get(environment)
@@ -25,9 +30,14 @@ class AiPropertiesTest {
 
         assertThat(properties.getBaseUrl()).isEqualTo("https://example.com/v1");
         assertThat(properties.getModel()).isEqualTo("test-model");
+        assertThat(properties.getEmbeddingModel()).isEqualTo("embedding-3");
+        assertThat(properties.getEmbeddingDimensions()).isEqualTo(256);
+        assertThat(properties.getRetrievalTopK()).isEqualTo(3);
+        assertThat(properties.getRetrievalMinScore()).isEqualTo(0.70D);
         assertThat(properties.getApiKey()).isEqualTo("test-secret-key");
         assertThat(properties.getConnectTimeout()).isEqualTo(3000);
         assertThat(properties.getReadTimeout()).isEqualTo(60000);
+        assertThat(properties.getTurnTimeoutSeconds()).isEqualTo(180);
         assertThat(properties.getMaxTokens()).isEqualTo(1024);
         assertThat(properties.toString()).doesNotContain("test-secret-key");
     }

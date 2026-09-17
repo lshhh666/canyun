@@ -11,6 +11,7 @@ import com.sky.dto.OrderPreviewDTO;
 import com.sky.dto.OrdersSubmitDTO;
 import com.sky.entity.*;
 import com.sky.enums.UserCouponStatus;
+import com.sky.enums.AiOrderCancellationOutcome;
 import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.CouponBusinessException;
 import com.sky.exception.OrderBusinessException;
@@ -29,6 +30,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 
 import java.math.BigDecimal;
@@ -104,6 +107,8 @@ public class OrderServiceImpl implements OrderService {
                 ? 0 : ordersSubmitDTO.getTablewareNumber());
         orders.setTablewareStatus(ordersSubmitDTO.getTablewareStatus());
         orders.setOriginalAmount(quote.getTotalAmount());
+        orders.setGoodsAmount(quote.getGoodsAmount());
+        orders.setDeliveryFee(quote.getDeliveryFee());
         //实际收钱
         if(userCoupon!=null){
             BigDecimal actualDiscount =
@@ -204,8 +209,7 @@ public class OrderServiceImpl implements OrderService {
         map.put("type",1);
         map.put("orderId",order.getId());
         map.put("content","订单号"+order.getNumber());
-        String jsonString = JSON.toJSONString(map);
-        webSocketServer.sendToAllClient(jsonString);
+        sendAfterCommit(JSON.toJSONString(map));
         return OrderPaymentVO.builder()
                 .estimatedDeliveryTime(order.getEstimatedDeliveryTime() != null
                         ? order.getEstimatedDeliveryTime().toString()
@@ -253,26 +257,49 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void cancelByOrderId(Long orderId) {
-        // 先查订单，判断状态
-        Orders order = orderMapper.getById(orderId);
-        if (order == null) {
+        AiOrderCancellationOutcome outcome = cancelPendingForAi(
+                orderId, BaseContext.getCurrentId());
+        if (outcome == AiOrderCancellationOutcome.ORDER_UNAVAILABLE) {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
-        if (!Objects.equals(order.getUserId(), BaseContext.getCurrentId())) {
-            throw new OrderBusinessException(MessageConstant.NO_PERMISSION);
-        }
-        // 当前项目没有退款链路，只允许用户取消待付款订单。
-        // 已支付待接单的订单必须等退款能力完成后再开放取消。
-        if (!Orders.PENDING_PAYMENT.equals(order.getStatus())) {
+        if (outcome != AiOrderCancellationOutcome.CANCELLED) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AiOrderCancellationOutcome cancelPendingForAi(Long orderId, Long userId) {
+        if (orderId == null || userId == null || userId <= 0) {
+            return AiOrderCancellationOutcome.ORDER_UNAVAILABLE;
+        }
+        Orders order = orderMapper.getById(orderId);
+        if (order == null || !Objects.equals(order.getUserId(), userId)) {
+            return AiOrderCancellationOutcome.ORDER_UNAVAILABLE;
+        }
+        if (Orders.CANCELLED.equals(order.getStatus())) {
+            return AiOrderCancellationOutcome.ALREADY_CANCELLED;
+        }
+        // 当前项目没有退款链路，只允许取消待付款且未支付的订单。
+        if (!Orders.PENDING_PAYMENT.equals(order.getStatus())
+                || !Orders.UN_PAID.equals(order.getPayStatus())) {
+            return AiOrderCancellationOutcome.NOT_CANCELLABLE;
         }
         LocalDateTime now = LocalDateTime.now();
         int cancelledRows = orderMapper.cancelIfPending(orderId, now, null);
-        if (cancelledRows != 1) {
-            // 初次查询后支付可能已经抢先提交，条件更新失败时不能再释放优惠券。
-            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        if (cancelledRows == 1) {
+            releaseCouponIfLocked(order, now);
+            return AiOrderCancellationOutcome.CANCELLED;
         }
-        releaseCouponIfLocked(order, now);
+        // 初查后可能支付或被定时任务取消。重新读取，将并发结果转成正常业务结论。
+        Orders latest = orderMapper.getById(orderId);
+        if (latest == null || !Objects.equals(latest.getUserId(), userId)) {
+            return AiOrderCancellationOutcome.ORDER_UNAVAILABLE;
+        }
+        if (Orders.CANCELLED.equals(latest.getStatus())) {
+            return AiOrderCancellationOutcome.ALREADY_CANCELLED;
+        }
+        return AiOrderCancellationOutcome.NOT_CANCELLABLE;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -374,7 +401,34 @@ public class OrderServiceImpl implements OrderService {
         return userCoupon;
     }
 
-        private void releaseCouponIfLocked(Orders order,LocalDateTime now){
+    /**
+     * 订单状态提交成功后再发送通知，避免事务随后回滚却让管理端看到“新订单”。
+     * WebSocket 是尽力而为的实时提示，发送失败不反向影响已经提交的支付结果。
+     */
+    private void sendAfterCommit(String message) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()
+                || !TransactionSynchronizationManager.isActualTransactionActive()) {
+            sendNotification(message);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendNotification(message);
+                    }
+                });
+    }
+
+    private void sendNotification(String message) {
+        try {
+            webSocketServer.sendToAllClient(message);
+        } catch (RuntimeException ex) {
+            log.warn("订单已提交，但 WebSocket 通知发送失败", ex);
+        }
+    }
+
+    private void releaseCouponIfLocked(Orders order,LocalDateTime now){
         if(order.getUserCouponId()==null){
             return ;
         }

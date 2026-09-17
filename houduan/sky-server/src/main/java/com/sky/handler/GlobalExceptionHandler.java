@@ -1,8 +1,10 @@
 package com.sky.handler;
 
 import com.sky.constant.MessageConstant;
+import com.sky.exception.AiChatTurnException;
 import com.sky.exception.BaseException;
 import com.sky.result.Result;
+import com.sky.vo.AiChatVO;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +18,18 @@ import java.sql.SQLIntegrityConstraintViolationException;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    /**
+     * AI客服本轮失败时，返回已创建的会话ID，便于前端继续该会话。
+     */
+    @ExceptionHandler(AiChatTurnException.class)
+    public Result<AiChatVO> exceptionHandler(AiChatTurnException ex) {
+        log.error("AI客服对话失败，sessionId={}", ex.getSessionId(), ex);
+        AiChatVO data = AiChatVO.builder()
+                .sessionId(ex.getSessionId())
+                .build();
+        return Result.error(ex.getMessage(), data);
+    }
 
     /**
      * 捕获业务异常

@@ -100,6 +100,8 @@ class OrderTimeoutSelectionIntegrationTest {
                 .estimatedDeliveryTime(now.plusMinutes(30))
                 .deliveryStatus(1)
                 .packAmount(2)
+                .goodsAmount(new BigDecimal("50.00"))
+                .deliveryFee(new BigDecimal("6.00"))
                 .tablewareNumber(0)
                 .tablewareStatus(0)
                 .build();

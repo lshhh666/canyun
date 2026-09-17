@@ -29,6 +29,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -111,6 +113,8 @@ class OrderServiceImplSubmitTest {
         assertEquals(BigDecimal.ZERO, order.getValue().getDiscountAmount());
         assertEquals(null, order.getValue().getUserCouponId());
         assertEquals(3, order.getValue().getPackAmount());
+        assertEquals(new BigDecimal("49.00"), order.getValue().getGoodsAmount());
+        assertEquals(new BigDecimal("6.00"), order.getValue().getDeliveryFee());
         assertEquals(eta, order.getValue().getEstimatedDeliveryTime());
         assertEquals(new BigDecimal("58.00"), result.getOrderAmount());
         assertEquals(99L, result.getId());
@@ -165,6 +169,8 @@ class OrderServiceImplSubmitTest {
         assertEquals(new BigDecimal("68.00"), order.getValue().getOriginalAmount());
         assertEquals(new BigDecimal("10.00"), order.getValue().getDiscountAmount());
         assertEquals(new BigDecimal("58.00"), order.getValue().getAmount());
+        assertEquals(new BigDecimal("60.00"), order.getValue().getGoodsAmount());
+        assertEquals(new BigDecimal("6.00"), order.getValue().getDeliveryFee());
         assertEquals(101L, order.getValue().getUserCouponId());
         assertEquals(new BigDecimal("58.00"), result.getOrderAmount());
         verify(userCouponMapper).lockForOrder(eq(101L), eq(7L), eq(99L),
@@ -283,6 +289,36 @@ class OrderServiceImplSubmitTest {
     }
 
     @Test
+    void paymentNotificationWaitsUntilTransactionCommit() {
+        Orders pendingOrder = Orders.builder()
+                .id(18L).userId(7L).number("202608200005")
+                .status(Orders.PENDING_PAYMENT).payStatus(Orders.UN_PAID)
+                .build();
+        when(orderMapper.getByNumber("202608200005")).thenReturn(pendingOrder);
+        when(orderMapper.markPaidIfPending(eq(18L), eq(7L), eq(1),
+                any(LocalDateTime.class))).thenReturn(1);
+        OrdersPaymentDTO dto = new OrdersPaymentDTO();
+        dto.setOrderNumber("202608200005");
+        dto.setPayMethod(1);
+
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            service.orderpayment(dto);
+
+            verify(webSocketServer, never()).sendToAllClient(any(String.class));
+            for (TransactionSynchronization synchronization
+                    : TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCommit();
+            }
+            verify(webSocketServer).sendToAllClient(any(String.class));
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+    }
+
+    @Test
     void couponWriteOffFailureDoesNotUpdateOrderOrSendNotification() {
         Orders pendingOrder = Orders.builder()
                 .id(15L)
@@ -378,6 +414,7 @@ class OrderServiceImplSubmitTest {
                 .id(88L)
                 .userId(7L)
                 .status(Orders.PENDING_PAYMENT)
+                .payStatus(Orders.UN_PAID)
                 .userCouponId(101L)
                 .build();
         when(orderMapper.getById(88L)).thenReturn(pendingOrder);
@@ -401,6 +438,7 @@ class OrderServiceImplSubmitTest {
                 .id(88L)
                 .userId(7L)
                 .status(Orders.PENDING_PAYMENT)
+                .payStatus(Orders.UN_PAID)
                 .userCouponId(101L)
                 .build();
         when(orderMapper.getById(88L)).thenReturn(pendingOrder);

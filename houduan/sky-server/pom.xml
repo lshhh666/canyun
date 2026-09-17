@@ -11,6 +11,14 @@
     <artifactId>sky-server</artifactId>
     <dependencies>
 
+        <!-- 隔离数据库回归：执行真实 Mapper SQL 与 Spring 事务，不连接业务库。 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.3.232</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.sky</groupId>
             <artifactId>sky-common</artifactId>

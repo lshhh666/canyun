@@ -102,6 +102,12 @@ public class Orders implements Serializable {
     //打包费
     private int packAmount;
 
+    // 商品金额快照
+    private BigDecimal goodsAmount;
+
+    // 配送费快照
+    private BigDecimal deliveryFee;
+
     //餐具数量
     private int tablewareNumber;
 

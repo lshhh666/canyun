@@ -9,6 +9,7 @@ import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderPreviewVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.enums.AiOrderCancellationOutcome;
 
 public interface OrderService {
     OrderPreviewVO preview(OrderPreviewDTO orderPreviewDTO);
@@ -22,6 +23,8 @@ public interface OrderService {
     PageResult historyOrders(OrdersPageQueryDTO ordersPageQueryDTO);
     //取消订单
     void cancelByOrderId(Long orderId);
+    /** AI客服确认按钮专用：把正常状态竞争转换为确定性结果，不向用户暴露内部异常。 */
+    AiOrderCancellationOutcome cancelPendingForAi(Long orderId, Long userId);
     //取消超时未支付订单
     void cancelTimeoutOrder(Long orderId);
     //再来一单

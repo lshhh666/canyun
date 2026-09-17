@@ -1,6 +1,7 @@
 package com.sky.service.impl;
 
 import com.sky.entity.Orders;
+import com.sky.exception.BaseException;
 import com.sky.mapper.ReportMapper;
 import com.sky.service.ReportService;
 import com.sky.service.WorkspaceService;
@@ -20,6 +21,7 @@ import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.Map;
 @Slf4j
 @Service
 public class ReportServiceImpl implements ReportService {
+    private static final int MAX_REPORT_DAYS = 366;
     @Autowired
     private ReportMapper reportMapper;
     @Autowired
@@ -52,8 +55,8 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public UserReportVO userStatistics(LocalDate begin, LocalDate end) {
-        LocalDateTime dateTimebegin1 = LocalDateTime.of(begin, LocalTime.MIN);
         List<LocalDate> dateList = getLocalDates(begin, end);
+        LocalDateTime dateTimebegin1 = LocalDateTime.of(begin, LocalTime.MIN);
         List<Integer> userNumList=new ArrayList<>();
         List<Integer> insertUserList = new ArrayList<>();
         Integer baseNum = reportMapper.getTotalUserBefore(dateTimebegin1);
@@ -112,6 +115,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public SalesTop10ReportVO top10(LocalDate begin, LocalDate end) {
+        validateDateRange(begin, end);
         LocalDateTime dateTimeBegin = LocalDateTime.of(begin, LocalTime.MIN);
         LocalDateTime dateTimeend = LocalDateTime.of(end, LocalTime.MAX);
         List<Map<String,String>> top10=reportMapper.getTop10(dateTimeBegin, dateTimeend);
@@ -186,13 +190,23 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private static List<LocalDate> getLocalDates(LocalDate begin, LocalDate end) {
-        List<LocalDate> dateList=new ArrayList<>();
-        dateList.add(begin);
-        while(!begin.equals(end)){
-            begin = begin.plusDays(1);
-            dateList.add(begin);
+        long days = validateDateRange(begin, end);
+        List<LocalDate> dateList = new ArrayList<>((int) days + 1);
+        for (int offset = 0; offset <= days; offset++) {
+            dateList.add(begin.plusDays(offset));
         }
         return dateList;
+    }
+
+    private static long validateDateRange(LocalDate begin, LocalDate end) {
+        if (begin == null || end == null || begin.isAfter(end)) {
+            throw new BaseException("请提供有效的起止日期，开始日期不能晚于结束日期");
+        }
+        long days = ChronoUnit.DAYS.between(begin, end);
+        if (days >= MAX_REPORT_DAYS) {
+            throw new BaseException("单次报表查询最多支持366天（含起止日期）");
+        }
+        return days;
     }
 
     private Map<String,Object> buildDateMap(LocalDate date) {

@@ -24,6 +24,19 @@ public interface OrderMapper {
 
     Orders getById(Long id);
 
+    /**
+     * 查询当前用户最近的进行中订单，只投影AI客服需要的非敏感字段。
+     */
+    List<Orders> listActiveByUserId(@Param("userId") Long userId);
+
+    /** AI客服按订单主键和当前用户查询安全的订单详情字段。 */
+    Orders getAiDetailByIdAndUserId(@Param("orderId") Long orderId,
+                                    @Param("userId") Long userId);
+
+    /** AI客服准备取消前只读取判断所需字段，并在SQL层校验订单归属。 */
+    Orders getAiCancellationByIdAndUserId(@Param("orderId") Long orderId,
+                                          @Param("userId") Long userId);
+
     Page<OrderVO> historyOrders(OrdersPageQueryDTO ordersPageQueryDTO);
 
 

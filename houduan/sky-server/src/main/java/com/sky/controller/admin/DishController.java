@@ -115,10 +115,9 @@ public class DishController {
     public Result statusUpdateDish(@PathVariable Integer status,DishDTO dishDTO) {
         log.info("id和status:{},{}",dishDTO.getId(),status);
         Dish dish=new Dish();
-        BeanUtils.copyProperties(dishDTO,dish);
+        dish.setId(dishDTO.getId());
         dish.setStatus(status);
         dishService.statusUpdateDish(dish);
-        redisTemplate.delete("dish_category_"+dishDTO.getCategoryId());
         return Result.success();
     }
 }

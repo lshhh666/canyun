@@ -8,13 +8,13 @@
             number, status, user_id, address_book_id, order_time,
             pay_method, pay_status, amount, original_amount, discount_amount, user_coupon_id,
             remark, phone, address, consignee,
-            estimated_delivery_time, delivery_status, pack_amount,
+            estimated_delivery_time, delivery_status, pack_amount, goods_amount, delivery_fee,
             tableware_number, tableware_status
         ) values(
                     #{number}, #{status}, #{userId}, #{addressBookId}, #{orderTime},
                     #{payMethod}, #{payStatus}, #{amount}, #{originalAmount}, #{discountAmount}, #{userCouponId},
                     #{remark}, #{phone}, #{address}, #{consignee},
-                    #{estimatedDeliveryTime}, #{deliveryStatus}, #{packAmount},
+                    #{estimatedDeliveryTime}, #{deliveryStatus}, #{packAmount}, #{goodsAmount}, #{deliveryFee},
                     #{tablewareNumber}, #{tablewareStatus}
                 )
 
@@ -115,6 +115,31 @@
         select o.*, u.name user_name from orders o
         left join user u on o.user_id = u.id
         where o.id = #{id}
+    </select>
+
+    <select id="listActiveByUserId" resultType="com.sky.entity.Orders">
+        select id, number, status, order_time, estimated_delivery_time
+        from orders
+        where user_id = #{userId}
+          and status in (1, 2, 3, 4)
+        order by order_time desc, id desc
+        limit 4
+    </select>
+
+    <!-- AI客服只读取订单详情回答所需字段，并在SQL层同时校验订单归属。 -->
+    <select id="getAiDetailByIdAndUserId" resultType="com.sky.entity.Orders">
+        select id, number, status, pay_status, amount, original_amount,
+               discount_amount, pack_amount, goods_amount, delivery_fee, remark
+        from orders
+        where id = #{orderId}
+          and user_id = #{userId}
+    </select>
+
+    <select id="getAiCancellationByIdAndUserId" resultType="com.sky.entity.Orders">
+        select id, number, user_id, status, pay_status, user_coupon_id
+        from orders
+        where id = #{orderId}
+          and user_id = #{userId}
     </select>
 
     <!--
