@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloudmeal.mapper.AiKnowledgeMapper">
+
+    <select id="pageCurrent" resultType="com.cloudmeal.entity.AiKnowledge">
+        SELECT id, knowledge_key, title, category, content,
+               embedding_status, version_no, status, create_time, update_time
+        FROM ai_knowledge
+        WHERE status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (knowledge_key LIKE CONCAT('%', #{keyword}, '%')
+                 OR title LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="category != null">
+            AND category = #{category}
+        </if>
+        <if test="embeddingStatus != null">
+            AND embedding_status = #{embeddingStatus}
+        </if>
+        ORDER BY update_time DESC, id DESC
+    </select>
+
+    <!-- 修改知识时锁住被编辑的版本，避免两个管理员同时生成下一版本。 -->
+    <select id="selectByIdForUpdate" resultType="com.cloudmeal.entity.AiKnowledge">
+        SELECT id, knowledge_key, title, category, content,
+               embedding, embedding_model, embedding_dimensions,
+               embedding_status, version_no, status, create_time, update_time
+        FROM ai_knowledge
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <!-- 状态条件是数据库层的状态机保护。 -->
+    <update id="disableEnabled">
+        UPDATE ai_knowledge
+        SET status = 0,
+            update_time = #{updateTime}
+        WHERE id = #{id}
+          AND status = 1
+    </update>
+
+    <!-- 只加载当前嵌入模型和维度可兼容的启用知识，避免不同向量空间参与计算。 -->
+    <select id="selectEnabledByEmbeddingConfiguration" resultType="com.cloudmeal.entity.AiKnowledge">
+        SELECT id, title, category, content, embedding
+        FROM ai_knowledge
+        WHERE status = 1
+          AND embedding_status = 1
+          AND embedding_model = #{embeddingModel}
+          AND embedding_dimensions = #{embeddingDimensions}
+    </select>
+
+    <update id="markEmbeddingReady">
+        UPDATE ai_knowledge
+        SET embedding = #{embedding},
+            embedding_model = #{embeddingModel},
+            embedding_dimensions = #{embeddingDimensions},
+            embedding_status = 1,
+            update_time = #{now}
+        WHERE id = #{id}
+          AND status = 1
+          AND embedding_status = 0
+    </update>
+
+    <update id="markEmbeddingFailed">
+        UPDATE ai_knowledge
+        SET embedding_status = 2,
+            update_time = #{now}
+        WHERE id = #{id}
+          AND status = 1
+          AND embedding_status = 0
+    </update>
+
+    <update id="markEmbeddingPendingForManualRetry">
+        UPDATE ai_knowledge
+        SET embedding = NULL,
+            embedding_model = NULL,
+            embedding_dimensions = NULL,
+            embedding_status = 0,
+            update_time = #{now}
+        WHERE id = #{id}
+          AND status = 1
+          AND embedding_status = 2
+    </update>
+
+    <select id="countReadyCurrentByKeys" resultType="int">
+        SELECT COUNT(DISTINCT knowledge_key)
+        FROM ai_knowledge
+        WHERE status = 1
+          AND embedding_status = 1
+          AND embedding_model = #{embeddingModel}
+          AND embedding_dimensions = #{embeddingDimensions}
+          AND knowledge_key IN
+          <foreach collection="knowledgeKeys" item="knowledgeKey"
+                   open="(" separator="," close=")">
+              #{knowledgeKey}
+          </foreach>
+    </select>
+
+</mapper>

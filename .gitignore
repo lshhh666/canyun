@@ -22,7 +22,7 @@ nginx-1.20.2/conf/*
 !nginx-1.20.2/conf/nginx.conf
 
 # Local secrets and private tool configuration
-houduan/sky-server/src/main/resources/application-dev.yml
+houduan/cloudmeal-server/src/main/resources/application-dev.yml
 xiaochengxu/project.private.config.json
 resume/
 

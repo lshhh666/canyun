@@ -1,0 +1,75 @@
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: dev
+  main:
+    allow-circular-references: true
+  datasource:
+    druid:
+      driver-class-name: ${cloudmeal.datasource.driver-class-name}
+      url: jdbc:mysql://${cloudmeal.datasource.host}:${cloudmeal.datasource.port}/${cloudmeal.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${cloudmeal.datasource.username}
+      password: ${cloudmeal.datasource.password}
+  redis:
+    host: ${cloudmeal.redis.host}
+    port: ${cloudmeal.redis.port}
+    database: ${cloudmeal.redis.database}
+mybatis-plus:
+  #mapper配置文件
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.cloudmeal.entity
+  configuration:
+    #开启驼峰命名
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+logging:
+  level:
+    com:
+      sky:
+        mapper: debug
+        service: info
+        controller: info
+
+cloudmeal:
+  jwt:
+    # 未配置环境变量时每次启动生成临时密钥，正式部署必须提供稳定的高强度密钥
+    admin-secret-key: ${CLOUDMEAL_JWT_ADMIN_SECRET:${random.uuid}}
+    # 设置jwt过期时间
+    admin-ttl: 7200000
+    # 设置前端传递过来的令牌名称
+    admin-token-name: token
+    user-secret-key: ${CLOUDMEAL_JWT_USER_SECRET:${random.uuid}}
+    user-ttl: 7200000
+    user-token-name: authentication
+  wechat:
+    appid: ${cloudmeal.wechat.appid}
+    secret: ${cloudmeal.wechat.secret}
+  shop:
+    id: 1
+    name: ${SHOP_NAME:餐云智慧餐饮}
+    phone: ${SHOP_PHONE:}
+    delivery-fee: 6.00
+    pack-fee-per-item: 1.00
+    estimated-delivery-minutes: 30
+    max-delivery-distance-meters: 5000
+  ai:
+    base-url: https://open.bigmodel.cn/api/paas/v4
+    model: glm-4.5-air
+    embedding-model: embedding-3
+    embedding-dimensions: 256
+    retrieval-top-k: 3
+    retrieval-min-score: 0.70
+    connect-timeout: 3000
+    read-timeout: 60000
+    # 包含向量检索和聊天生成的整轮占用期限；下一次提问触发超时接替。
+    turn-timeout-seconds: 150
+    # 敏感动作只允许通过后端返回的确认按钮在有效期内执行。
+    action-confirm-timeout-seconds: 300
+    # 超过该时间未继续交流时，下一次提问自动创建新会话。
+    session-idle-timeout-minutes: 30
+    max-tokens: 1024

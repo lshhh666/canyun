@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloudmeal.mapper.AiChatMessageMapper">
+
+    <!-- 没有历史消息时MAX返回NULL，COALESCE将其转为0，因此第一条消息序号为1。 -->
+    <select id="selectNextSequenceNo" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(sequence_no), 0) + 1
+        FROM ai_chat_message
+        WHERE session_id = #{sessionId}
+    </select>
+
+    <!--
+        内层倒序并限制数量，取得真正的最近N条；外层再改为正序，方便直接组装模型上下文。
+    -->
+    <select id="selectRecentMessages" resultType="com.cloudmeal.entity.AiChatMessage">
+        SELECT id, session_id, role, content, sequence_no, create_time
+        FROM (
+            SELECT id, session_id, role, content, sequence_no, create_time
+            FROM ai_chat_message
+            WHERE session_id = #{sessionId}
+            ORDER BY sequence_no DESC
+            LIMIT #{limit}
+        ) AS recent_messages
+        ORDER BY sequence_no ASC
+    </select>
+
+    <select id="selectTurnMessages" resultType="com.cloudmeal.entity.AiChatMessage">
+        SELECT id, session_id, role, content, sequence_no, create_time
+        FROM (
+            SELECT id, session_id, role, content, sequence_no, create_time
+            FROM ai_chat_message
+            WHERE session_id = #{sessionId}
+              AND sequence_no &lt;= #{sequenceNo}
+            ORDER BY sequence_no DESC
+            LIMIT #{limit}
+        ) AS turn_messages
+        ORDER BY sequence_no ASC
+    </select>
+
+    <!--
+        先定位每个会话最后一条AI回答，再找该回答之前最近的用户问题。
+        查询次数固定为一次，避免分页列表逐条查消息产生N+1问题。
+    -->
+    <select id="selectLatestTurnsBySessionIds"
+            resultType="com.cloudmeal.vo.AiChatFeedbackTurnVO">
+        SELECT
+            assistant_message.session_id,
+            user_message.content AS user_question,
+            assistant_message.content AS ai_answer
+        FROM ai_chat_message assistant_message
+        LEFT JOIN ai_chat_message user_message
+          ON user_message.id = (
+              SELECT candidate_user.id
+              FROM ai_chat_message candidate_user
+              WHERE candidate_user.session_id = assistant_message.session_id
+                AND candidate_user.role = 'USER'
+                AND candidate_user.sequence_no &lt; assistant_message.sequence_no
+              ORDER BY candidate_user.sequence_no DESC
+              LIMIT 1
+          )
+        WHERE assistant_message.role = 'ASSISTANT'
+          AND assistant_message.session_id IN
+          <foreach collection="sessionIds" item="sessionId"
+                   open="(" separator="," close=")">
+              #{sessionId}
+          </foreach>
+          AND NOT EXISTS (
+              SELECT 1
+              FROM ai_chat_message newer_assistant
+              WHERE newer_assistant.session_id = assistant_message.session_id
+                AND newer_assistant.role = 'ASSISTANT'
+                AND newer_assistant.sequence_no
+                    &gt; assistant_message.sequence_no
+          )
+    </select>
+</mapper>

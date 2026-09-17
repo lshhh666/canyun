@@ -113,9 +113,9 @@ flowchart LR
 ```text
 canyun/
 ├─ houduan/               Java 后端多模块 Maven 工程
-│  ├─ sky-common/         公共配置、异常、工具和通用结果
-│  ├─ sky-pojo/           DTO、实体和 VO
-│  ├─ sky-server/         Controller、Service、Mapper、任务与测试
+│  ├─ cloudmeal-common/         公共配置、异常、工具和通用结果
+│  ├─ cloudmeal-pojo/           DTO、实体和 VO
+│  ├─ cloudmeal-server/         Controller、Service、Mapper、任务与测试
 │  └─ sql/                优惠券、AI 客服等增量数据库迁移
 ├─ wangye/                Vue 管理端源码
 ├─ xiaochengxu-source/    可维护的 UniApp 小程序源码
@@ -154,7 +154,7 @@ canyun/
 
 ### 3. 配置后端
 
-在 `houduan/sky-server/src/main/resources/` 下创建本地 `application-dev.yml`。该文件已被 `.gitignore` 排除，请勿提交真实密钥。
+在 `houduan/cloudmeal-server/src/main/resources/` 下创建本地 `application-dev.yml`。该文件已被 `.gitignore` 排除，请勿提交真实密钥。
 
 ```yaml
 sky:
@@ -185,21 +185,21 @@ sky:
 
 不需要测试的第三方能力也应使用本地占位配置，不能把真实密钥提交到仓库。
 
-JWT 管理端和用户端使用不同的签名密钥。未设置时，应用会在每次启动时生成临时随机值，因此重启后旧令牌会失效；正式部署必须通过 `SKY_JWT_ADMIN_SECRET` 和 `SKY_JWT_USER_SECRET` 环境变量提供两个不同的高强度密钥。
+JWT 管理端和用户端使用不同的签名密钥。未设置时，应用会在每次启动时生成临时随机值，因此重启后旧令牌会失效；正式部署必须通过 `CLOUDMEAL_JWT_ADMIN_SECRET` 和 `CLOUDMEAL_JWT_USER_SECRET` 环境变量提供两个不同的高强度密钥。
 
 ### 4. 启动后端
 
 可以在 IDE 中运行：
 
 ```text
-com.sky.SkyApplication
+com.cloudmeal.CloudMealApplication
 ```
 
 也可以在 `houduan` 目录构建并运行：
 
 ```powershell
-mvn -pl sky-server -am package -DskipTests
-java -jar sky-server/target/sky-server-1.0-SNAPSHOT.jar
+mvn -pl cloudmeal-server -am package -DskipTests
+java -jar cloudmeal-server/target/cloudmeal-server-1.0-SNAPSHOT.jar
 ```
 
 后端默认端口为 `8080`。
@@ -251,7 +251,7 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-miniapp-output.ps1
 
 ```powershell
 cd houduan
-mvn -pl sky-server -am test
+mvn -pl cloudmeal-server -am test
 ```
 
 管理端测试：

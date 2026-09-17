@@ -1,0 +1,32 @@
+package com.cloudmeal.dto;
+
+import lombok.Data;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+@Data
+public class OrdersSubmitDTO implements Serializable {
+    //地址簿id
+    private Long addressBookId;
+    //付款方式
+    private int payMethod;
+    //备注
+    private String remark;
+    // Legacy client value. The server recalculates ETA and accepts this only for JSON compatibility.
+    private String estimatedDeliveryTime;
+    //配送状态  1立即送出  0选择具体时间
+    private Integer deliveryStatus;
+    //餐具数量
+    private Integer tablewareNumber;
+    //餐具数量状态  1按餐量提供  0选择具体数量
+    private Integer tablewareStatus;
+    //打包费
+    // Legacy client value. The server recalculates and ignores this field.
+    private Integer packAmount;
+    //总金额
+    // Legacy client value. The server recalculates and ignores this field.
+    private BigDecimal amount;
+    //用户优惠券记录 ID
+    private Long userCouponId;
+}

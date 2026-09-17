@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cloudmeal.mapper.AiChatPendingActionMapper">
+
+    <select id="selectRestorable" resultType="com.cloudmeal.entity.AiChatPendingAction">
+        SELECT id, user_id, session_id, action_type, target_order_id, assistant_message_id,
+               status, expire_time, result_message, create_time, update_time
+        FROM ai_chat_pending_action
+        WHERE session_id = #{sessionId}
+          AND user_id = #{userId}
+          AND status = 1
+          AND expire_time &gt; #{now}
+          AND assistant_message_id IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectOwned" resultType="com.cloudmeal.entity.AiChatPendingAction">
+        SELECT id, user_id, session_id, action_type, target_order_id, assistant_message_id, status,
+               expire_time, result_message, create_time, update_time
+        FROM ai_chat_pending_action
+        WHERE id = #{actionId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="selectOwnedForUpdate" resultType="com.cloudmeal.entity.AiChatPendingAction">
+        SELECT id, user_id, session_id, action_type, target_order_id, assistant_message_id, status,
+               expire_time, result_message, create_time, update_time
+        FROM ai_chat_pending_action
+        WHERE id = #{actionId}
+          AND user_id = #{userId}
+        FOR UPDATE
+    </select>
+
+    <update id="supersedePending">
+        UPDATE ai_chat_pending_action
+        SET status = 5,
+            result_message = #{resultMessage},
+            update_time = #{updateTime}
+        WHERE session_id = #{sessionId}
+          AND user_id = #{userId}
+          AND status = 1
+    </update>
+
+    <update id="completePending">
+        UPDATE ai_chat_pending_action
+        SET status = #{newStatus},
+            result_message = #{resultMessage},
+            update_time = #{updateTime}
+        WHERE id = #{actionId}
+          AND user_id = #{userId}
+          AND status = 1
+    </update>
+
+</mapper>

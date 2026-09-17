@@ -12,7 +12,7 @@
 - 普通编辑不能更改默认标志；设置默认时只更新默认标志，不接收请求附带的地址内容修改。
 - 设置默认前检查归属；清除旧默认和设置目标默认同事务执行。目标更新失败时回滚旧默认清除。
 
-实现：[地址 Service](D:/canyun/houduan/sky-server/src/main/java/com/sky/service/impl/AddressBookServiceImpl.java)、[Mapper](D:/canyun/houduan/sky-server/src/main/java/com/sky/mapper/AddressBookMapper.java)、[更新 SQL](D:/canyun/houduan/sky-server/src/main/resources/mapper/AddressBookMapper.xml)。
+实现：[地址 Service](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/service/impl/AddressBookServiceImpl.java)、[Mapper](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/mapper/AddressBookMapper.java)、[更新 SQL](D:/canyun/houduan/cloudmeal-server/src/main/resources/mapper/AddressBookMapper.xml)。
 
 ### 报表日期
 
@@ -21,7 +21,7 @@
 - 日期列表使用经过校验的有限次数循环，兼容同一天、闰日和 LocalDate.MAX 的单日边界。
 - 保留现有 `Result` 业务错误响应格式，前端无需更改接口调用。
 
-实现：[ReportServiceImpl](D:/canyun/houduan/sky-server/src/main/java/com/sky/service/impl/ReportServiceImpl.java)。
+实现：[ReportServiceImpl](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/service/impl/ReportServiceImpl.java)。
 
 ### 菜品状态与缓存
 
@@ -30,7 +30,7 @@
 - 使用 Spring 事务提交后回调删除真实分类的缓存；事务回滚时不删除缓存。
 - 此次修复针对起售/停售入口，不声称整个菜单缓存已经强一致，也未增加可靠缓存失效消息机制。
 
-实现：[DishController](D:/canyun/houduan/sky-server/src/main/java/com/sky/controller/admin/DishController.java)、[DIshServiceImpl](D:/canyun/houduan/sky-server/src/main/java/com/sky/service/impl/DIshServiceImpl.java)、[DishMapper](D:/canyun/houduan/sky-server/src/main/java/com/sky/mapper/DishMapper.java)。
+实现：[DishController](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/controller/admin/DishController.java)、[DIshServiceImpl](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/service/impl/DIshServiceImpl.java)、[DishMapper](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/mapper/DishMapper.java)。
 
 ### 身份上下文与 JWT 日志
 
@@ -39,7 +39,7 @@
 - 删除管理员日志中的完整 JWT，仅保留员工 ID 日志。
 - 这不自动向异步工作线程传播 ThreadLocal；若以后增加异步业务，应显式传递身份。
 
-实现：[用户拦截器](D:/canyun/houduan/sky-server/src/main/java/com/sky/interceptor/JwtTokenUserInterceptor.java)、[管理员拦截器](D:/canyun/houduan/sky-server/src/main/java/com/sky/interceptor/JwtTokenAdminInterceptor.java)。
+实现：[用户拦截器](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/interceptor/JwtTokenUserInterceptor.java)、[管理员拦截器](D:/canyun/houduan/cloudmeal-server/src/main/java/com/cloudmeal/interceptor/JwtTokenAdminInterceptor.java)。
 
 ## 回归方式
 
@@ -47,16 +47,16 @@
 
 新增测试：
 
-- [BackendHardeningSqlTest](D:/canyun/houduan/sky-server/src/test/java/com/sky/service/BackendHardeningSqlTest.java)：地址越权、伪造身份、直接 Mapper 防护、默认切换、写失败回滚、菜品真实分类、字段限制、提交/回滚时序及 HTTP 原始请求方式。
-- [ReportDateRangeTest](D:/canyun/houduan/sky-server/src/test/java/com/sky/service/ReportDateRangeTest.java)：四接口空值/倒置/超限拒绝、错误响应、同日/闰年/极值及日期序列。
-- [JwtContextCleanupTest](D:/canyun/houduan/sky-server/src/test/java/com/sky/interceptor/JwtContextCleanupTest.java)：用户与管理员正常/异常请求清理、失效/错误签名拒绝、静态和异步分支及无 JWT 日志。
+- [BackendHardeningSqlTest](D:/canyun/houduan/cloudmeal-server/src/test/java/com/cloudmeal/service/BackendHardeningSqlTest.java)：地址越权、伪造身份、直接 Mapper 防护、默认切换、写失败回滚、菜品真实分类、字段限制、提交/回滚时序及 HTTP 原始请求方式。
+- [ReportDateRangeTest](D:/canyun/houduan/cloudmeal-server/src/test/java/com/cloudmeal/service/ReportDateRangeTest.java)：四接口空值/倒置/超限拒绝、错误响应、同日/闰年/极值及日期序列。
+- [JwtContextCleanupTest](D:/canyun/houduan/cloudmeal-server/src/test/java/com/cloudmeal/interceptor/JwtContextCleanupTest.java)：用户与管理员正常/异常请求清理、失效/错误签名拒绝、静态和异步分支及无 JWT 日志。
 
 同时回归 `OrderPricingServiceImplTest`、`OrderServiceImplSubmitTest`、`OrderServiceOwnershipTest`，核对已有下单地址校验与订单链路。
 
 从 `D:/canyun/houduan` 执行：
 
 ```powershell
-mvn.cmd -o -pl sky-server -am test '-Dtest=BackendHardeningSqlTest,ReportDateRangeTest,JwtContextCleanupTest,OrderPricingServiceImplTest,OrderServiceImplSubmitTest,OrderServiceOwnershipTest' '-Dsurefire.failIfNoSpecifiedTests=false' '-Dmaven.test.redirectTestOutputToFile=true'
+mvn.cmd -o -pl cloudmeal-server -am test '-Dtest=BackendHardeningSqlTest,ReportDateRangeTest,JwtContextCleanupTest,OrderPricingServiceImplTest,OrderServiceImplSubmitTest,OrderServiceOwnershipTest' '-Dsurefire.failIfNoSpecifiedTests=false' '-Dmaven.test.redirectTestOutputToFile=true'
 ```
 
 最终运行：2026-09-13 21:14:58，BUILD SUCCESS，60 项通过、0 失败、0 错误、0 跳过。其中新增回归 33 项（SQL/接口/事务 12、日期 13、JWT 8），已有交易回归 27 项（计价 5、下单 16、订单归属 6）。

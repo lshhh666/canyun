@@ -1,0 +1,17 @@
+package com.cloudmeal.config;
+
+import com.cloudmeal.properties.AliOssProperties;
+import com.cloudmeal.utils.AliOssUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OssConfiguration {
+    @Autowired
+    AliOssProperties aliOssProperties;
+    @Bean
+    public AliOssUtil getAliOssUtil() {
+        return new AliOssUtil(aliOssProperties.getEndpoint(),aliOssProperties.getAccessKeyId(),aliOssProperties.getAccessKeySecret(),aliOssProperties.getBucketName());
+    }
+}
