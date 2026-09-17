@@ -389,9 +389,34 @@ export const queryOrdersCheckStatus = (params) =>
 		params
 	})
 
-// 向 AI 客服发送当前用户的文本消息。用户身份由请求头中的 JWT 确定。
-export const sendAiChatMessage = message => request({
+// 向 AI 客服发送当前用户的文本消息。用户身份由请求头中的 JWT 确定，sessionId 仅用于续接对话。
+export const sendAiChatMessage = (message, sessionId) => request({
 	url: '/user/ai/chat',
 	method: 'POST',
-	params: { message }
+	params: { message, sessionId }
+})
+
+// 只允许AI客服回答中由后端签发的确认按钮调用，不接收前端传入的订单ID。
+export const confirmAiChatAction = actionId => request({
+	url: `/user/ai/actions/${actionId}/confirm`,
+	method: 'POST'
+})
+
+// 恢复当前JWT用户最近一次可继续的AI客服会话，不接收前端用户ID。
+export const getRecentAiChatHistory = () => request({
+	url: '/user/ai/session/recent',
+	method: 'GET'
+})
+
+// 结束当前JWT用户自己的会话；下一条消息会创建新会话。
+export const closeAiChatSession = sessionId => request({
+	url: `/user/ai/session/${sessionId}/close`,
+	method: 'POST'
+})
+
+// 评价已结束的会话。用户身份仍由JWT确定，前端只提交会话和评价结果。
+export const submitAiChatFeedback = (sessionId, result) => request({
+	url: '/user/ai/session/feedback',
+	method: 'POST',
+	params: { sessionId, result }
 })

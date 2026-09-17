@@ -7,6 +7,17 @@
       @back="goBack"
     />
 
+    <view class="conversation-tools">
+      <text class="conversation-tools__hint">仅展示最近对话</text>
+      <button
+        class="conversation-tools__new"
+        :disabled="sending || historyLoading"
+        @click="startNewConversation"
+      >
+        新对话
+      </button>
+    </view>
+
     <scroll-view
       class="chat-scroll"
       scroll-y
@@ -37,7 +48,17 @@
             src="/static/ai/yunxiaocan-mascot.png"
             mode="aspectFit"
           />
-          <view class="message-bubble">{{ item.content }}</view>
+          <view class="message-content">
+            <view class="message-bubble">{{ item.content }}</view>
+            <button
+              v-if="item.role === 'assistant' && item.action && !item.action.consumed"
+              class="message-action"
+              :disabled="sending || historyLoading || item.action.confirming"
+              @click="confirmPendingAction(item)"
+            >
+              {{ item.action.confirming ? '处理中' : item.action.label }}
+            </button>
+          </view>
         </view>
 
         <view v-if="sending" id="ai-message-loading" class="message-row message-row--assistant">
@@ -55,7 +76,7 @@
             v-for="prompt in quickPrompts"
             :key="prompt"
             class="quick-prompt"
-            :disabled="sending"
+            :disabled="sending || historyLoading"
             @click="selectPrompt(prompt)"
           >
             {{ prompt }}
@@ -73,11 +94,11 @@
           type="text"
           maxlength="100"
           confirm-type="send"
-          :disabled="sending"
+          :disabled="sending || historyLoading"
           placeholder="问问云小餐…"
           @confirm="sendMessage"
         />
-        <button class="composer__send" :disabled="sending || !canSend" @click="sendMessage">
+        <button class="composer__send" :disabled="sending || historyLoading || !canSend" @click="sendMessage">
           {{ sending ? '回答中' : '发送' }}
         </button>
       </view>
@@ -88,9 +109,21 @@
 
 <script>
 import CloudmealHeader from '@/components/cloudmeal-header/cloudmeal-header.vue'
-import { sendAiChatMessage } from '../api/api.js'
+import {
+  sendAiChatMessage,
+  confirmAiChatAction,
+  getRecentAiChatHistory,
+  closeAiChatSession,
+  submitAiChatFeedback
+} from '../api/api.js'
 
 const BUSY_MESSAGE = '云小餐暂时有点忙，请稍后再试。'
+const FEEDBACK_OPTIONS = ['HELPFUL', 'UNSOLVED', null]
+const WELCOME_MESSAGE = {
+  id: 'ai-message-0',
+  role: 'assistant',
+  content: '你好，我是云小餐。今天想了解菜品，还是查询订单和优惠券？'
+}
 
 export default {
   components: { CloudmealHeader },
@@ -98,22 +131,25 @@ export default {
     return {
       inputValue: '',
       sending: false,
+      historyLoading: false,
+      historyTimer: null,
+      sessionId: null,
       scrollIntoView: '',
       messageSequence: 1,
       quickPrompts: ['推荐不辣的菜', '怎么取消订单？', '优惠券怎么使用？'],
-      messages: [
-        {
-          id: 'ai-message-0',
-          role: 'assistant',
-          content: '你好，我是云小餐。今天想了解菜品，还是查询订单和优惠券？'
-        }
-      ]
+      messages: [{ ...WELCOME_MESSAGE }]
     }
   },
   computed: {
     canSend() {
       return this.inputValue.trim().length > 0
     }
+  },
+  onLoad() {
+    this.loadRecentHistory()
+  },
+  onUnload() {
+    this.clearHistoryTimer()
   },
   methods: {
     goBack() {
@@ -125,20 +161,143 @@ export default {
       uni.reLaunch({ url: '/pages/index/index' })
     },
     selectPrompt(prompt) {
-      if (this.sending) return
+      if (this.sending || this.historyLoading) return
       this.inputValue = prompt
     },
-    appendMessage(role, content) {
+    resetConversation() {
+      this.clearHistoryTimer()
+      this.inputValue = ''
+      this.sending = false
+      this.sessionId = null
+      this.messageSequence = 1
+      this.messages = [{ ...WELCOME_MESSAGE }]
+      this.$nextTick(() => {
+        this.scrollIntoView = WELCOME_MESSAGE.id
+      })
+    },
+    async startNewConversation() {
+      if (this.sending || this.historyLoading) return
+      if (this.sessionId == null) {
+        this.resetConversation()
+        return
+      }
+
+      this.clearHistoryTimer()
+      this.historyLoading = true
+      try {
+        const feedbackResult = await this.chooseSessionFeedback()
+        if (feedbackResult === undefined) return
+
+        const closedSessionId = this.sessionId
+        await closeAiChatSession(closedSessionId)
+        this.resetConversation()
+        // 关闭成功后立即解锁新会话；评价走独立请求，不等待它返回。
+        this.historyLoading = false
+        this.submitSessionFeedbackInBackground(closedSessionId, feedbackResult)
+        if (uni.showToast) uni.showToast({ title: '已开始新对话', icon: 'none' })
+      } catch (error) {
+        if (uni.showToast) uni.showToast({ title: BUSY_MESSAGE, icon: 'none' })
+      } finally {
+        this.historyLoading = false
+      }
+    },
+    chooseSessionFeedback() {
+      if (!uni.showActionSheet) return Promise.resolve(null)
+      return new Promise(resolve => {
+        uni.showActionSheet({
+          title: '这次对话解决了你的问题吗？',
+          itemList: ['有帮助', '没解决', '暂不评价'],
+          success: result => {
+            const index = result && result.tapIndex
+            resolve(Number.isInteger(index) ? FEEDBACK_OPTIONS[index] : undefined)
+          },
+          fail: () => resolve(undefined)
+        })
+      })
+    },
+    submitSessionFeedbackInBackground(sessionId, result) {
+      if (!result) return
+      submitAiChatFeedback(sessionId, result).catch(() => {
+        // 这里只提示评价结果，不改变已经结束的会话，也不锁住新会话输入。
+        if (uni.showToast) uni.showToast({ title: '评价暂未提交', icon: 'none' })
+      })
+    },
+    normalizeAction(action) {
+      return action && Number.isSafeInteger(action.actionId)
+        && action.actionId > 0 && typeof action.label === 'string'
+        ? { ...action, consumed: false, confirming: false }
+        : null
+    },
+    appendMessage(role, content, action = null) {
       const id = `ai-message-${this.messageSequence++}`
-      this.messages.push({ id, role, content })
+      const safeAction = this.normalizeAction(action)
+      this.messages.push({ id, role, content, action: safeAction })
       this.$nextTick(() => {
         this.scrollIntoView = id
       })
     },
+    captureSessionId(payload) {
+      let candidate = payload && payload.data && payload.data.sessionId
+      if (candidate == null && payload && payload.raw && payload.raw.data
+        && payload.raw.data.data) {
+        candidate = payload.raw.data.data.sessionId
+      }
+      if (typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate > 0) {
+        this.sessionId = candidate
+      }
+    },
+    clearHistoryTimer() {
+      if (this.historyTimer != null) {
+        clearTimeout(this.historyTimer)
+        this.historyTimer = null
+      }
+    },
+    scheduleHistoryRefresh() {
+      this.clearHistoryTimer()
+      this.historyTimer = setTimeout(() => this.loadRecentHistory(), 1000)
+    },
+    async loadRecentHistory() {
+      if (this.historyLoading) return
+      this.historyLoading = true
+      try {
+        const result = await getRecentAiChatHistory()
+        const history = result && result.data ? result.data : {}
+        const sessionId = history.sessionId
+        const restored = Array.isArray(history.messages)
+          ? history.messages
+            .filter(item => item && Number.isSafeInteger(item.messageId)
+              && item.messageId > 0
+              && (item.role === 'user' || item.role === 'assistant')
+              && typeof item.content === 'string' && item.content.trim())
+            .map(item => ({
+              id: `ai-message-history-${item.messageId}`,
+              role: item.role,
+              content: item.content.trim(),
+              action: this.normalizeAction(item.action)
+            }))
+          : []
+        this.sessionId = Number.isSafeInteger(sessionId) && sessionId > 0
+          ? sessionId : null
+        this.messages = [{ ...WELCOME_MESSAGE }, ...restored]
+        this.messageSequence = this.messages.length
+        this.sending = history.processing === true
+        this.clearHistoryTimer()
+        if (this.sending) this.scheduleHistoryRefresh()
+        this.$nextTick(() => {
+          const last = this.messages[this.messages.length - 1]
+          this.scrollIntoView = this.sending ? 'ai-message-loading' : last.id
+        })
+      } catch (error) {
+        if (this.sending) this.scheduleHistoryRefresh()
+      } finally {
+        this.historyLoading = false
+      }
+    },
     async sendMessage() {
       const message = this.inputValue.trim()
-      if (!message || this.sending) return
+      if (!message || this.sending || this.historyLoading) return
 
+      this.clearHistoryTimer()
       this.appendMessage('user', message)
       this.inputValue = ''
       this.sending = true
@@ -147,14 +306,45 @@ export default {
       })
 
       try {
-        const result = await sendAiChatMessage(message)
+        const result = await sendAiChatMessage(message, this.sessionId)
+        this.captureSessionId(result)
         const answer = result && result.data && typeof result.data.answer === 'string'
           ? result.data.answer.trim()
           : ''
-        this.appendMessage('assistant', answer || BUSY_MESSAGE)
+        const action = result && result.data ? result.data.action : null
+        this.appendMessage('assistant', answer || BUSY_MESSAGE, answer ? action : null)
       } catch (error) {
+        this.captureSessionId(error)
         this.appendMessage('assistant', BUSY_MESSAGE)
       } finally {
+        this.sending = false
+      }
+    },
+    async confirmPendingAction(messageItem) {
+      const action = messageItem && messageItem.action
+      if (!action || action.consumed || action.confirming || this.sending || this.historyLoading) return
+
+      this.clearHistoryTimer()
+      action.confirming = true
+      this.sending = true
+      this.appendMessage('user', '确认取消订单')
+      this.$nextTick(() => {
+        this.scrollIntoView = 'ai-message-loading'
+      })
+      try {
+        const result = await confirmAiChatAction(action.actionId)
+        this.captureSessionId(result)
+        const answer = result && result.data && typeof result.data.answer === 'string'
+          ? result.data.answer.trim()
+          : ''
+        if (!answer) throw new Error('empty answer')
+        action.consumed = true
+        this.appendMessage('assistant', answer)
+      } catch (error) {
+        this.captureSessionId(error)
+        this.appendMessage('assistant', BUSY_MESSAGE)
+      } finally {
+        action.confirming = false
         this.sending = false
       }
     }
@@ -171,7 +361,7 @@ export default {
 
 .chat-scroll {
   position: fixed;
-  top: calc(116rpx + var(--status-bar-height));
+  top: calc(180rpx + var(--status-bar-height));
   right: 0;
   bottom: calc(154rpx + env(safe-area-inset-bottom));
   left: 0;
@@ -221,6 +411,49 @@ export default {
   text-align: center;
 }
 
+.conversation-tools {
+  position: fixed;
+  top: calc(116rpx + var(--status-bar-height));
+  right: 0;
+  left: 0;
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: 64rpx;
+  padding: 5rpx 24rpx 5rpx 36rpx;
+  background: rgba(244, 248, 252, 0.92);
+}
+
+.conversation-tools__hint {
+  color: #9aa8b6;
+  font-size: 21rpx;
+}
+
+.conversation-tools__new {
+  width: auto;
+  height: 54rpx;
+  margin: 0;
+  padding: 0 20rpx;
+  color: #147ee8;
+  background: #ffffff;
+  border: 1rpx solid #bddbfa;
+  border-radius: 27rpx;
+  font-size: 22rpx;
+  line-height: 52rpx;
+}
+
+.conversation-tools__new::after {
+  border: 0;
+}
+
+.conversation-tools__new[disabled] {
+  color: #9aabba;
+  background: #f3f6f9;
+  border-color: #dfe7ee;
+}
+
 .message-row {
   display: flex;
   align-items: flex-start;
@@ -249,6 +482,42 @@ export default {
   font-size: 28rpx;
   line-height: 42rpx;
   word-break: break-all;
+}
+
+.message-content {
+  display: flex;
+  max-width: 520rpx;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.message-row--user .message-content {
+  align-items: flex-end;
+}
+
+.message-content .message-bubble {
+  max-width: 100%;
+}
+
+.message-action {
+  width: auto;
+  height: 62rpx;
+  margin: 12rpx 0 0;
+  padding: 0 28rpx;
+  color: #ffffff;
+  background: #e95b45;
+  border-radius: 31rpx;
+  font-size: 24rpx;
+  line-height: 62rpx;
+}
+
+.message-action::after {
+  border: 0;
+}
+
+.message-action[disabled] {
+  color: #9aabba;
+  background: #e6edf4;
 }
 
 .message-row--user .message-bubble {

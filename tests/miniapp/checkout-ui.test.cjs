@@ -521,6 +521,41 @@ test('address list preserves select, edit, add and default-address behavior', as
   assert.equal(address.calls.toasts.at(-1).title, '默认地址设置成功')
 })
 
+test('address default update ignores rapid repeat taps while a request is pending', async () => {
+  let resolveDefault
+  const defaultCalls = []
+  const pendingDefault = new Promise(resolve => { resolveDefault = resolve })
+  const address = harness('xiaochengxu-source/pages/address/address.vue', {
+    apis: {
+      queryAddressBookList: async () => ({ code: 1, data: [] }),
+      putAddressBookDefault: async params => {
+        defaultCalls.push(params)
+        return pendingDefault
+      }
+    }
+  })
+  address.instance.addressList = [
+    { id: 1, isDefault: 1 },
+    { id: 2, isDefault: 0 },
+    { id: 3, isDefault: 0 }
+  ]
+  address.instance.isActive = 0
+
+  const first = address.instance.getRadio(1, address.instance.addressList[1])
+  const repeated = await address.instance.getRadio(2, address.instance.addressList[2])
+
+  assert.equal(repeated, false)
+  assert.equal(defaultCalls.length, 1)
+  assert.equal(defaultCalls[0].id, 2)
+  assert.equal(address.instance.isActive, 1)
+  assert.equal(address.instance.isSettingDefault, true)
+
+  resolveDefault({ code: 1 })
+  await first
+  assert.equal(address.instance.isSettingDefault, false)
+  assert.equal(address.instance.addressList.map(item => item.isDefault).join(','), '0,1,0')
+})
+
 test('address form saves new data and deletes an existing address', async () => {
   const adds = []
   const deletes = []

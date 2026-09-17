@@ -62,6 +62,24 @@ const router = new Router({
           }
         },
         {
+          path: "ai-feedback",
+          component: () =>
+            import(/* webpackChunkName: "aiFeedback" */ "@/views/aiFeedback/index.vue"),
+          meta: {
+            title: "AI客服评价",
+            icon: "icon-statistics"
+          }
+        },
+        {
+          path: "ai-knowledge",
+          component: () =>
+            import(/* webpackChunkName: "aiKnowledge" */ "@/views/aiKnowledge/index.vue"),
+          meta: {
+            title: "知识管理",
+            icon: "icon-category"
+          }
+        },
+        {
           path: "order",
           component: () =>
             import(/* webpackChunkName: "shopTable" */ "@/views/orderDetails/index.vue"),

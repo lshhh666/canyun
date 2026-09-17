@@ -5,7 +5,7 @@
     <scroll-view class="address-list" scroll-y>
       <view
         v-for="(item, index) in addressList"
-        :key="item.id || index"
+        :key="item.id"
         class="address-card"
       >
         <view class="address-card__main" @click.stop="choseAddress(index, item)">
@@ -22,13 +22,12 @@
           <button class="edit-button" @click.stop="addOrEdit('编辑', item)">编辑</button>
         </view>
         <view class="address-card__default" @click.stop="getRadio(index, item)">
-          <radio
-            v-if="testValue"
-            class="default-radio"
-            color="#147EE8"
-            :value="String(item.id)"
-            :checked="isActive === index"
-          />
+          <view
+            class="default-check"
+            :class="{ 'default-check--active': isActive === index }"
+          >
+            <text v-if="isActive === index" class="default-check__mark">✓</text>
+          </view>
           <text>{{ isActive === index ? '默认地址' : '设为默认地址' }}</text>
         </view>
       </view>
@@ -55,10 +54,10 @@ export default {
   components: { CloudmealHeader },
   data () {
     return {
-      testValue: true,
       addressList: [],
       isActive: null,
-      isEmpty: false
+      isEmpty: false,
+      isSettingDefault: false
     }
   },
   onShow () {
@@ -84,7 +83,6 @@ export default {
       }
     },
     async getAddressList () {
-      this.testValue = false
       uni.showLoading({ title: '加载中', mask: true })
       try {
         const res = await queryAddressBookList()
@@ -103,7 +101,6 @@ export default {
         })
         return null
       } finally {
-        this.testValue = true
         uni.hideLoading()
       }
     },
@@ -125,7 +122,10 @@ export default {
       return true
     },
     async getRadio (index, item) {
+      if (this.isActive === index) return true
+      if (this.isSettingDefault) return false
       const previousIndex = this.isActive
+      this.isSettingDefault = true
       this.isActive = index
       try {
         const res = await putAddressBookDefault({ id: item.id })
@@ -135,7 +135,13 @@ export default {
           })
           item.isDefault = 1
           uni.showToast({ title: '默认地址设置成功', duration: 2000, icon: 'none' })
+          return res
         }
+        this.isActive = previousIndex
+        uni.showToast({
+          title: res.msg || '默认地址设置失败，请重试',
+          icon: 'none'
+        })
         return res
       } catch (error) {
         this.isActive = previousIndex
@@ -144,6 +150,8 @@ export default {
           icon: 'none'
         })
         return null
+      } finally {
+        this.isSettingDefault = false
       }
     }
   }
@@ -241,8 +249,28 @@ export default {
   font-size: 24rpx;
 }
 
-.default-radio {
-  transform: scale(0.76);
+.default-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 12rpx;
+  border: 2rpx solid $cm-border;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.default-check--active {
+  color: #fff;
+  background: $cm-primary;
+  border-color: $cm-primary;
+}
+
+.default-check__mark {
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .address-empty {

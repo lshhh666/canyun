@@ -43,3 +43,17 @@ test('profile bindings compile to WeChat-compatible WXML expressions', () => {
   sourceTemplates.forEach(source => assert.doesNotMatch(source, /:profile="\$store\.state\.baseUserInfo\s*\|\|/))
   generatedTemplates.forEach(source => assert.doesNotMatch(source, /\|\|\{\}/))
 })
+
+test('address list uses a stable key and a controlled default indicator', () => {
+  const source = read('xiaochengxu-source/pages/address/address.vue')
+  const generated = read('xiaochengxu/pages/address/address.wxml')
+
+  assert.match(source, /:key="item\.id"/)
+  assert.doesNotMatch(source, /:key="item\.id\s*\|\|\s*index"/)
+  assert.doesNotMatch(source, /<radio\b/)
+  assert.match(source, /default-check--active[^\n]+isActive === index/)
+  assert.match(generated, /wx:key="id"/)
+  assert.match(generated, /\['addressList','id',item\.\$orig\.id\]/)
+  assert.doesNotMatch(generated, /id\|\|index/)
+  assert.doesNotMatch(generated, /<radio\b/)
+})
