@@ -30,7 +30,7 @@ mybatis-plus:
 logging:
   level:
     com:
-      sky:
+      cloudmeal:
         mapper: debug
         service: info
         controller: info
