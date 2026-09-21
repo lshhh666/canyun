@@ -18,6 +18,7 @@ import com.cloudmeal.mapper.OrderdetailMapper;
 import com.cloudmeal.mapper.ShoppingCartMapper;
 import com.cloudmeal.mapper.UserCouponMapper;
 import com.cloudmeal.service.impl.OrderServiceImpl;
+import com.cloudmeal.service.impl.OrderNumberGenerator;
 import com.cloudmeal.vo.OrderPreviewVO;
 import com.cloudmeal.vo.OrderSubmitVO;
 import com.cloudmeal.vo.OrderPaymentVO;
@@ -28,6 +29,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -53,6 +56,7 @@ class OrderServiceImplSubmitTest {
     private OrderPricingService pricingService;
     private WebSocketServer webSocketServer;
     private UserCouponMapper userCouponMapper;
+    private OrderNumberGenerator orderNumberGenerator;
     private OrderServiceImpl service;
 
     @BeforeEach
@@ -65,6 +69,8 @@ class OrderServiceImplSubmitTest {
         pricingService = Mockito.mock(OrderPricingService.class);
         webSocketServer = Mockito.mock(WebSocketServer.class);
         userCouponMapper = Mockito.mock(UserCouponMapper.class);
+        orderNumberGenerator = Mockito.mock(OrderNumberGenerator.class);
+        when(orderNumberGenerator.nextNumber()).thenReturn("900000000000000001");
         service = new OrderServiceImpl();
         ReflectionTestUtils.setField(service, "orderMapper", orderMapper);
         ReflectionTestUtils.setField(service, "orderdetailMapper", detailMapper);
@@ -73,6 +79,7 @@ class OrderServiceImplSubmitTest {
         ReflectionTestUtils.setField(service, "orderPricingService", pricingService);
         ReflectionTestUtils.setField(service, "webSocketServer", webSocketServer);
         ReflectionTestUtils.setField(service, "userCouponMapper", userCouponMapper);
+        ReflectionTestUtils.setField(service, "orderNumberGenerator", orderNumberGenerator);
     }
 
     @AfterEach
@@ -231,6 +238,99 @@ class OrderServiceImplSubmitTest {
         verify(orderMapper, never()).add(any(Orders.class));
         verify(detailMapper, never()).add(any(OrderDetail.class));
         verify(cartMapper, never()).deleteShoppingCart(any(Long.class));
+    }
+
+    @Test
+    void redisFailureStopsBeforeOrderInsert() {
+        prepareSimpleOrder();
+        when(orderNumberGenerator.nextNumber())
+                .thenThrow(new OrderBusinessException("订单号生成失败，请稍后重试"));
+
+        assertThrows(OrderBusinessException.class, () -> service.orderSubmit(simpleRequest()));
+
+        verify(orderMapper, never()).add(any(Orders.class));
+        verify(detailMapper, never()).add(any(OrderDetail.class));
+        verify(cartMapper, never()).deleteShoppingCart(any(Long.class));
+    }
+
+    @Test
+    void numberConflictRetriesWithFreshSequence() {
+        prepareSimpleOrder();
+        when(orderNumberGenerator.nextNumber()).thenReturn(
+                "900000000000000001", "900000000000000002");
+        Mockito.doThrow(new DuplicateKeyException("Duplicate entry for key 'uk_orders_number'"))
+                .doAnswer(invocation -> {
+                    invocation.<Orders>getArgument(0).setId(99L);
+                    return null;
+                }).when(orderMapper).add(any(Orders.class));
+
+        OrderSubmitVO result = service.orderSubmit(simpleRequest());
+
+        assertEquals("900000000000000002", result.getOrderNumber());
+        verify(orderMapper, Mockito.times(2)).add(any(Orders.class));
+        verify(detailMapper).add(any(OrderDetail.class));
+    }
+
+    @Test
+    void persistentNumberConflictFailsBeforeOtherWrites() {
+        prepareSimpleOrder();
+        Mockito.doThrow(new DuplicateKeyException("Duplicate entry for key 'uk_orders_number'"))
+                .when(orderMapper).add(any(Orders.class));
+
+        assertThrows(OrderBusinessException.class, () -> service.orderSubmit(simpleRequest()));
+
+        verify(orderMapper, Mockito.times(3)).add(any(Orders.class));
+        verify(detailMapper, never()).add(any(OrderDetail.class));
+        verify(cartMapper, never()).deleteShoppingCart(any(Long.class));
+    }
+
+    @Test
+    void unrelatedConstraintFailureDoesNotRetry() {
+        prepareSimpleOrder();
+        Mockito.doThrow(new DuplicateKeyException("Duplicate entry for key 'uk_other'"))
+                .when(orderMapper).add(any(Orders.class));
+
+        assertThrows(OrderBusinessException.class, () -> service.orderSubmit(simpleRequest()));
+
+        verify(orderMapper).add(any(Orders.class));
+        verify(detailMapper, never()).add(any(OrderDetail.class));
+        verify(cartMapper, never()).deleteShoppingCart(any(Long.class));
+    }
+
+    @Test
+    void detailInsertFailureUsesBusinessException() {
+        prepareSimpleOrder();
+        doAnswer(invocation -> {
+            invocation.<Orders>getArgument(0).setId(99L);
+            return null;
+        }).when(orderMapper).add(any(Orders.class));
+        Mockito.doThrow(new DataIntegrityViolationException("detail write failed"))
+                .when(detailMapper).add(any(OrderDetail.class));
+
+        assertThrows(OrderBusinessException.class, () -> service.orderSubmit(simpleRequest()));
+        verify(cartMapper, never()).deleteShoppingCart(any(Long.class));
+    }
+
+    private OrdersSubmitDTO simpleRequest() {
+        OrdersSubmitDTO dto = new OrdersSubmitDTO();
+        dto.setAddressBookId(12L);
+        dto.setPayMethod(1);
+        return dto;
+    }
+
+    private void prepareSimpleOrder() {
+        when(pricingService.preview(7L, 12L)).thenReturn(OrderPreviewVO.builder()
+                .goodsAmount(new BigDecimal("20.00"))
+                .packAmount(BigDecimal.ONE)
+                .deliveryFee(BigDecimal.ONE)
+                .totalAmount(new BigDecimal("22.00"))
+                .estimatedDeliveryTime(LocalDateTime.now().plusMinutes(30)).build());
+        when(cartMapper.listShoppingCartByUserId(7L)).thenReturn(Collections.singletonList(
+                ShoppingCart.builder().id(3L).name("dish").amount(new BigDecimal("20.00"))
+                        .number(1).userId(7L).build()));
+        when(addressMapper.getById(12L)).thenReturn(AddressBook.builder().id(12L)
+                .userId(7L).provinceName("A").cityName("B").districtName("C")
+                .detail("D").consignee("User").phone("13800000000").build());
     }
 
     @Test

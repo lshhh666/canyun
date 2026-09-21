@@ -10,6 +10,7 @@
 2. `ai_customer_service.sql`
 3. `ai_order_detail_tool_migration.sql`
 4. `ai_order_status_tool_migration.sql`
+5. `orders_number_unique_migration.sql`
 
 `ai_customer_service.sql` 是当前 AI 模块的完整结构，已经包含会话、消息、待确认动作、评价、知识、向量任务、知识关联和复测表。全新安装不要再执行下方的历史增量脚本。
 
@@ -27,6 +28,13 @@
 8. `ai_feedback_resolution_migration.sql`
 9. `ai_order_detail_tool_migration.sql`
 10. `ai_order_status_tool_migration.sql`
+11. `orders_number_unique_migration.sql`
+
+运行 `orders_number_unique_migration.sql` 前，先用
+`SELECT number, COUNT(*) FROM orders GROUP BY number HAVING COUNT(*) > 1;`
+检查历史重复订单号，并依据业务记录人工处理。迁移不会删除或改写订单；若仍有重复值，建唯一索引会失败。
+请先建索引再部署新生成器。Redis 键 `orders:number:sequence:v1` 必须持久保存且不参与缓存淘汰。
+如果该键被重置，数据库唯一索引仍会拦截重复值，但计数器超过历史已用序号前，新建订单可能失败。
 
 向量迁移会先以可空字段接收历史知识，再由闭环迁移区分已有向量和待生成向量，并为缺失向量创建异步任务，因此不会要求历史数据临时伪造向量值。
 

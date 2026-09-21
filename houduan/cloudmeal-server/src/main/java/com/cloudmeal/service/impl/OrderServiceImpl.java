@@ -28,6 +28,8 @@ import com.cloudmeal.websocket.WebSocketServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -36,7 +38,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -56,6 +57,8 @@ public class OrderServiceImpl implements OrderService {
     private OrderPricingService orderPricingService;
     @Autowired
     private UserCouponMapper  userCouponMapper;
+    @Autowired
+    private OrderNumberGenerator orderNumberGenerator;
 
     @Override
     public OrderPreviewVO preview(OrderPreviewDTO orderPreviewDTO) {
@@ -89,8 +92,6 @@ public class OrderServiceImpl implements OrderService {
         if(addressBook==null){
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
         }
-        //生成订单号
-        String orderNumber=generateOrderNumber();
         //订单金额只使用服务端报价，不信任客户端传入的金额字段
         if(quote.getTotalAmount() == null){
             throw new OrderBusinessException("金额异常");
@@ -124,7 +125,6 @@ public class OrderServiceImpl implements OrderService {
         }
         orders.setPackAmount(quote.getPackAmount().intValueExact());
         orders.setEstimatedDeliveryTime(quote.getEstimatedDeliveryTime());
-        orders.setNumber(orderNumber);
         orders.setUserId(userId);
         orders.setStatus(Orders.PENDING_PAYMENT);           // 待付款
         orders.setOrderTime(now);           // 下单时间
@@ -135,27 +135,45 @@ public class OrderServiceImpl implements OrderService {
                 + addressBook.getDetail());
         orders.setConsignee(addressBook.getConsignee());    // 收货人
         orders.setPhone(addressBook.getPhone());
-        orderMapper.add(orders);
-        if(userCoupon!=null){
-            int i = userCouponMapper.lockForOrder(userCoupon.getId(), userId, orders.getId(), quote.getGoodsAmount(), now);
-            if(i==0){
-                throw  new CouponBusinessException("锁券失败");
+        // A reset Redis counter can reuse an old value. The database unique index
+        // remains authoritative; retry only collisions on the order number.
+        for (int attempt = 0; attempt < 3; attempt++) {
+            orders.setNumber(orderNumberGenerator.nextNumber());
+            try {
+                orderMapper.add(orders);
+                break;
+            } catch (DuplicateKeyException ex) {
+                if (!isOrderNumberConflict(ex) || attempt == 2) {
+                    throw new OrderBusinessException("订单创建失败，请稍后重试");
+                }
+            } catch (DataAccessException ex) {
+                throw new OrderBusinessException("订单创建失败，请稍后重试");
             }
         }
-        //设置Orderdetail
-        for(ShoppingCart shoppingCart : shoppingCartList){
-            OrderDetail  orderDetail = new OrderDetail();
-            BeanUtils.copyProperties(shoppingCart,orderDetail);
-            orderDetail.setOrderId(orders.getId());
-            orderdetailMapper.add(orderDetail);
+        try {
+            if(userCoupon!=null){
+                int i = userCouponMapper.lockForOrder(userCoupon.getId(), userId, orders.getId(), quote.getGoodsAmount(), now);
+                if(i==0){
+                    throw  new CouponBusinessException("锁券失败");
+                }
+            }
+            //设置Orderdetail
+            for(ShoppingCart shoppingCart : shoppingCartList){
+                OrderDetail  orderDetail = new OrderDetail();
+                BeanUtils.copyProperties(shoppingCart,orderDetail);
+                orderDetail.setOrderId(orders.getId());
+                orderdetailMapper.add(orderDetail);
+            }
+            //清空购物车
+            shoppingCartMapper.deleteShoppingCart(userId);
+        } catch (DataAccessException ex) {
+            throw new OrderBusinessException("订单创建失败，请稍后重试");
         }
-        //清空购物车
-        shoppingCartMapper.deleteShoppingCart(userId);
        //创建vo
         OrderSubmitVO orderSubmitVO = OrderSubmitVO.builder()
                 .id(orders.getId())
                 .orderAmount(orders.getAmount())
-                .orderNumber(orderNumber)
+                .orderNumber(orders.getNumber())
                 .orderTime(orders.getOrderTime())
                 .build();
 
@@ -369,14 +387,10 @@ public class OrderServiceImpl implements OrderService {
         return order;
     }
 
-    //生成订单号方法
-    private String generateOrderNumber(){
-        //时间戳
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-        String timestamp = LocalDateTime.now().format(formatter);
-        //随机数
-       int random= new Random().nextInt(9000)+1000;
-       return timestamp+random;
+    private boolean isOrderNumberConflict(DuplicateKeyException ex) {
+        String message = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        return message != null && message.toLowerCase(Locale.ROOT).contains("uk_orders_number");
     }
 
     //1. 查询并初步校验用户优惠券
