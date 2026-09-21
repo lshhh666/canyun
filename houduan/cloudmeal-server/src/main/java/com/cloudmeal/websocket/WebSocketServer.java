@@ -21,6 +21,7 @@ public class WebSocketServer {
 
     //存放会话对象
     private static final Map<String, Session> sessionMap = new ConcurrentHashMap<>();
+    private Session currentSession;
 
     /**
      * 连接建立成功调用的方法
@@ -28,6 +29,7 @@ public class WebSocketServer {
     @OnOpen
     public void onOpen(Session session, @PathParam("sid") String sid) {
         log.info("客户端：{}建立连接", sid);
+        currentSession = session;
         sessionMap.put(sid, session);
     }
 
@@ -49,7 +51,9 @@ public class WebSocketServer {
     @OnClose
     public void onClose(@PathParam("sid") String sid) {
         log.info("连接断开:{}", sid);
-        sessionMap.remove(sid);
+        if (currentSession != null) {
+            sessionMap.remove(sid, currentSession);
+        }
     }
 
     /**
