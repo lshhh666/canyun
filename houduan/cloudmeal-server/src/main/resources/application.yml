@@ -79,7 +79,7 @@ cloudmeal:
 spring:
   config:
     activate:
-      on-profile: dev
+      on-profile: "dev & !prod"
   main:
     # 仅供本地兼容历史循环依赖；生产环境保持 Spring Boot 默认的 false
     allow-circular-references: true

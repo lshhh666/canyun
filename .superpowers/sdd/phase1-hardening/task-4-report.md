@@ -17,3 +17,10 @@
 ## 边界
 
 生产需显式启用 `prod` 并提供两个稳定且不同的 JWT 密钥和实际使用的外部服务配置。配置测试不连接 MySQL、Redis、微信或 AI 服务；未执行全量后端测试。
+
+## Fix round 1
+
+- `JwtProperties` 在属性绑定后拒绝缺失、空白或未解析的管理端/用户端密钥，避免把 `${CLOUDMEAL_JWT_ADMIN_SECRET}` 等占位符用作签名密钥；`dev` 未配置时仍使用启动随机密钥。
+- 开发配置段改为仅在 `dev & !prod` 时启用，混合激活 `dev,prod` 不再继承循环依赖开关或随机 JWT 回退。
+- 配置测试实际创建并绑定 `JwtProperties`，覆盖生产缺失任一密钥、空白、未解析占位符，以及混合 profile 的成功和失败路径；测试环境移除宿主系统环境变量来源，不连接外部服务。
+- 聚焦执行 `mvn -q -pl cloudmeal-server -am '-Dtest=ApplicationConfigurationTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`：5 项通过，0 失败、0 错误；未执行全量测试。
