@@ -23,4 +23,5 @@
 
 - 修复测试模拟器的并发返回值：在每次请求的 `ConcurrentHashMap.compute` 回调内保存本次计数，回调结束后返回该快照，避免读取已被其他请求递增的共享 `Window.count`。
 - 增加并发断言，验证 40 次模拟 Redis 调用分别返回 1 到 40；真实限流生产代码未改动。
-- 按本轮最新要求未运行耗时测试；以本轮提交和 `git diff --check` 作为快速校验记录。
+- 最终聚焦执行 `mvn -q -pl cloudmeal-server -am '-Dtest=AiChatRateLimiterTest,AiChatControllerTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`：13 个测试通过，0 失败，0 错误。
+- 真实 Redis/Lua/TTL/多实例集成验证仍未执行；该限制保留。
