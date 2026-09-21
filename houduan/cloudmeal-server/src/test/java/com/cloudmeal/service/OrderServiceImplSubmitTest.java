@@ -272,6 +272,23 @@ class OrderServiceImplSubmitTest {
     }
 
     @Test
+    void fallbackNumberIndexConflictRetriesWithFreshSequence() {
+        prepareSimpleOrder();
+        when(orderNumberGenerator.nextNumber()).thenReturn(
+                "900000000000000001", "900000000000000002");
+        Mockito.doThrow(new DuplicateKeyException("Duplicate entry for key 'uk_orders_number_unique'"))
+                .doAnswer(invocation -> {
+                    invocation.<Orders>getArgument(0).setId(99L);
+                    return null;
+                }).when(orderMapper).add(any(Orders.class));
+
+        OrderSubmitVO result = service.orderSubmit(simpleRequest());
+
+        assertEquals("900000000000000002", result.getOrderNumber());
+        verify(orderMapper, Mockito.times(2)).add(any(Orders.class));
+    }
+
+    @Test
     void persistentNumberConflictFailsBeforeOtherWrites() {
         prepareSimpleOrder();
         Mockito.doThrow(new DuplicateKeyException("Duplicate entry for key 'uk_orders_number'"))

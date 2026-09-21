@@ -33,6 +33,8 @@
 运行 `orders_number_unique_migration.sql` 前，先用
 `SELECT number, COUNT(*) FROM orders GROUP BY number HAVING COUNT(*) > 1;`
 检查历史重复订单号，并依据业务记录人工处理。迁移不会删除或改写订单；若仍有重复值，建唯一索引会失败。
+若 `uk_orders_number` 已是普通索引或复合索引，迁移会保留它，并新建单列唯一索引 `uk_orders_number_unique`；重复执行会识别这两个名称下正确的单列唯一索引。
+执行前可用 `SHOW INDEX FROM orders;` 查看索引定义。若两个名称都被不兼容索引占用，迁移会因备用索引名冲突而失败，不会跳过唯一约束：先核实索引用途，确认新名称未占用后执行 `ALTER TABLE orders RENAME INDEX uk_orders_number_unique TO uk_orders_number_legacy;`，或在确认索引不再需要后删除，再重新运行迁移。迁移完成后用 `SHOW INDEX FROM orders;` 确认 `number` 存在独立的 `Non_unique = 0` 单列索引。
 请先建索引再部署新生成器。Redis 键 `orders:number:sequence:v1` 必须持久保存且不参与缓存淘汰。
 如果该键被重置，数据库唯一索引仍会拦截重复值，但计数器超过历史已用序号前，新建订单可能失败。
 

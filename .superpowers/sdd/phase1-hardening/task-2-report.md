@@ -34,3 +34,11 @@ SELECT number, COUNT(*) FROM orders GROUP BY number HAVING COUNT(*) > 1;
 - 仓库未包含基础 `orders` 建表脚本，也没有目标库连接；需在目标 MySQL 库确认 `number` 列至少可容纳 18 位字符串、运行历史重复值查询并实际执行迁移。当前只做了 SQL 静态检查。
 - Redis 序列键须持久保存，不可被缓存淘汰。若键丢失，数据库索引仍阻止重复订单号，但历史序列范围内的有限重试可能使新建订单暂时失败。Redis 计数可能因事务回滚而出现空号，这不影响唯一性。
 - 单元测试覆盖失败分支，但没有运行真实 Redis/MySQL 端到端测试；生产部署前应在测试库执行迁移并验证唯一索引。
+
+## Fix round 1
+
+- 修复 `uk_orders_number` 已被普通索引或复合索引占用时的迁移：若未找到正确的单列、全列唯一索引，主名称空闲则用主名称建索引，否则用 `uk_orders_number_unique` 建索引。两种名称下已有正确索引均跳过，保证重复执行幂等。
+- 若主、备用名称均被不兼容索引占用，备用名称的 `ADD UNIQUE INDEX` 会明确报索引名冲突并停止执行；`houduan/sql/README.md` 给出 `SHOW INDEX` 核查、改名和重跑路径，绝不把该状态当成迁移成功。历史重复订单号仍需按原前置条件人工处理。
+- Java 原有重试判断匹配 `uk_orders_number` 字串，也覆盖新的 `uk_orders_number_unique`；新增备用索引重复键重试测试。
+- SQL 静态核对了四种分支：无索引建主索引、主名称被占用建备用索引、已有任一名称的正确索引跳过、两个名称均不兼容时建备用索引报名称冲突。未连接目标 MySQL 实测。
+- 聚焦测试 `OrderNumberGeneratorTest`（3 个）与 `OrderServiceImplSubmitTest`（23 个）均通过，0 失败、0 错误；`git diff --check` 通过。
