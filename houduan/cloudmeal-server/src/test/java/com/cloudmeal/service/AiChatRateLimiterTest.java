@@ -85,6 +85,24 @@ class AiChatRateLimiterTest {
     }
 
     @Test
+    void simulatedRedisShouldReturnEachConcurrentRequestsOwnCount() {
+        StringRedisTemplate redis = simulatedRedis(new AtomicLong(0));
+        RedisScript<Long> script = mock(RedisScript.class);
+        ExecutorService pool = Executors.newFixedThreadPool(20);
+        try {
+            List<CompletableFuture<Long>> calls = new java.util.ArrayList<>();
+            for (int i = 0; i < 40; i++) {
+                calls.add(CompletableFuture.supplyAsync(() -> redis.execute(
+                        script, java.util.Collections.singletonList("ai:chat:rate:v1:user:7"), "60"), pool));
+            }
+            assertThat(calls.stream().map(CompletableFuture::join).sorted().toList())
+                    .containsExactlyElementsOf(java.util.stream.LongStream.rangeClosed(1, 40).boxed().toList());
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
     void shouldFailClosedWithoutExposingRedisException() {
         StringRedisTemplate redis = mock(StringRedisTemplate.class);
         when(redis.execute(any(RedisScript.class), anyList(), eq("60")))
@@ -115,14 +133,16 @@ class AiChatRateLimiterTest {
                 .thenAnswer(invocation -> {
                     List<String> keys = invocation.getArgument(1);
                     long ttlMillis = Long.parseLong(invocation.getArgument(2)) * 1000;
-                    Window window = windows.compute(keys.get(0), (key, old) -> {
+                    long[] requestCount = new long[1];
+                    windows.compute(keys.get(0), (key, old) -> {
                         if (old == null || nowMillis.get() >= old.expiresAt) {
+                            requestCount[0] = 1;
                             return new Window(1, nowMillis.get() + ttlMillis);
                         }
-                        old.count.incrementAndGet();
+                        requestCount[0] = old.count.incrementAndGet();
                         return old;
                     });
-                    return (long) window.count.get();
+                    return requestCount[0];
                 });
         return redis;
     }
