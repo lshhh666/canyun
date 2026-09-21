@@ -24,3 +24,9 @@
 - 开发配置段改为仅在 `dev & !prod` 时启用，混合激活 `dev,prod` 不再继承循环依赖开关或随机 JWT 回退。
 - 配置测试实际创建并绑定 `JwtProperties`，覆盖生产缺失任一密钥、空白、未解析占位符，以及混合 profile 的成功和失败路径；测试环境移除宿主系统环境变量来源，不连接外部服务。
 - 聚焦执行 `mvn -q -pl cloudmeal-server -am '-Dtest=ApplicationConfigurationTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`：5 项通过，0 失败、0 错误；未执行全量测试。
+
+## Fix round 2
+
+- `ApplicationConfigurationTest.start()` 同时移除 `systemProperties` 和 `systemEnvironment` 属性源，避免 JVM 的 `-DCLOUDMEAL_JWT_ADMIN_SECRET` / `-DCLOUDMEAL_JWT_USER_SECRET` 污染缺失密钥与开发回退测试；显式命令行测试参数仍由各用例提供。
+- `dev` 无外部密钥测试现在创建并关闭两次独立的应用上下文，分别断言管理端和用户端临时 JWT 密钥跨启动不同。
+- 聚焦执行 `mvn -q -pl cloudmeal-server -am '-Dtest=ApplicationConfigurationTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`：5 项通过，0 失败、0 错误；未执行全量测试。

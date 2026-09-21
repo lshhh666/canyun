@@ -20,12 +20,21 @@ class ApplicationConfigurationTest {
 
     @Test
     void developmentProfileKeepsLocalFallbacks() {
+        String firstAdminSecret;
+        String firstUserSecret;
         try (ConfigurableApplicationContext context = start("dev")) {
             JwtProperties jwt = context.getBean(JwtProperties.class);
             assertThat(((DefaultListableBeanFactory) context.getBeanFactory()).isAllowCircularReferences()).isTrue();
             assertThat(jwt.getAdminSecretKey()).isNotBlank();
             assertThat(jwt.getUserSecretKey()).isNotBlank();
             assertThat(jwt.getAdminSecretKey()).isNotEqualTo(jwt.getUserSecretKey());
+            firstAdminSecret = jwt.getAdminSecretKey();
+            firstUserSecret = jwt.getUserSecretKey();
+        }
+        try (ConfigurableApplicationContext context = start("dev")) {
+            JwtProperties jwt = context.getBean(JwtProperties.class);
+            assertThat(jwt.getAdminSecretKey()).isNotEqualTo(firstAdminSecret);
+            assertThat(jwt.getUserSecretKey()).isNotEqualTo(firstUserSecret);
         }
     }
 
@@ -88,6 +97,7 @@ class ApplicationConfigurationTest {
         application.setBannerMode(Banner.Mode.OFF);
         application.setLogStartupInfo(false);
         ConfigurableEnvironment environment = new StandardEnvironment();
+        environment.getPropertySources().remove(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
         environment.getPropertySources().remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);
         application.setEnvironment(environment);
         String[] arguments = new String[extraArguments.length + 2];
