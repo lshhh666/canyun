@@ -157,7 +157,7 @@ canyun/
 在 `houduan/cloudmeal-server/src/main/resources/` 下创建本地 `application-dev.yml`。该文件已被 `.gitignore` 排除，请勿提交真实密钥。
 
 ```yaml
-sky:
+cloudmeal:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     host: localhost
@@ -181,11 +181,15 @@ sky:
     ak: your_ak
     sk: your_sk
     shop-address: your_shop_address
+  ai:
+    api-key: your_ai_api_key
 ```
 
-不需要测试的第三方能力也应使用本地占位配置，不能把真实密钥提交到仓库。
+不需要测试的第三方能力也应使用本地占位配置，不能把真实密钥提交到仓库。数据库密码、Redis 密码（如需认证，使用 `spring.redis.password`）、AI API Key、微信、对象存储和地图密钥只放在环境变量或未纳入版本控制的本地/外部配置文件；示例值不能用于生产。构建生产包前，不要把含密钥的本地 `application-dev.yml` 打进 JAR。
 
-JWT 管理端和用户端使用不同的签名密钥。未设置时，应用会在每次启动时生成临时随机值，因此重启后旧令牌会失效；正式部署必须通过 `CLOUDMEAL_JWT_ADMIN_SECRET` 和 `CLOUDMEAL_JWT_USER_SECRET` 环境变量提供两个不同的高强度密钥。
+默认激活 `dev` profile。仅 `dev` 允许历史循环依赖兼容，并在未配置 JWT 密钥时每次启动生成临时随机值，重启后旧令牌会失效。随机 JWT 只适合本地开发，不能用于生产。管理端和用户端应使用两个不同的高强度密钥。
+
+生产启动时显式设置 `SPRING_PROFILES_ACTIVE=prod`（或使用 `--spring.profiles.active=prod`），并通过 `CLOUDMEAL_JWT_ADMIN_SECRET`、`CLOUDMEAL_JWT_USER_SECRET` 环境变量或外部配置中的 `cloudmeal.jwt.admin-secret-key`、`cloudmeal.jwt.user-secret-key` 提供稳定密钥；其他敏感项也由外部配置提供。生产环境不启用循环依赖兼容。没有配置完整第三方服务时，本地仍可按上述 `dev` 方式启动；真实微信支付尚未接入。
 
 ### 4. 启动后端
 

@@ -4,8 +4,6 @@ server:
 spring:
   profiles:
     active: dev
-  main:
-    allow-circular-references: true
   datasource:
     druid:
       driver-class-name: ${cloudmeal.datasource.driver-class-name}
@@ -37,13 +35,13 @@ logging:
 
 cloudmeal:
   jwt:
-    # 未配置环境变量时每次启动生成临时密钥，正式部署必须提供稳定的高强度密钥
-    admin-secret-key: ${CLOUDMEAL_JWT_ADMIN_SECRET:${random.uuid}}
+    # 非 dev 环境必须从环境变量或外部配置提供稳定密钥
+    admin-secret-key: ${CLOUDMEAL_JWT_ADMIN_SECRET}
     # 设置jwt过期时间
     admin-ttl: 7200000
     # 设置前端传递过来的令牌名称
     admin-token-name: token
-    user-secret-key: ${CLOUDMEAL_JWT_USER_SECRET:${random.uuid}}
+    user-secret-key: ${CLOUDMEAL_JWT_USER_SECRET}
     user-ttl: 7200000
     user-token-name: authentication
   wechat:
@@ -76,3 +74,18 @@ cloudmeal:
     # 超过该时间未继续交流时，下一次提问自动创建新会话。
     session-idle-timeout-minutes: 30
     max-tokens: 1024
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  main:
+    # 仅供本地兼容历史循环依赖；生产环境保持 Spring Boot 默认的 false
+    allow-circular-references: true
+
+cloudmeal:
+  jwt:
+    # 开发临时密钥每次启动变化，不可用于生产部署
+    admin-secret-key: ${CLOUDMEAL_JWT_ADMIN_SECRET:${random.uuid}}
+    user-secret-key: ${CLOUDMEAL_JWT_USER_SECRET:${random.uuid}}
