@@ -58,6 +58,9 @@ cloudmeal:
     estimated-delivery-minutes: 30
     max-delivery-distance-meters: 5000
   ai:
+    rate-limit:
+      max-requests: 10
+      window-seconds: 60
     base-url: https://open.bigmodel.cn/api/paas/v4
     model: glm-4.5-air
     embedding-model: embedding-3

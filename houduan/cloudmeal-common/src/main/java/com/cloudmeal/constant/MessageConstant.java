@@ -31,6 +31,7 @@ public class MessageConstant {
     public static final String NO_PERMISSION="优惠券不属于该用户，无权使用";
     public static final String NOT_AVAILABLE="优惠券不可用";
     public static final String AI_SERVICE_UNAVAILABLE="AI客服暂时繁忙，请稍后再试";
+    public static final String AI_CHAT_RATE_LIMIT_EXCEEDED="AI请求过于频繁，请稍后再试";
     public static final String AI_MESSAGE_EMPTY="聊天内容不能为空";
     public static final String AI_MESSAGE_TOO_LONG="聊天内容不能超过100个字符";
     public static final String AI_CHAT_SESSION_UNAVAILABLE="会话不存在或无权访问";

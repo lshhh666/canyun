@@ -1,7 +1,9 @@
 package com.cloudmeal.controller.user;
 
 import com.cloudmeal.dto.AiChatDTO;
+import com.cloudmeal.context.BaseContext;
 import com.cloudmeal.result.Result;
+import com.cloudmeal.service.AiChatRateLimiter;
 import com.cloudmeal.service.AiChatService;
 import com.cloudmeal.vo.AiChatVO;
 import com.cloudmeal.vo.AiChatHistoryVO;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiChatController {
 
     private final AiChatService aiChatService;
+    private final AiChatRateLimiter aiChatRateLimiter;
 
     @GetMapping("/session/recent")
     @ApiOperation("恢复最近一次AI客服会话")
@@ -39,6 +42,7 @@ public class AiChatController {
     @PostMapping("/chat")
     @ApiOperation("发送AI客服消息")
     public Result<AiChatVO> chat(@RequestBody AiChatDTO aiChatDTO) {
+        aiChatRateLimiter.check(BaseContext.getCurrentId());
         return Result.success(aiChatService.chat(aiChatDTO.getMessage(), aiChatDTO.getSessionId()));
     }
 
